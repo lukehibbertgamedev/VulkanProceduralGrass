@@ -51,12 +51,17 @@ int main() {
 
     vkApp.createInstance();
     vkApp.createDebugMessenger();
+    vkApp.createGlfwSurface(window);
     vkApp.createPhysicalDevice();
+    vkApp.createLogicalDevice();
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
     }
 
+    vkDestroyDevice(vkApp.m_LogicalDevice, nullptr);
+    vkDestroySurfaceKHR(vkApp.m_VkInstance, vkApp.m_SurfaceKHR, nullptr);
+    
     if (kEnableValidationLayers) {
         vkApp.destroyDebugUtilsMessengerEXT(vkApp.m_VkInstance, vkApp.m_DebugMessenger, nullptr);
     }
