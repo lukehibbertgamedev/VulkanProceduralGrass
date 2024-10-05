@@ -49,16 +49,30 @@ int main() {
     glm::vec4 vec;
     auto test = matrix * vec;
 
-    vkApp.createInstance();
+    
+    VkResult ret = vkApp.createInstance();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad instance.");
     vkApp.createDebugMessenger();
-    vkApp.createGlfwSurface(window);
-    vkApp.createPhysicalDevice();
-    vkApp.createLogicalDevice();
+
+    ret = vkApp.createGlfwSurface(window);
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad surface.");
+
+    ret = vkApp.createPhysicalDevice();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad physical device.");
+
+    ret = vkApp.createLogicalDevice();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad logical device.");
+
+    ret = vkApp.createSwapchain(window);
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad swapchain.");
+
+    std::cout << "\nSuccessful initialization.\n";
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
     }
 
+    vkDestroySwapchainKHR(vkApp.m_LogicalDevice, vkApp.swapChain, nullptr);
     vkDestroyDevice(vkApp.m_LogicalDevice, nullptr);
     vkDestroySurfaceKHR(vkApp.m_VkInstance, vkApp.m_SurfaceKHR, nullptr);
     

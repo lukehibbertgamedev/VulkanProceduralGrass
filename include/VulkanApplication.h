@@ -9,6 +9,7 @@
 #include <GLFW/glfw3native.h>
 
 #include <optional>
+#include <vector>
 
 static constexpr bool kEnableValidationLayers = false;
 
@@ -24,19 +25,31 @@ public:
 	};
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
+	struct SwapChainSupportDetails {
+	public:
+		VkSurfaceCapabilitiesKHR capabilities;
+		std::vector<VkSurfaceFormatKHR> formats;
+		std::vector<VkPresentModeKHR> presentModes;
+	};
+
 	VkResult createInstance();
 	void createDebugMessenger();
 	VkResult createPhysicalDevice();
 	VkResult createLogicalDevice();
-	VkResult createWin32Surface(GLFWwindow* window);
 	VkResult createGlfwSurface(GLFWwindow* window);
+	VkResult createSwapchain(GLFWwindow* window);
+
+	VkSurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+	VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
 
 	void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 private:
+	SwapChainSupportDetails checkSwapchainSupport(VkPhysicalDevice device);
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& outCreateInfo);
 	VkResult createDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 	bool checkPhysicalDeviceSuitability(VkPhysicalDevice device);
-
+	bool checkPhysicalDeviceExtensionSupport(VkPhysicalDevice device);
 public:
 	// Vulkan.
 	VkInstance m_VkInstance = VK_NULL_HANDLE;											// Vulkan library handle.
@@ -50,5 +63,7 @@ public:
 
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
+
+	VkSwapchainKHR swapChain;
 	
 };
