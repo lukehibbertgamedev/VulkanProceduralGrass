@@ -11,6 +11,8 @@
 #include <VulkanApplication.h>
 
 #include <iostream>
+#include <cstdio>
+#include <stdio.h>
 #include <vector>
 #include <set>
 
@@ -46,6 +48,10 @@ int main() {
     glm::mat4 matrix;
     glm::vec4 vec;
     auto test = matrix * vec;
+
+    vkApp.createInstance();
+    vkApp.createDebugMessenger();
+    vkApp.createPhysicalDevice();
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();

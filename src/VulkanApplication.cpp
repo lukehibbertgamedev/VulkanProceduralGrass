@@ -164,6 +164,42 @@ void VulkanApplication::createDebugMessenger()
     //return VK_SUCCESS;
 }
 
+VkResult VulkanApplication::createPhysicalDevice()
+{
+    uint32_t deviceCount = 0;
+    vkEnumeratePhysicalDevices(m_VkInstance, &deviceCount, nullptr);
+    std::vector<VkPhysicalDevice> devices(deviceCount);
+    vkEnumeratePhysicalDevices(m_VkInstance, &deviceCount, devices.data());
+    for (const auto& device : devices) {
+        if (checkPhysicalDeviceSuitability(device)) {
+            m_PhysicalDevice = device;
+            break;
+        }
+    }
+
+    // Print out details of all physical devices.
+    for (int i = 0; i < deviceCount; ++i) {
+        VkPhysicalDeviceProperties deviceProperties = {};
+        memset(&deviceProperties, 0, sizeof(deviceProperties));
+        vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
+        std::cout << "\nDevice name: " << deviceProperties.deviceName << "\n";
+        std::cout << "Device version: " << deviceProperties.driverVersion << "\n";
+        std::cout << "Device ID: " << deviceProperties.deviceID << "\n";
+        std::cout << "Device type: " << deviceProperties.deviceType << "\n";
+        auto apiVersionMajor = (deviceProperties.apiVersion >> 22) & 0X3FF;
+        auto apiVersionMinor = (deviceProperties.apiVersion >> 12) & 0X3FF;
+        auto apiVersionPatch = deviceProperties.apiVersion & 0X3FF;
+        std::cout << "API version: " << apiVersionMajor << "." << apiVersionMinor << "." << apiVersionPatch << "\n";
+    }
+
+    if (m_PhysicalDevice == VK_NULL_HANDLE) {
+        throw std::runtime_error("failed to find a suitable GPU!");
+        return VK_ERROR_INCOMPATIBLE_DRIVER;
+    }
+
+    return VK_SUCCESS;
+}
+
 void VulkanApplication::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& outCreateInfo)
 {
     outCreateInfo = {};
@@ -191,4 +227,16 @@ void VulkanApplication::destroyDebugUtilsMessengerEXT(VkInstance instance, VkDeb
     if (func != nullptr) {
         func(instance, debugMessenger, pAllocator);
     }
+}
+
+bool VulkanApplication::checkPhysicalDeviceSuitability(VkPhysicalDevice device)
+{
+    VkPhysicalDeviceProperties deviceProperties;
+    VkPhysicalDeviceFeatures deviceFeatures;
+    vkGetPhysicalDeviceProperties(device, &deviceProperties);
+    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+    return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU 
+        && deviceFeatures.geometryShader 
+        && deviceFeatures.tessellationShader;
 }
