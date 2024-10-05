@@ -14,11 +14,21 @@
 #include <vector>
 #include <set>
 
+
 int main() {
-    glfwInit();
+    
+    VulkanApplication vkApp = {};
+
+    if (glfwInit() != GLFW_TRUE) {
+        throw std::runtime_error("failed to initialize glfw!");
+    }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan procedural grass rendering", nullptr, nullptr);
+    if (window == nullptr) {
+        throw std::runtime_error("failed to create glfw window!");
+    }
 
     uint32_t extensionCount = 0;
     VkExtensionProperties props = {};
@@ -28,8 +38,10 @@ int main() {
     std::vector<VkExtensionProperties> extensionProperties(extensionCount);
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProperties.data());
     for (auto& extension : extensionProperties) {
-        std::cout << "- " << extension.extensionName << "\n";
+        std::cout << "- " << extension.extensionName;
+        std::cout << ".\tVersion: " << extension.specVersion << "\n";
     }
+
 
     glm::mat4 matrix;
     glm::vec4 vec;
@@ -38,6 +50,12 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
     }
+
+    if (kEnableValidationLayers) {
+        vkApp.destroyDebugUtilsMessengerEXT(vkApp.m_VkInstance, vkApp.m_DebugMessenger, nullptr);
+    }
+
+    vkDestroyInstance(vkApp.m_VkInstance, nullptr);
 
     glfwDestroyWindow(window);
 
