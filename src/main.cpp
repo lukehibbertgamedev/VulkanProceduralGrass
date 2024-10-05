@@ -6,8 +6,9 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
-#include <../PortableVulkanSDK1.3/include/vulkan/vulkan.h>
 #include <imgui.h>
+
+#include <VulkanApplication.h>
 
 #include <iostream>
 #include <vector>
