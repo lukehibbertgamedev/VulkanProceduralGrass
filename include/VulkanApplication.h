@@ -67,8 +67,6 @@ public:
 
 	VkSwapchainKHR swapChain;
 	std::vector<VkImage> swapChainImages;
-	VkSwapchainKHR swapChain;
-	std::vector<VkImage> swapChainImages;
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 	std::vector<VkImageView> swapChainImageViews;

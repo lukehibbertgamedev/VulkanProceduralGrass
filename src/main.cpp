@@ -66,6 +66,9 @@ int main() {
     ret = vkApp.createSwapchain(window);
     if (ret != VK_SUCCESS) throw std::runtime_error("bad swapchain.");
 
+    ret = vkApp.createSwapchainImageViews();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad swapchain image views.");
+
     std::cout << "\nSuccessful initialization.\n";
 
     while (!glfwWindowShouldClose(window)) {
