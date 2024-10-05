@@ -38,6 +38,7 @@ public:
 	VkResult createLogicalDevice();
 	VkResult createGlfwSurface(GLFWwindow* window);
 	VkResult createSwapchain(GLFWwindow* window);
+	VkResult createSwapchainImageViews();
 
 	VkSurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
@@ -65,5 +66,10 @@ public:
 	VkQueue presentQueue;
 
 	VkSwapchainKHR swapChain;
-	
+	std::vector<VkImage> swapChainImages;
+	VkSwapchainKHR swapChain;
+	std::vector<VkImage> swapChainImages;
+	VkFormat swapChainImageFormat;
+	VkExtent2D swapChainExtent;
+	std::vector<VkImageView> swapChainImageViews;
 };

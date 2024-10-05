@@ -72,6 +72,10 @@ int main() {
         glfwPollEvents();
     }
 
+    for (auto imageView : vkApp.swapChainImageViews) {
+        vkDestroyImageView(vkApp.m_LogicalDevice, imageView, nullptr);
+    }
+
     vkDestroySwapchainKHR(vkApp.m_LogicalDevice, vkApp.swapChain, nullptr);
     vkDestroyDevice(vkApp.m_LogicalDevice, nullptr);
     vkDestroySurfaceKHR(vkApp.m_VkInstance, vkApp.m_SurfaceKHR, nullptr);
