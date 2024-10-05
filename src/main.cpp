@@ -79,6 +79,8 @@ int main() {
         vkDestroyImageView(vkApp.m_LogicalDevice, imageView, nullptr);
     }
 
+    vkDestroyPipelineLayout(vkApp.m_LogicalDevice, vkApp.pipelineLayout, nullptr);
+
     vkDestroySwapchainKHR(vkApp.m_LogicalDevice, vkApp.swapChain, nullptr);
     vkDestroyDevice(vkApp.m_LogicalDevice, nullptr);
     vkDestroySurfaceKHR(vkApp.m_VkInstance, vkApp.m_SurfaceKHR, nullptr);

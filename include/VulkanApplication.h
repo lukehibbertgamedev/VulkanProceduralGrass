@@ -13,6 +13,7 @@
 
 static constexpr bool kEnableValidationLayers = false;
 
+
 class VulkanApplication {
 
 public:
@@ -32,6 +33,8 @@ public:
 		std::vector<VkPresentModeKHR> presentModes;
 	};
 
+	VkShaderModule createShaderModule(const std::vector<char>& code);
+
 	VkResult createInstance();
 	void createDebugMessenger();
 	VkResult createPhysicalDevice();
@@ -39,6 +42,7 @@ public:
 	VkResult createGlfwSurface(GLFWwindow* window);
 	VkResult createSwapchain(GLFWwindow* window);
 	VkResult createSwapchainImageViews();
+	VkResult createGraphicsPipeline();
 
 	VkSurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
@@ -70,4 +74,6 @@ public:
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 	std::vector<VkImageView> swapChainImageViews;
+
+	VkPipelineLayout pipelineLayout;
 };
