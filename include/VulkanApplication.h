@@ -42,6 +42,7 @@ public:
 	VkResult createGlfwSurface(GLFWwindow* window);
 	VkResult createSwapchain(GLFWwindow* window);
 	VkResult createSwapchainImageViews();
+	VkResult createRenderPass();
 	VkResult createGraphicsPipeline();
 
 	VkSurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
@@ -75,5 +76,7 @@ public:
 	VkExtent2D swapChainExtent;
 	std::vector<VkImageView> swapChainImageViews;
 
+	VkRenderPass renderPass;
 	VkPipelineLayout pipelineLayout;
+	VkPipeline graphicsPipeline;
 };

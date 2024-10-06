@@ -2,8 +2,8 @@
 setlocal
 
 rem Path to the glslc executable
-set GLSLC_PATH="C:/Users/c1027117/OneDrive - SHeffield Hallam University/_Year 4/Vulkan Shader Compiler/bin/glslc.exe"
-rem set GLSLC_PATH="C:/Users/lukeh/OneDrive - SHeffield Hallam University/_Year 4/Vulkan Shader Compiler/bin/glslc.exe"
+rem set GLSLC_PATH="C:/Users/c1027117/OneDrive - SHeffield Hallam University/_Year 4/Vulkan Shader Compiler/bin/glslc.exe"
+set GLSLC_PATH="C:/Users/lukeh/OneDrive - SHeffield Hallam University/_Year 4/Vulkan Shader Compiler/bin/glslc.exe"
 
 rem Compile .vert files
 for %%f in (*.vert) do (

@@ -69,6 +69,12 @@ int main() {
     ret = vkApp.createSwapchainImageViews();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad swapchain image views.");
 
+    ret = vkApp.createRenderPass();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad render pass.");
+
+    ret = vkApp.createGraphicsPipeline();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad graphics pipeline.");
+
     std::cout << "\nSuccessful initialization.\n";
 
     while (!glfwWindowShouldClose(window)) {
@@ -79,7 +85,9 @@ int main() {
         vkDestroyImageView(vkApp.m_LogicalDevice, imageView, nullptr);
     }
 
+    vkDestroyPipeline(vkApp.m_LogicalDevice, vkApp.graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(vkApp.m_LogicalDevice, vkApp.pipelineLayout, nullptr);
+    vkDestroyRenderPass(vkApp.m_LogicalDevice, vkApp.renderPass, nullptr);
 
     vkDestroySwapchainKHR(vkApp.m_LogicalDevice, vkApp.swapChain, nullptr);
     vkDestroyDevice(vkApp.m_LogicalDevice, nullptr);
