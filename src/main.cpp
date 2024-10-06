@@ -75,10 +75,33 @@ int main() {
     ret = vkApp.createGraphicsPipeline();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad graphics pipeline.");
 
+    ret = vkApp.createFrameBuffers();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad frame buffers.");
+
+    ret = vkApp.createCommandPool();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad command pool.");
+
+    ret = vkApp.createCommandBuffer();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad command buffer.");
+
+    ret = vkApp.createSynchronizationObjects();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad semaphores | fences.");
+
     std::cout << "\nSuccessful initialization.\n";
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+        vkApp.render();
+    }
+
+    vkDestroySemaphore(vkApp.m_LogicalDevice, vkApp.imageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(vkApp.m_LogicalDevice, vkApp.renderFinishedSemaphore, nullptr);
+    vkDestroyFence(vkApp.m_LogicalDevice, vkApp.inFlightFence, nullptr);
+
+    vkDestroyCommandPool(vkApp.m_LogicalDevice, vkApp.commandPool, nullptr);
+
+    for (auto framebuffer : vkApp.swapChainFramebuffers) {
+        vkDestroyFramebuffer(vkApp.m_LogicalDevice, framebuffer, nullptr);
     }
 
     for (auto imageView : vkApp.swapChainImageViews) {

@@ -35,6 +35,8 @@ public:
 
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
+	void render();
+
 	VkResult createInstance();
 	void createDebugMessenger();
 	VkResult createPhysicalDevice();
@@ -44,6 +46,12 @@ public:
 	VkResult createSwapchainImageViews();
 	VkResult createRenderPass();
 	VkResult createGraphicsPipeline();
+	VkResult createFrameBuffers();
+	VkResult createCommandPool();
+	VkResult createCommandBuffer();
+	VkResult createSynchronizationObjects();
+
+	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
 	VkSurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
@@ -75,8 +83,16 @@ public:
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 	std::vector<VkImageView> swapChainImageViews;
+	std::vector<VkFramebuffer> swapChainFramebuffers;
 
 	VkRenderPass renderPass;
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
+
+	VkCommandPool commandPool;
+	VkCommandBuffer commandBuffer;
+
+	VkSemaphore imageAvailableSemaphore;
+	VkSemaphore renderFinishedSemaphore;
+	VkFence inFlightFence;
 };
