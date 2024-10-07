@@ -489,6 +489,12 @@ VkResult VulkanApplication::recreateSwapchain()
         return ret; 
     }
 
+    ret = createDepthResources();
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad depth resources.");
+        return ret;
+    }
+
     ret = createFrameBuffers(); 
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("bad frame buffers.");
@@ -1275,6 +1281,10 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 void VulkanApplication::cleanupApplication(GLFWwindow* window)
 {
     cleanupSwapchain();
+
+    vkDestroyImageView(m_LogicalDevice, depthImageView, nullptr);
+    vkDestroyImage(m_LogicalDevice, depthImage, nullptr);
+    vkFreeMemory(m_LogicalDevice, depthImageMemory, nullptr);
 
     vkDestroySampler(m_LogicalDevice, textureSampler, nullptr);
     vkDestroyImageView(m_LogicalDevice, textureImageView, nullptr);
