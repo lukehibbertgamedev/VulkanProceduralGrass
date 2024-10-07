@@ -87,11 +87,14 @@ int main() {
     ret = vkApp.createGraphicsPipeline();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad graphics pipeline.");
 
-    ret = vkApp.createFrameBuffers();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad frame buffers.");
-
     ret = vkApp.createCommandPool();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad command pool.");
+
+    ret = vkApp.createDepthResources();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad depth resources.");
+
+    ret = vkApp.createFrameBuffers();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad frame buffers.");
 
     ret = vkApp.createTextureImage();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad texture image.");
