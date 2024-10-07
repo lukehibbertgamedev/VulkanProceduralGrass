@@ -59,6 +59,13 @@ struct Vertex {
 	}
 };
 
+// See more on alignment: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap15.html#interfaces-resources-layout
+struct UniformBufferObject {
+	alignas(16) glm::mat4 model;
+	alignas(16) glm::mat4 view;
+	alignas(16) glm::mat4 proj;
+};
+
 const std::vector<Vertex> vertices = {
 	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
 	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
@@ -92,6 +99,7 @@ public:
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
 	void render();
+	void updateUniformBuffer(uint32_t currentFrame);
 
 	VkResult createInstance();
 	VkResult createDebugMessenger();
@@ -102,11 +110,15 @@ public:
 	VkResult recreateSwapchain();
 	VkResult createSwapchainImageViews();
 	VkResult createRenderPass();
+	VkResult createDescriptorSetLayout();
 	VkResult createGraphicsPipeline();
 	VkResult createFrameBuffers();
 	VkResult createCommandPool();
 	VkResult createVertexBuffer();
 	VkResult createIndexBuffer();
+	VkResult createUniformBuffers();
+	VkResult createDescriptorPool();
+	VkResult createDescriptorSets();
 	VkResult createCommandBuffer();
 	VkResult createSynchronizationObjects();
 	VkResult createImGuiImplementation();
@@ -179,4 +191,12 @@ public:
 	VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
 
 	DriverData driverData = {};
+
+	VkDescriptorSetLayout descriptorSetLayout;
+	VkDescriptorPool descriptorPool;
+	std::vector<VkDescriptorSet> descriptorSets;
+
+	std::vector<VkBuffer> uniformBuffers;
+	std::vector<VkDeviceMemory> uniformBuffersMemory;
+	std::vector<void*> uniformBuffersMapped;
 };

@@ -81,6 +81,9 @@ int main() {
     ret = vkApp.createRenderPass();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad render pass.");
 
+    ret = vkApp.createDescriptorSetLayout();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad descriptor layout.");
+
     ret = vkApp.createGraphicsPipeline();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad graphics pipeline.");
 
@@ -95,6 +98,15 @@ int main() {
 
     ret = vkApp.createIndexBuffer(); 
     if (ret != VK_SUCCESS) throw std::runtime_error("bad index buffer.");
+
+    ret = vkApp.createUniformBuffers();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad uniform buffer.");
+
+    ret = vkApp.createDescriptorPool();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad descriptor pool.");
+
+    ret = vkApp.createDescriptorSets(); 
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad descriptor sets.");
 
     ret = vkApp.createCommandBuffer();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad command buffer.");
