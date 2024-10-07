@@ -12,6 +12,11 @@
 #include <vector>
 
 static constexpr bool kEnableValidationLayers = false;
+static constexpr int MAX_FRAMES_IN_FLIGHT = 2; // kMaxFramesInFlight
+
+struct DriverData {
+
+};
 
 
 class VulkanApplication {
@@ -38,7 +43,7 @@ public:
 	void render();
 
 	VkResult createInstance();
-	void createDebugMessenger();
+	VkResult createDebugMessenger();
 	VkResult createPhysicalDevice();
 	VkResult createLogicalDevice();
 	VkResult createGlfwSurface(GLFWwindow* window);
@@ -50,6 +55,7 @@ public:
 	VkResult createCommandPool();
 	VkResult createCommandBuffer();
 	VkResult createSynchronizationObjects();
+	VkResult createImGuiImplementation();
 
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
@@ -90,9 +96,11 @@ public:
 	VkPipeline graphicsPipeline;
 
 	VkCommandPool commandPool;
-	VkCommandBuffer commandBuffer;
+	std::vector<VkCommandBuffer> commandBuffers;
 
-	VkSemaphore imageAvailableSemaphore;
-	VkSemaphore renderFinishedSemaphore;
-	VkFence inFlightFence;
+	std::vector<VkSemaphore> imageAvailableSemaphores;
+	std::vector<VkSemaphore> renderFinishedSemaphores;
+	std::vector<VkFence> inFlightFences;
+
+	uint32_t currentFrame = 0;
 };

@@ -133,31 +133,31 @@ VkShaderModule VulkanApplication::createShaderModule(const std::vector<char>& co
 
 void VulkanApplication::render()
 {
-    vkWaitForFences(m_LogicalDevice, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(m_LogicalDevice, 1, &inFlightFence);
+    vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkResetFences(m_LogicalDevice, 1, &inFlightFences[currentFrame]);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(m_LogicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    vkAcquireNextImageKHR(m_LogicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
-    vkResetCommandBuffer(commandBuffer, 0);
+    vkResetCommandBuffer(commandBuffers[currentFrame], 0);
 
-    recordCommandBuffer(commandBuffer, imageIndex);
+    recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
-    VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+    VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
+    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
+    submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFence) != VK_SUCCESS) {
+    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
 
@@ -172,6 +172,9 @@ void VulkanApplication::render()
     presentInfo.pResults = nullptr; // Optional
 
     vkQueuePresentKHR(presentQueue, &presentInfo);
+
+    // Frame complete, increment frame and wrap if it goes beyond max frames in flight.
+    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 VkResult VulkanApplication::createInstance() {   
@@ -181,6 +184,8 @@ VkResult VulkanApplication::createInstance() {
     if (kEnableValidationLayers && !checkValidationLayerSupport()) {
         throw std::runtime_error("validation layers requested, but not available!");
     }
+
+    // Set up instance information structures:
 
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -199,13 +204,8 @@ VkResult VulkanApplication::createInstance() {
     createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
-    if (kEnableValidationLayers) {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(kValidationLayers.size());
-        createInfo.ppEnabledLayerNames = kValidationLayers.data();
-    }
-    else {
-        createInfo.enabledLayerCount = 0;
-    }
+    createInfo.enabledLayerCount = (kEnableValidationLayers) ? static_cast<uint32_t>(kValidationLayers.size()) : 0;
+    createInfo.ppEnabledLayerNames = (kEnableValidationLayers) ? kValidationLayers.data() : nullptr;
 
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
     if (kEnableValidationLayers) {
@@ -214,11 +214,8 @@ VkResult VulkanApplication::createInstance() {
         populateDebugMessengerCreateInfo(debugCreateInfo);
         createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
     }
-    else {
-        createInfo.enabledLayerCount = 0;
-        createInfo.pNext = nullptr;
-    }
 
+    // Create Vulkan instance and write to class member.
     VkResult result = vkCreateInstance(&createInfo, nullptr, &m_VkInstance);
     if (vkCreateInstance(&createInfo, nullptr, &m_VkInstance) != VK_SUCCESS) {
         throw std::runtime_error("failed to create instance!");
@@ -228,19 +225,20 @@ VkResult VulkanApplication::createInstance() {
     return VK_SUCCESS;
 }
 
-void VulkanApplication::createDebugMessenger()
+VkResult VulkanApplication::createDebugMessenger()
 {
-    if (!kEnableValidationLayers) return;
+    // If the validation layers aren't enabled, we don't want to return an error but m_DebugMessenger will be VK_NULL_HANDLE.
+    if (!kEnableValidationLayers) return VK_SUCCESS;
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
     populateDebugMessengerCreateInfo(createInfo);
 
     if (createDebugUtilsMessengerEXT(m_VkInstance, &createInfo, nullptr, &m_DebugMessenger) != VK_SUCCESS) {
         throw std::runtime_error("failed to set up debug messenger!");
-        //return VK_ERROR_INITIALIZATION_FAILED;
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    //return VK_SUCCESS;
+    return VK_SUCCESS; 
 }
 
 VkResult VulkanApplication::createPhysicalDevice()
@@ -688,37 +686,49 @@ VkResult VulkanApplication::createCommandPool()
 
 VkResult VulkanApplication::createCommandBuffer()
 {
-    VkCommandBufferAllocateInfo allocInfo = {};
+    commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
+    VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
+    allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
-    if (vkAllocateCommandBuffers(m_LogicalDevice, &allocInfo, &commandBuffer) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(m_LogicalDevice, &allocInfo, commandBuffers.data()) != VK_SUCCESS) { 
         throw std::runtime_error("failed to allocate command buffers!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
-
     return VK_SUCCESS;
 }
 
 VkResult VulkanApplication::createSynchronizationObjects()
 {
-    VkSemaphoreCreateInfo semaphoreInfo = {};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT); 
+    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT); 
+    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT); 
 
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    VkSemaphoreCreateInfo semaphoreInfo = {}; 
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO; 
 
-    if (vkCreateSemaphore(m_LogicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-        vkCreateSemaphore(m_LogicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
-        vkCreateFence(m_LogicalDevice, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create semaphores or fence!");
-        return VK_ERROR_INITIALIZATION_FAILED;
+    VkFenceCreateInfo fenceInfo = {}; 
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO; 
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; 
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) { 
+        if (vkCreateSemaphore(m_LogicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS || 
+            vkCreateSemaphore(m_LogicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS || 
+            vkCreateFence(m_LogicalDevice, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) { 
+
+            throw std::runtime_error("failed to create semaphores or fences!"); 
+            return VK_ERROR_INITIALIZATION_FAILED;
+        }
     }
-
     return VK_SUCCESS;
+}
+
+VkResult VulkanApplication::createImGuiImplementation()
+{
+    return VkResult();
 }
 
 void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)

@@ -18,13 +18,13 @@
 
 
 int main() {
-    
-    VulkanApplication vkApp = {};
 
+    // Initialize glfw for window creation.
     if (glfwInit() != GLFW_TRUE) {
         throw std::runtime_error("failed to initialize glfw!");
     }
 
+    // Create the window.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan procedural grass rendering", nullptr, nullptr);
@@ -32,10 +32,10 @@ int main() {
         throw std::runtime_error("failed to create glfw window!");
     }
 
+    // Display supported extensions 
     uint32_t extensionCount = 0;
     VkExtensionProperties props = {};
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
     std::cout << extensionCount << " extensions supported:\n";
     std::vector<VkExtensionProperties> extensionProperties(extensionCount);
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProperties.data());
@@ -44,15 +44,15 @@ int main() {
         std::cout << ".\tVersion: " << extension.specVersion << "\n";
     }
 
+    // Vulkan application initialization:
 
-    glm::mat4 matrix;
-    glm::vec4 vec;
-    auto test = matrix * vec;
+    VulkanApplication vkApp = {}; 
 
-    
     VkResult ret = vkApp.createInstance();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad instance.");
-    vkApp.createDebugMessenger();
+   
+    ret = vkApp.createDebugMessenger();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad debug messenger.");
 
     ret = vkApp.createGlfwSurface(window);
     if (ret != VK_SUCCESS) throw std::runtime_error("bad surface.");
@@ -89,14 +89,24 @@ int main() {
 
     std::cout << "\nSuccessful initialization.\n";
 
+
+    // Main update & render loop:
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         vkApp.render();
     }
 
-    vkDestroySemaphore(vkApp.m_LogicalDevice, vkApp.imageAvailableSemaphore, nullptr);
-    vkDestroySemaphore(vkApp.m_LogicalDevice, vkApp.renderFinishedSemaphore, nullptr);
-    vkDestroyFence(vkApp.m_LogicalDevice, vkApp.inFlightFence, nullptr);
+    // All operations in vkApp.render() are asynchronous, ensure all operations have completed before termination.
+    vkDeviceWaitIdle(vkApp.m_LogicalDevice);
+
+    // Clean up/termination of allocated Vulkan objects (in the reverse order to initialization):
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroySemaphore(vkApp.m_LogicalDevice, vkApp.renderFinishedSemaphores[i], nullptr);
+        vkDestroySemaphore(vkApp.m_LogicalDevice, vkApp.imageAvailableSemaphores[i], nullptr);
+        vkDestroyFence(vkApp.m_LogicalDevice, vkApp.inFlightFences[i], nullptr);
+    }
 
     vkDestroyCommandPool(vkApp.m_LogicalDevice, vkApp.commandPool, nullptr);
 
@@ -110,10 +120,13 @@ int main() {
 
     vkDestroyPipeline(vkApp.m_LogicalDevice, vkApp.graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(vkApp.m_LogicalDevice, vkApp.pipelineLayout, nullptr);
+
     vkDestroyRenderPass(vkApp.m_LogicalDevice, vkApp.renderPass, nullptr);
 
     vkDestroySwapchainKHR(vkApp.m_LogicalDevice, vkApp.swapChain, nullptr);
+
     vkDestroyDevice(vkApp.m_LogicalDevice, nullptr);
+
     vkDestroySurfaceKHR(vkApp.m_VkInstance, vkApp.m_SurfaceKHR, nullptr);
     
     if (kEnableValidationLayers) {
@@ -121,6 +134,8 @@ int main() {
     }
 
     vkDestroyInstance(vkApp.m_VkInstance, nullptr);
+
+    // Glfw clean up/termination (ensure the window is terminated before glfw to avoid a memory leak).
 
     glfwDestroyWindow(window);
 
