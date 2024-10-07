@@ -12,6 +12,7 @@ set(SRC
 
 set(INCLUDE
 	${CMAKE_CURRENT_SOURCE_DIR}/include/VulkanApplication.h
+	${CMAKE_CURRENT_SOURCE_DIR}/include/stb_image.h
 )
 
 add_executable(${PROJECT_NAME} ${SRC} ${INCLUDE})

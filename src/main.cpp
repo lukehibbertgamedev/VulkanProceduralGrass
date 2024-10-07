@@ -93,6 +93,15 @@ int main() {
     ret = vkApp.createCommandPool();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad command pool.");
 
+    ret = vkApp.createTextureImage();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad texture image.");
+
+    ret = vkApp.createTextureImageView();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad texture image view.");
+
+    ret = vkApp.createTextureSampler();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad texture sampler.");
+
     ret = vkApp.createVertexBuffer();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad vertex buffer.");
 
