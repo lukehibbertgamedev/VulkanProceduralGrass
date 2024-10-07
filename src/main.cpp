@@ -17,7 +17,14 @@
 #include <set>
 
 
+static void frameBufferResizeCallback(GLFWwindow* window, int width, int height) {
+    auto app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
+    app->framebufferResized = true;
+}
+
 int main() {
+
+    VulkanApplication vkApp = {};
 
     // Initialize glfw for window creation.
     if (glfwInit() != GLFW_TRUE) {
@@ -26,11 +33,12 @@ int main() {
 
     // Create the window.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan procedural grass rendering", nullptr, nullptr);
     if (window == nullptr) {
         throw std::runtime_error("failed to create glfw window!");
     }
+    glfwSetWindowUserPointer(window, &vkApp);
+    glfwSetFramebufferSizeCallback(window, frameBufferResizeCallback);
 
     // Display supported extensions 
     uint32_t extensionCount = 0;
@@ -46,15 +54,16 @@ int main() {
 
     // Vulkan application initialization:
 
-    VulkanApplication vkApp = {}; 
+
+    vkApp.linkWindowToVulkan(window);
 
     VkResult ret = vkApp.createInstance();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad instance.");
-   
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad instance.");   
+
     ret = vkApp.createDebugMessenger();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad debug messenger.");
 
-    ret = vkApp.createGlfwSurface(window);
+    ret = vkApp.createGlfwSurface();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad surface.");
 
     ret = vkApp.createPhysicalDevice();
@@ -63,7 +72,7 @@ int main() {
     ret = vkApp.createLogicalDevice();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad logical device.");
 
-    ret = vkApp.createSwapchain(window);
+    ret = vkApp.createSwapchain();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad swapchain.");
 
     ret = vkApp.createSwapchainImageViews();
@@ -101,45 +110,7 @@ int main() {
     vkDeviceWaitIdle(vkApp.m_LogicalDevice);
 
     // Clean up/termination of allocated Vulkan objects (in the reverse order to initialization):
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vkDestroySemaphore(vkApp.m_LogicalDevice, vkApp.renderFinishedSemaphores[i], nullptr);
-        vkDestroySemaphore(vkApp.m_LogicalDevice, vkApp.imageAvailableSemaphores[i], nullptr);
-        vkDestroyFence(vkApp.m_LogicalDevice, vkApp.inFlightFences[i], nullptr);
-    }
-
-    vkDestroyCommandPool(vkApp.m_LogicalDevice, vkApp.commandPool, nullptr);
-
-    for (auto framebuffer : vkApp.swapChainFramebuffers) {
-        vkDestroyFramebuffer(vkApp.m_LogicalDevice, framebuffer, nullptr);
-    }
-
-    for (auto imageView : vkApp.swapChainImageViews) {
-        vkDestroyImageView(vkApp.m_LogicalDevice, imageView, nullptr);
-    }
-
-    vkDestroyPipeline(vkApp.m_LogicalDevice, vkApp.graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(vkApp.m_LogicalDevice, vkApp.pipelineLayout, nullptr);
-
-    vkDestroyRenderPass(vkApp.m_LogicalDevice, vkApp.renderPass, nullptr);
-
-    vkDestroySwapchainKHR(vkApp.m_LogicalDevice, vkApp.swapChain, nullptr);
-
-    vkDestroyDevice(vkApp.m_LogicalDevice, nullptr);
-
-    vkDestroySurfaceKHR(vkApp.m_VkInstance, vkApp.m_SurfaceKHR, nullptr);
-    
-    if (kEnableValidationLayers) {
-        vkApp.destroyDebugUtilsMessengerEXT(vkApp.m_VkInstance, vkApp.m_DebugMessenger, nullptr);
-    }
-
-    vkDestroyInstance(vkApp.m_VkInstance, nullptr);
-
-    // Glfw clean up/termination (ensure the window is terminated before glfw to avoid a memory leak).
-
-    glfwDestroyWindow(window);
-
-    glfwTerminate();
+    vkApp.cleanupApplication(window);
 
     return 0;
 }

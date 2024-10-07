@@ -46,8 +46,9 @@ public:
 	VkResult createDebugMessenger();
 	VkResult createPhysicalDevice();
 	VkResult createLogicalDevice();
-	VkResult createGlfwSurface(GLFWwindow* window);
-	VkResult createSwapchain(GLFWwindow* window);
+	VkResult createGlfwSurface();
+	VkResult createSwapchain();
+	VkResult recreateSwapchain();
 	VkResult createSwapchainImageViews();
 	VkResult createRenderPass();
 	VkResult createGraphicsPipeline();
@@ -59,9 +60,14 @@ public:
 
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
+	void cleanupApplication(GLFWwindow* window);
+
+	void cleanupSwapchain();
 	VkSurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 	VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
+
+	void linkWindowToVulkan(GLFWwindow* window);
 
 	void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 private:
@@ -71,6 +77,9 @@ private:
 	bool checkPhysicalDeviceSuitability(VkPhysicalDevice device);
 	bool checkPhysicalDeviceExtensionSupport(VkPhysicalDevice device);
 public:
+
+	// FIXME: All member variables should be default initialised.
+
 	// Vulkan.
 	VkInstance m_VkInstance = VK_NULL_HANDLE;											// Vulkan library handle.
 	VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;							// Vulkan debug output handle.
@@ -78,24 +87,26 @@ public:
 	VkDevice m_LogicalDevice = VK_NULL_HANDLE;													// Vulkan device for commands.
 	VkSurfaceKHR m_SurfaceKHR = VK_NULL_HANDLE;											// Vulkan window surface.
 
+	GLFWwindow* window = nullptr;
+
 	VkPhysicalDeviceProperties deviceProperties;
 	VkPhysicalDeviceFeatures deviceFeatures;
 
-	VkQueue graphicsQueue;
-	VkQueue presentQueue;
+	VkQueue graphicsQueue = VK_NULL_HANDLE;
+	VkQueue presentQueue = VK_NULL_HANDLE;
 
-	VkSwapchainKHR swapChain;
+	VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 	std::vector<VkImage> swapChainImages;
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 	std::vector<VkImageView> swapChainImageViews;
 	std::vector<VkFramebuffer> swapChainFramebuffers;
 
-	VkRenderPass renderPass;
-	VkPipelineLayout pipelineLayout;
-	VkPipeline graphicsPipeline;
+	VkRenderPass renderPass = VK_NULL_HANDLE;
+	VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+	VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
-	VkCommandPool commandPool;
+	VkCommandPool commandPool = VK_NULL_HANDLE;
 	std::vector<VkCommandBuffer> commandBuffers;
 
 	std::vector<VkSemaphore> imageAvailableSemaphores;
@@ -103,4 +114,5 @@ public:
 	std::vector<VkFence> inFlightFences;
 
 	uint32_t currentFrame = 0;
+	bool framebufferResized = false;
 };
