@@ -8,6 +8,9 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
+#include <array>        // For std::array
+#include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
+
 #include <optional>
 #include <vector>
 
@@ -18,6 +21,32 @@ struct DriverData {
 
 };
 
+struct Vertex {
+	glm::vec2 pos;
+	glm::vec3 color;
+
+	static VkVertexInputBindingDescription getBindingDescription() {
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof(Vertex);
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescription;
+	}
+
+	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof(Vertex, pos);
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(Vertex, color);
+		return attributeDescriptions;
+	}
+};
 
 class VulkanApplication {
 
@@ -54,6 +83,7 @@ public:
 	VkResult createGraphicsPipeline();
 	VkResult createFrameBuffers();
 	VkResult createCommandPool();
+	VkResult createVertexBuffer();
 	VkResult createCommandBuffer();
 	VkResult createSynchronizationObjects();
 	VkResult createImGuiImplementation();
@@ -71,6 +101,7 @@ public:
 
 	void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 private:
+	uint32_t findGPUMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	SwapChainSupportDetails checkSwapchainSupport(VkPhysicalDevice device);
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& outCreateInfo);
 	VkResult createDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
@@ -115,4 +146,13 @@ public:
 
 	uint32_t currentFrame = 0;
 	bool framebufferResized = false;
+
+	VkBuffer vertexBuffer = VK_NULL_HANDLE; 
+	VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE; 
+
+	const std::vector<Vertex> vertices = {
+	{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+	{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+	{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+	};
 };

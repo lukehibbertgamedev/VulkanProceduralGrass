@@ -90,6 +90,9 @@ int main() {
     ret = vkApp.createCommandPool();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad command pool.");
 
+    ret = vkApp.createVertexBuffer();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad vertex buffer.");
+
     ret = vkApp.createCommandBuffer();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad command buffer.");
 
