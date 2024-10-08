@@ -6,7 +6,6 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
-#include <imgui.h>
 
 #include <VulkanApplication.h>
 
@@ -129,13 +128,26 @@ int main() {
     ret = vkApp.createSynchronizationObjects();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad semaphores | fences.");
 
+    ret = vkApp.createImGuiImplementation();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad imgui implementation.");
+
     std::cout << "\nSuccessful initialization.\n";
 
 
     // Main update & render loop:
 
     while (!glfwWindowShouldClose(window)) {
+        
         glfwPollEvents();
+
+
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::ShowDemoWindow((bool*)0);
+
+        ImGui::Render();        
         vkApp.render();
     }
 
@@ -143,6 +155,10 @@ int main() {
     vkDeviceWaitIdle(vkApp.m_LogicalDevice);
 
     // Clean up/termination of allocated Vulkan objects (in the reverse order to initialization):
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     vkApp.cleanupApplication(window);
 
     return 0;

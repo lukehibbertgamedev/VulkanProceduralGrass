@@ -1162,7 +1162,55 @@ VkResult VulkanApplication::createSynchronizationObjects()
 
 VkResult VulkanApplication::createImGuiImplementation()
 {
-    return VkResult();
+    VkDescriptorPoolSize pool_sizes[] = { 
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 } 
+    };
+
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets = 1000;
+    pool_info.poolSizeCount = (uint32_t)std::size(pool_sizes);
+    pool_info.pPoolSizes = pool_sizes;
+
+    VkResult ret = vkCreateDescriptorPool(m_LogicalDevice, &pool_info, nullptr, &imguiDescriptorPool);
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad descriptor pool (imgui).");
+        return ret;
+    }
+
+    ImGui::CreateContext();
+
+    //ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForVulkan(window, true); // Set up the backend to hook ImGui, GLFW, and Vulkan altogether.
+
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = m_VkInstance;
+    init_info.PhysicalDevice = m_PhysicalDevice;
+    init_info.Device = m_LogicalDevice;
+    init_info.Queue = graphicsQueue;
+    init_info.DescriptorPool = imguiDescriptorPool;
+    init_info.MinImageCount = 3;
+    init_info.ImageCount = 3;
+    init_info.MSAASamples = msaaSamples;
+    init_info.RenderPass = renderPass;
+    init_info.Allocator = nullptr;
+    //init_info.UseDynamicRendering = true;
+
+    ImGui_ImplVulkan_Init(&init_info);
+
+    return ret;
 }
 
 VkResult VulkanApplication::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory)
@@ -1308,6 +1356,9 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     //vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0); // Triangle.
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0); // Quad.
      
+    // ImGui
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+
     // Record commands above.
 
     vkCmdEndRenderPass(commandBuffer);

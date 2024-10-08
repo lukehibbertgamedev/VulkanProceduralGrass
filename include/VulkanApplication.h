@@ -8,6 +8,10 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
+
 #include <array>        // For std::array
 #include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
 
@@ -16,6 +20,7 @@
 #include <string>
 
 static constexpr bool kEnableValidationLayers = false;
+static constexpr bool kEnableImGuiDemoWindow = true;
 static constexpr int MAX_FRAMES_IN_FLIGHT = 2; // kMaxFramesInFlight
 
 struct DriverData {
@@ -225,6 +230,8 @@ public:
 	VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 	VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> descriptorSets;
+
+	VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;
 
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
