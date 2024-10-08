@@ -147,6 +147,8 @@ int main() {
 
         ImGui::ShowDemoWindow((bool*)0);
 
+        vkApp.prepareImGuiDrawData();
+
         ImGui::Render();        
         vkApp.render();
     }

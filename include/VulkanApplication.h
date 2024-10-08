@@ -27,6 +27,7 @@ struct DriverData {
 public:
 	std::string name;
 	uint32_t version = 0;
+	unsigned int versionMajor = 0, versionMinor = 0, versionPatch = 0;
 	uint32_t deviceID = 0;
 	VkPhysicalDeviceType deviceType;
 	unsigned int apiMajor = 0, apiMinor = 0, apiPatch = 0;
@@ -142,6 +143,8 @@ public:
 	VkResult createCommandBuffer();
 	VkResult createSynchronizationObjects();
 	VkResult createImGuiImplementation();
+
+	void prepareImGuiDrawData();
 
 	VkResult createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 

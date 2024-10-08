@@ -314,6 +314,10 @@ VkResult VulkanApplication::createPhysicalDevice()
 
         driverData.name = deviceProperties.deviceName;
         driverData.version = deviceProperties.driverVersion;
+        driverData.versionMajor = (deviceProperties.driverVersion >> 22) & 0X3FF;
+        driverData.versionMinor = (deviceProperties.driverVersion >> 12) & 0X3FF;
+        driverData.versionPatch = deviceProperties.driverVersion & 0X3FF;
+
         driverData.deviceID = deviceProperties.deviceID;
         driverData.deviceType = deviceProperties.deviceType;
         driverData.apiMajor = (deviceProperties.apiVersion >> 22) & 0X3FF;
@@ -323,6 +327,7 @@ VkResult VulkanApplication::createPhysicalDevice()
 
         std::cout << "\nDevice name: " << deviceProperties.deviceName << "\n";
         std::cout << "Device version: " << deviceProperties.driverVersion << "\n";
+        std::cout << "Device version: " << driverData.versionMajor << "." << driverData.versionMinor << "." << driverData.versionPatch << "\n";
         std::cout << "Device ID: " << deviceProperties.deviceID << "\n";
         std::cout << "Device type: " << deviceProperties.deviceType << "\n";
         auto apiVersionMajor = (deviceProperties.apiVersion >> 22) & 0X3FF;
@@ -1211,6 +1216,16 @@ VkResult VulkanApplication::createImGuiImplementation()
     ImGui_ImplVulkan_Init(&init_info);
 
     return ret;
+}
+
+void VulkanApplication::prepareImGuiDrawData()
+{
+    ImGui::Begin("Driver Details", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize /*| ImGuiWindowFlags_NoMove*/ | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
+
+    ImGui::Text("Name: %s", driverData.name);
+    ImGui::Text("Version: %i", driverData.version);
+
+    ImGui::End();
 }
 
 VkResult VulkanApplication::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory)
