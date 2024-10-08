@@ -90,6 +90,9 @@ int main() {
     ret = vkApp.createCommandPool();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad command pool.");
 
+    ret = vkApp.createColourResources();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad colour resources.");
+
     ret = vkApp.createDepthResources();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad depth resources.");
 

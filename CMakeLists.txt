@@ -13,6 +13,7 @@ set(SRC
 set(INCLUDE
 	${CMAKE_CURRENT_SOURCE_DIR}/include/VulkanApplication.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/stb_image.h
+	${CMAKE_CURRENT_SOURCE_DIR}/include/tiny_obj_loader.h
 )
 
 add_executable(${PROJECT_NAME} ${SRC} ${INCLUDE})
