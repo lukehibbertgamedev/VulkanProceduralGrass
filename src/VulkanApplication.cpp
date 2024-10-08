@@ -321,8 +321,8 @@ VkResult VulkanApplication::createPhysicalDevice()
         driverData.deviceID = deviceProperties.deviceID;
         driverData.deviceType = deviceProperties.deviceType;
         driverData.apiMajor = (deviceProperties.apiVersion >> 22) & 0X3FF;
-        driverData.apiMajor = (deviceProperties.apiVersion >> 12) & 0X3FF;
-        driverData.apiMajor = deviceProperties.apiVersion & 0X3FF;
+        driverData.apiMinor = (deviceProperties.apiVersion >> 12) & 0X3FF;
+        driverData.apiPatch = deviceProperties.apiVersion & 0X3FF;
         driverData.deviceCount = deviceCount;
 
         std::cout << "\nDevice name: " << deviceProperties.deviceName << "\n";
@@ -714,7 +714,7 @@ VkResult VulkanApplication::createGraphicsPipeline()
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f; 
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;  
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;  
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
     rasterizer.depthBiasConstantFactor = 0.0f; // Optional
     rasterizer.depthBiasClamp = 0.0f; // Optional
@@ -887,6 +887,8 @@ VkResult VulkanApplication::createTextureImage()
 {
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load("../assets/texture01.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    // TODO: Find out
+    // Why are we doing this? ( *4??)
     VkDeviceSize imageSize = texWidth * texHeight * 4;
 
     if (!pixels) {
@@ -1193,7 +1195,7 @@ VkResult VulkanApplication::createImGuiImplementation()
         throw std::runtime_error("bad descriptor pool (imgui).");
         return ret;
     }
-
+    
     ImGui::CreateContext();
 
     //ImGui::StyleColorsDark();
@@ -1220,10 +1222,13 @@ VkResult VulkanApplication::createImGuiImplementation()
 
 void VulkanApplication::prepareImGuiDrawData()
 {
-    ImGui::Begin("Driver Details", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize /*| ImGuiWindowFlags_NoMove*/ | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
+    ImGui::Begin("Driver Details", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
 
-    ImGui::Text("Name: %s", driverData.name);
-    ImGui::Text("Version: %i", driverData.version);
+    ImGui::Text("Device Count: %i", driverData.deviceCount);
+    ImGui::Text("Name: %s", driverData.name.c_str()); 
+    ImGui::SameLine(); ImGui::Text("ID: %i", driverData.deviceID);
+    ImGui::Text("Driver Version: %i.%i.%i", driverData.versionMajor, driverData.versionMinor, driverData.versionPatch);
+    ImGui::Text("Vulkan API Version supported: %i.%i.%i", driverData.apiMajor, driverData.apiMinor, driverData.apiPatch);
 
     ImGui::End();
 }
@@ -1240,7 +1245,7 @@ VkResult VulkanApplication::createImage(uint32_t width, uint32_t height, uint32_
     imageInfo.arrayLayers = 1;
     imageInfo.format = format;
     imageInfo.tiling = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; 
     imageInfo.usage = usage;
     imageInfo.samples = numSamples;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;

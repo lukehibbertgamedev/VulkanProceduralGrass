@@ -145,8 +145,6 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::ShowDemoWindow((bool*)0);
-
         vkApp.prepareImGuiDrawData();
 
         ImGui::Render();        
