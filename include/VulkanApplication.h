@@ -37,6 +37,38 @@ public:
 	VkQueueFlags queueFlags;
 };
 
+struct Particle {
+	glm::vec2 position;
+	glm::vec2 velocity;
+	glm::vec4 color;
+
+	static VkVertexInputBindingDescription getBindingDescription() {
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof(Particle);
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescription;
+	}
+
+	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof(Particle, position);
+
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(Particle, color);
+
+		return attributeDescriptions;
+	}
+};
+
+
 struct Vertex {
 	glm::vec3 pos;
 	glm::vec3 color;
@@ -70,10 +102,14 @@ struct Vertex {
 };
 
 // See more on alignment: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap15.html#interfaces-resources-layout
+//struct UniformBufferObject {
+//	alignas(16) glm::mat4 model;
+//	alignas(16) glm::mat4 view;
+//	alignas(16) glm::mat4 proj;
+//};
+
 struct UniformBufferObject {
-	alignas(16) glm::mat4 model;
-	alignas(16) glm::mat4 view;
-	alignas(16) glm::mat4 proj;
+	float deltaTime = 1.0f;
 };
 
 const std::vector<Vertex> vertices = {
@@ -99,9 +135,11 @@ public:
 
 	struct QueueFamilyIndices {
 	public:
-		std::optional<uint32_t> graphicsFamily;
+		//std::optional<uint32_t> graphicsFamily;
 		std::optional<uint32_t> presentFamily;
-		bool isComplete() { return graphicsFamily.has_value() && presentFamily.has_value(); }
+		std::optional<uint32_t> graphicsAndComputeFamily;
+
+		bool isComplete() { return /*graphicsFamily.has_value() &&*/ presentFamily.has_value() && graphicsAndComputeFamily.has_value(); }
 	};
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
@@ -126,10 +164,13 @@ public:
 	VkResult recreateSwapchain();
 	VkResult createSwapchainImageViews();
 	VkResult createRenderPass();
+	VkResult createComputeDescriptorSetLayout(); // Compute relevant
 	VkResult createDescriptorSetLayout();
 	VkResult createGraphicsPipeline();
+	VkResult createComputePipeline(); // Compute relevant
 	VkResult createFrameBuffers();
 	VkResult createCommandPool();
+	VkResult createShaderStorageBuffers(); // Compute relevant
 	VkResult createColourResources();
 	VkResult createDepthResources();
 	VkResult createTextureImage();
@@ -139,7 +180,9 @@ public:
 	VkResult createIndexBuffer();
 	VkResult createUniformBuffers();
 	VkResult createDescriptorPool();
+	VkResult createComputeDescriptorSets(); // Compute relevant
 	VkResult createDescriptorSets();
+	VkResult createComputeCommandBuffer(); // Compute relevant
 	VkResult createCommandBuffer();
 	VkResult createSynchronizationObjects();
 	VkResult createImGuiImplementation();
@@ -151,7 +194,8 @@ public:
 	VkResult createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+	void recordComputeCommandBuffer(VkCommandBuffer commandBuffer); // Compute relevant
+	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex); 
 
 	void cleanupApplication(GLFWwindow* window);
 
@@ -195,6 +239,7 @@ public:
 	VkPhysicalDeviceProperties deviceProperties;
 	VkPhysicalDeviceFeatures deviceFeatures;
 
+
 	VkQueue graphicsQueue = VK_NULL_HANDLE;
 	VkQueue presentQueue = VK_NULL_HANDLE;
 
@@ -230,6 +275,7 @@ public:
 
 	DriverData driverData = {};
 
+
 	VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 	VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> descriptorSets;
@@ -251,4 +297,21 @@ public:
 	VkImage colorImage;
 	VkDeviceMemory colorImageMemory;
 	VkImageView colorImageView;
+
+	std::vector<VkBuffer> shaderStorageBuffers;
+	std::vector<VkDeviceMemory> shaderStorageBuffersMemory;
+
+	VkDescriptorSetLayout computeDescriptorSetLayout = VK_NULL_HANDLE;
+	VkQueue computeQueue = VK_NULL_HANDLE;
+	std::vector<VkDescriptorSet> computeDescriptorSets;
+	VkPipelineLayout computePipelineLayout;
+	VkPipeline computePipeline;
+	std::vector<VkFence> computeInFlightFences;
+	std::vector<VkSemaphore> computeFinishedSemaphores;
+	std::vector<VkCommandBuffer> computeCommandBuffers;
+
+	float lastFrameTime = 0.0f;
+	double lastTime = 0.0f;
+
+
 };

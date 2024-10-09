@@ -17,6 +17,12 @@ for %%f in (*.frag) do (
     %GLSLC_PATH% %%f -o %%~nf.frag.spv
 )
 
+rem Compile .comp files
+for %%f in (*.comp) do (
+    echo Compiling %%f to %%~nf.comp.spv...
+    %GLSLC_PATH% %%f -o %%~nf.comp.spv
+)
+
 rem pause
 echo All shaders compiled!
 endlocal

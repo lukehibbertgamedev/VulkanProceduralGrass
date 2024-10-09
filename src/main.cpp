@@ -38,6 +38,7 @@ int main() {
     }
     glfwSetWindowUserPointer(window, &vkApp);
     glfwSetFramebufferSizeCallback(window, frameBufferResizeCallback);
+    vkApp.lastTime = glfwGetTime();
 
     // Display supported extensions 
     uint32_t extensionCount = 0;
@@ -80,38 +81,47 @@ int main() {
     ret = vkApp.createRenderPass();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad render pass.");
 
-    ret = vkApp.createDescriptorSetLayout();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad descriptor layout.");
+    ret = vkApp.createComputeDescriptorSetLayout();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad compute descriptor layout.");
+
+    //ret = vkApp.createDescriptorSetLayout();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("bad descriptor layout.");
 
     ret = vkApp.createGraphicsPipeline();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad graphics pipeline.");
 
-    ret = vkApp.createCommandPool();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad command pool.");
-
-    ret = vkApp.createColourResources();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad colour resources.");
-
-    ret = vkApp.createDepthResources();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad depth resources.");
+    ret = vkApp.createComputePipeline();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad compute pipeline.");
 
     ret = vkApp.createFrameBuffers();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad frame buffers.");
 
-    ret = vkApp.createTextureImage();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad texture image.");
+    ret = vkApp.createCommandPool();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad command pool.");
 
-    ret = vkApp.createTextureImageView();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad texture image view.");
+    //ret = vkApp.createColourResources();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("bad colour resources.");
 
-    ret = vkApp.createTextureSampler();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad texture sampler.");
+    //ret = vkApp.createDepthResources();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("bad depth resources.");    
 
-    ret = vkApp.createVertexBuffer();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad vertex buffer.");
+    //ret = vkApp.createTextureImage();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("bad texture image.");
 
-    ret = vkApp.createIndexBuffer(); 
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad index buffer.");
+    //ret = vkApp.createTextureImageView();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("bad texture image view.");
+
+    //ret = vkApp.createTextureSampler();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("bad texture sampler.");
+
+    //ret = vkApp.createVertexBuffer();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("bad vertex buffer.");
+
+    //ret = vkApp.createIndexBuffer(); 
+    //if (ret != VK_SUCCESS) throw std::runtime_error("bad index buffer.");
+
+    ret = vkApp.createShaderStorageBuffers();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad shader storage buffer.");
 
     ret = vkApp.createUniformBuffers();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad uniform buffer.");
@@ -119,11 +129,17 @@ int main() {
     ret = vkApp.createDescriptorPool();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad descriptor pool.");
 
-    ret = vkApp.createDescriptorSets(); 
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad descriptor sets.");
+    ret = vkApp.createComputeDescriptorSets();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad compute descriptor sets.");
+
+    //ret = vkApp.createDescriptorSets(); 
+    //if (ret != VK_SUCCESS) throw std::runtime_error("bad descriptor sets.");
 
     ret = vkApp.createCommandBuffer();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad command buffer.");
+
+    ret = vkApp.createComputeCommandBuffer();
+    if (ret != VK_SUCCESS) throw std::runtime_error("bad compute command buffer.");
 
     ret = vkApp.createSynchronizationObjects();
     if (ret != VK_SUCCESS) throw std::runtime_error("bad semaphores | fences.");
@@ -149,6 +165,12 @@ int main() {
 
         ImGui::Render();        
         vkApp.render();
+
+        // We want to animate the particle system using the last frames time to get smooth,
+        // frame-rate independent animation
+        double currentTime = glfwGetTime();
+        vkApp.lastFrameTime = (currentTime - vkApp.lastTime) * 1000.0;
+        vkApp.lastTime = currentTime;
     }
 
     // All operations in vkApp.render() are asynchronous, ensure all operations have completed before termination.
