@@ -192,7 +192,7 @@ int main() {
         vkApp.lastFrameTime = (currentTime - vkApp.lastTime) * 1000.0;
         vkApp.lastTime = currentTime;
 
-        vkApp.dt = timer.getDeltaTime();
+        vkApp.deltaTime = timer.getDeltaTime();
     }
 
     // All operations in vkApp.render() are asynchronous, ensure all operations have completed before termination.

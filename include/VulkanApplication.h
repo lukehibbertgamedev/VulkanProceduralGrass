@@ -225,94 +225,98 @@ private:
 	bool checkPhysicalDeviceExtensionSupport(VkPhysicalDevice device);
 public:
 
-	// FIXME: All member variables should be default initialised.
+	// Important Vulkan structures for HelloTriangle.
+	VkInstance m_VkInstance = VK_NULL_HANDLE;							// Vulkan library handle.
+	VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;			// Vulkan debug output handle.
+	VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;					// GPU chosen as the default device.
+	VkDevice m_LogicalDevice = VK_NULL_HANDLE;							// Handle to allow interaction with the GPU.
 
-	// Vulkan.
-	VkInstance m_VkInstance = VK_NULL_HANDLE;											// Vulkan library handle.
-	VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;							// Vulkan debug output handle.
-	VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;									// GPU chosen as the default device.
-	VkDevice m_LogicalDevice = VK_NULL_HANDLE;													// Vulkan device for commands.
-	VkSurfaceKHR m_SurfaceKHR = VK_NULL_HANDLE;											// Vulkan window surface.
+	// Window.
+	GLFWwindow* window = nullptr;										// Glfw window pointer to keep track of the window for use in the swapchain.
+	VkSurfaceKHR m_SurfaceKHR = VK_NULL_HANDLE;							// A handle to the area on screen that rendering can occur, connects Vulkan and the windowing system.
 
-	GLFWwindow* window = nullptr;
+	// GPU features, properties, limitations.
+	VkPhysicalDeviceProperties deviceProperties = {};					// A structure describing key GPU driver information (ie., driver name, driver version), including a collection of limitations.
+	VkPhysicalDeviceFeatures deviceFeatures = {};						// A structure describing features that are supported by the GPU in Vulkan allowing optional additional capabilities.
 
-	VkPhysicalDeviceProperties deviceProperties;
-	VkPhysicalDeviceFeatures deviceFeatures;
+	// Command queues.
+	VkQueue computeQueue = VK_NULL_HANDLE;								// Queues compute shader commands for general-purpose computations.
+	VkQueue graphicsQueue = VK_NULL_HANDLE;								// Queues graphics rendering commands for processing graphics shaders.
+	VkQueue presentQueue = VK_NULL_HANDLE;								// Manages the commands for presenting the swapchain images to the screen.
 
+	// Swapchain structures.
+	VkSwapchainKHR swapChain = VK_NULL_HANDLE;							// Handle to manage the swapping of rendering images to a window surface.
+	std::vector<VkImage> swapChainImages = {};							// A collection of images used by the swapchain, each image corresponds to a framebuffer used for drawing.
+	std::vector<VkImageView> swapChainImageViews = {};					// A collection of image views for each image to access and interpret image data for rendering.
+	std::vector<VkFramebuffer> swapChainFramebuffers = {};				// A collection of framebuffer objects for each image to define attachments used in rendering images.
+	VkFormat swapChainImageFormat = {};									// A reference to the format of the images used by the swapchain. Determines how pixel data is stored and displayed.
+	VkExtent2D swapChainExtent = {};									// A reference to the dimensions of the images used by the swapchain. Determines the resolution of the images.
 
-	VkQueue graphicsQueue = VK_NULL_HANDLE;
-	VkQueue presentQueue = VK_NULL_HANDLE;
+	// Render passes and pipelines.
+	VkRenderPass renderPass = VK_NULL_HANDLE;							// Defines how rendering operations are performed and how framebuffers are used during rendering.
+	VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;					// A description of how the graphics pipeline will be configured.
+	VkPipeline graphicsPipeline = VK_NULL_HANDLE;						// Describes the entire state of the graphics rendering process (input assembly, rasterization, blending states, including shaders, etc...)
+	VkPipelineLayout computePipelineLayout = VK_NULL_HANDLE;			// A description of how the compute pipeline will be configured, organises descriptor sets and push constants used to pass data to compute shaders.
+	VkPipeline computePipeline = VK_NULL_HANDLE;						// Describes the entire state of how compute shaders will be executed allowing for general-purpose computing on the GPU, independent of the graphics pipeline.
 
-	VkSwapchainKHR swapChain = VK_NULL_HANDLE;
-	std::vector<VkImage> swapChainImages;
-	VkFormat swapChainImageFormat;
-	VkExtent2D swapChainExtent;
-	std::vector<VkImageView> swapChainImageViews;
-	std::vector<VkFramebuffer> swapChainFramebuffers;
+	// Commands.
+	VkCommandPool commandPool = VK_NULL_HANDLE;							// A handle to the manager that allocates command buffers to increase memory efficiency.
+	std::vector<VkCommandBuffer> commandBuffers = {};					// A collection of command buffers, each buffer contains a list of GPU commands to be executed.
+	std::vector<VkCommandBuffer> computeCommandBuffers = {};			// A collection of command buffers, each buffer contains a list of GPU commands to be executed specifically for compute shaders.
 
-	VkRenderPass renderPass = VK_NULL_HANDLE;
-	VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-	VkPipeline graphicsPipeline;
+	// Synchronisation.
+	std::vector<VkSemaphore> imageAvailableSemaphores = {};				// Per-frame synchronisation used for signalling when swapchain images are available for rendering.
+	std::vector<VkSemaphore> renderFinishedSemaphores = {};				// Per-frame synchronisation used for signalling when rendering to an image is completed allowing safe image presentation to the screen.
+	std::vector<VkFence> inFlightFences = {};							// Per-frame synchronisation used for signalling when a frame's rendering has completed allowing the GPU tasks to complete.
+	std::vector<VkSemaphore> computeFinishedSemaphores = {};			// Per-frame synchronisation used for signalling when a compute command has finished executing.
+	std::vector<VkFence> computeInFlightFences = {};					// Per-frame synchronisation used for signalling when a frame's compute command queue has completed.
 
-	VkCommandPool commandPool = VK_NULL_HANDLE;
-	std::vector<VkCommandBuffer> commandBuffers;
+	// Descriptors.
+	VkDescriptorPool descriptorPool = VK_NULL_HANDLE;					// A handle to the manager that allocates descriptor sets to increase correct resource allocation.
+	VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;				// A handle to the manager that allocates descriptor sets specifically for ImGui resources necessary for rendering its interface.
+	VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;			// A description of how descriptor sets (ie., resources/buffers) are accessed by shaders.
+	VkDescriptorSetLayout computeDescriptorSetLayout = VK_NULL_HANDLE;	// A description of how descriptor sets (ie., resources/buffers) are accessed specifically by compute shaders.
+	std::vector<VkDescriptorSet> descriptorSets = {};					// A collection of resources/buffers/images that can be bound to shaders during rendering operations.
+	std::vector<VkDescriptorSet> computeDescriptorSets = {};			// A collection of resources/buffers/images that can be bound to compute shaders during compute operations.
+	
+	std::vector<VkBuffer> uniformBuffers = {};							// A collection of uniform buffer objects that stored constant data for all vertices/fragments within a draw call.
+	std::vector<VkDeviceMemory> uniformBuffersMemory = {};				// A collection of device memory allocations for a uniform buffer.
+	std::vector<void*> uniformBuffersMapped = {};						// A collection of pointers to the mapped memory for the uniform buffers, allowing direct access to modify the buffer's data.
 
-	std::vector<VkSemaphore> imageAvailableSemaphores;
-	std::vector<VkSemaphore> renderFinishedSemaphores;
-	std::vector<VkFence> inFlightFences;
+	DriverData driverData = {};											// A custom collection of GPU data to be displayed easily in ImGui.
+	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
+	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
 
-	uint32_t currentFrame = 0;
-	bool framebufferResized = false;
+	VkBuffer vertexBuffer = VK_NULL_HANDLE;								// Currently unused.
+	VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;					// Currently unused.
+	VkBuffer indexBuffer = VK_NULL_HANDLE;								// Currently unused.
+	VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;					// Currently unused.
+	VkImage textureImage = VK_NULL_HANDLE;								// Currently unused.
+	VkDeviceMemory textureImageMemory = VK_NULL_HANDLE;					// Currently unused.
+	VkImageView textureImageView = VK_NULL_HANDLE;						// Currently unused.
+	VkSampler textureSampler = VK_NULL_HANDLE;							// Currently unused.
+	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;					// Currently unused.
+	VkImageView depthImageView = VK_NULL_HANDLE;						// Currently unused.
+	VkImage	depthImage = VK_NULL_HANDLE;								// Currently unused.
+		
 
-	VkBuffer vertexBuffer = VK_NULL_HANDLE; 
-	VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE; 
-	VkBuffer indexBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
-	VkBuffer stagingBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory stagingBufferMemory = VK_NULL_HANDLE;
-	VkImage textureImage = VK_NULL_HANDLE;
-	VkDeviceMemory textureImageMemory = VK_NULL_HANDLE;
+	
 
-	DriverData driverData = {};
-
-
-	VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-	VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-	std::vector<VkDescriptorSet> descriptorSets;
-
-	VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;
-
-	std::vector<VkBuffer> uniformBuffers;
-	std::vector<VkDeviceMemory> uniformBuffersMemory;
-	std::vector<void*> uniformBuffersMapped;
-
-	VkImageView textureImageView = VK_NULL_HANDLE;
-	VkSampler textureSampler = VK_NULL_HANDLE;
-
-	VkImage depthImage = VK_NULL_HANDLE;
-	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
-	VkImageView depthImageView = VK_NULL_HANDLE;
 
 	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-	VkImage colorImage;
-	VkDeviceMemory colorImageMemory;
-	VkImageView colorImageView;
+	VkImage colorImage = VK_NULL_HANDLE;
+	VkDeviceMemory colorImageMemory = VK_NULL_HANDLE;
+	VkImageView colorImageView = VK_NULL_HANDLE;
 
-	std::vector<VkBuffer> shaderStorageBuffers;
-	std::vector<VkDeviceMemory> shaderStorageBuffersMemory;
+	std::vector<VkBuffer> shaderStorageBuffers = {};
+	std::vector<VkDeviceMemory> shaderStorageBuffersMemory = {};
 
-	VkDescriptorSetLayout computeDescriptorSetLayout;
-	VkQueue computeQueue;
-	std::vector<VkDescriptorSet> computeDescriptorSets;
-	VkPipelineLayout computePipelineLayout;
-	VkPipeline computePipeline;
-	std::vector<VkFence> computeInFlightFences;
-	std::vector<VkSemaphore> computeFinishedSemaphores;
-	std::vector<VkCommandBuffer> computeCommandBuffers;
+	// Compute related handles.
+	
+	
 
-	float lastFrameTime = 0.0f;
-	float dt = 0.0f;
-	double lastTime = 0.0f;
-
-
+	// Timing metrics.
+	float lastFrameTime = 0.0f; // Used to calculate FPS.
+	float deltaTime = 0.0f; // Used to smooth out update logic.
+	double lastTime = 0.0f; // Used to calculated lastFrameTime.
 };

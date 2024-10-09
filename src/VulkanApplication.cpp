@@ -1418,7 +1418,7 @@ void VulkanApplication::prepareImGuiDrawData()
 
     ImGui::Text("Particle count: %i", PARTICLE_COUNT);
     ImGui::Text("Frames per second: %f", 1 / (lastFrameTime / 1000));
-    ImGui::Text("Delta time: %f", dt);
+    ImGui::Text("Delta time: %f", deltaTime);
 
     ImGui::End();
 }
