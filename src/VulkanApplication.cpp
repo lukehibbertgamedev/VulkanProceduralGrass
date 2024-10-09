@@ -168,7 +168,7 @@ void VulkanApplication::render()
     };
 
     // Graphics submission
-    vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); // Wait for compute to finish.
 
     uint32_t imageIndex;
     VkResult ret = vkAcquireNextImageKHR(m_LogicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
@@ -229,15 +229,7 @@ void VulkanApplication::render()
 
 void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
 {
-    static auto startTime = std::chrono::high_resolution_clock::now();
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
     UniformBufferObject ubo{};
-    //ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    //ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    //ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
-    //ubo.proj[1][1] *= -1;
     ubo.deltaTime = lastFrameTime * 2.0f;
 
     memcpy(uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));    
@@ -627,7 +619,7 @@ VkResult VulkanApplication::createComputeDescriptorSetLayout()
     layoutBindings[0].descriptorCount = 1;
     layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layoutBindings[0].pImmutableSamplers = nullptr;
-    layoutBindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 
     layoutBindings[1].binding = 1;
     layoutBindings[1].descriptorCount = 1;
@@ -903,7 +895,6 @@ VkResult VulkanApplication::createCommandPool()
 
 VkResult VulkanApplication::createShaderStorageBuffers()
 {
-
     // Initialize particles
     std::default_random_engine rndEngine((unsigned)time(nullptr));
     std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
@@ -1425,6 +1416,9 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::Text("Driver Version: %i.%i.%i", driverData.versionMajor, driverData.versionMinor, driverData.versionPatch);
     ImGui::Text("Vulkan API Version supported: %i.%i.%i", driverData.apiMajor, driverData.apiMinor, driverData.apiPatch);
 
+    ImGui::Text("Frames per second: %f", 1 / (lastFrameTime / 1000));
+    ImGui::Text("Delta time: %f", dt);
+
     ImGui::End();
 }
 
@@ -1521,10 +1515,7 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, 
-            computePipelineLayout, 0, 1, &computeDescriptorSets[i], 0, nullptr);
-    }
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &computeDescriptorSets[currentFrame], 0, nullptr);
 
     // Dispatch count/256 local workgroups in the x dimension.
     // The current particle array is linear so we leave the other dimensions at value 1 to get the 

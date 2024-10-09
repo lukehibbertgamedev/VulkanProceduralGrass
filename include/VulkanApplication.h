@@ -22,7 +22,7 @@
 static constexpr bool kEnableValidationLayers = false;
 static constexpr bool kEnableImGuiDemoWindow = true;
 static constexpr int MAX_FRAMES_IN_FLIGHT = 2; // kMaxFramesInFlight
-static constexpr int PARTICLE_COUNT = 8192;
+static constexpr unsigned int PARTICLE_COUNT = 1u << 9;
 
 struct DriverData {
 public:
@@ -311,6 +311,7 @@ public:
 	std::vector<VkCommandBuffer> computeCommandBuffers;
 
 	float lastFrameTime = 0.0f;
+	float dt = 0.0f;
 	double lastTime = 0.0f;
 
 

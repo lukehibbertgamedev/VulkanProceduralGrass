@@ -14,12 +14,30 @@
 #include <stdio.h>
 #include <vector>
 #include <set>
+#include <chrono>
 
 
 static void frameBufferResizeCallback(GLFWwindow* window, int width, int height) {
     auto app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
     app->framebufferResized = true;
 }
+
+class Timer {
+public:
+    Timer() {
+        lastTime = std::chrono::high_resolution_clock::now();
+    }
+
+    float getDeltaTime() {
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
+        return deltaTime.count(); // Return delta time in seconds
+    }
+
+private:
+    std::chrono::high_resolution_clock::time_point lastTime;
+};
 
 int main() {
 
@@ -152,6 +170,8 @@ int main() {
 
     // Main update & render loop:
 
+    Timer timer;
+
     while (!glfwWindowShouldClose(window)) {
         
         glfwPollEvents();
@@ -171,6 +191,8 @@ int main() {
         double currentTime = glfwGetTime();
         vkApp.lastFrameTime = (currentTime - vkApp.lastTime) * 1000.0;
         vkApp.lastTime = currentTime;
+
+        vkApp.dt = timer.getDeltaTime();
     }
 
     // All operations in vkApp.render() are asynchronous, ensure all operations have completed before termination.
