@@ -902,13 +902,13 @@ VkResult VulkanApplication::createShaderStorageBuffers()
     // Initial particle positions on a circle
     std::vector<Particle> particles(PARTICLE_COUNT);
     for (auto& particle : particles) {
-        float r = 0.25f * sqrt(rndDist(rndEngine));
+        float r = 2.25f * sqrt(rndDist(rndEngine));
         float theta = rndDist(rndEngine) * 2.0f * 3.14159265358979323846f;
         float x = r * cos(theta) * 800 / 600;
-        float y = r * sin(theta);
+        float y = r * sin(theta) * 600 / 800;
         particle.position = glm::vec2(x, y);
         particle.velocity = glm::normalize(glm::vec2(x, y)) * 0.00025f;
-        particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
+        particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine) * 0.1f, rndDist(rndEngine) * 0.1f, 1.0f);
     }
 
     VkDeviceSize bufferSize = sizeof(Particle) * PARTICLE_COUNT;
@@ -1408,7 +1408,7 @@ VkResult VulkanApplication::createImGuiImplementation()
 
 void VulkanApplication::prepareImGuiDrawData()
 {
-    ImGui::Begin("Driver Details", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
+    ImGui::Begin("Driver Details", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar);
 
     ImGui::Text("Device Count: %i", driverData.deviceCount);
     ImGui::Text("Name: %s", driverData.name.c_str()); 
@@ -1416,6 +1416,7 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::Text("Driver Version: %i.%i.%i", driverData.versionMajor, driverData.versionMinor, driverData.versionPatch);
     ImGui::Text("Vulkan API Version supported: %i.%i.%i", driverData.apiMajor, driverData.apiMinor, driverData.apiPatch);
 
+    ImGui::Text("Particle count: %i", PARTICLE_COUNT);
     ImGui::Text("Frames per second: %f", 1 / (lastFrameTime / 1000));
     ImGui::Text("Delta time: %f", dt);
 
@@ -1515,6 +1516,7 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
 
+    // Bind the current frame's compute resources to allow the GPU to work on the particles shader storage buffer object.
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &computeDescriptorSets[currentFrame], 0, nullptr);
 
     // Dispatch count/256 local workgroups in the x dimension.
@@ -1523,6 +1525,8 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
     // will do 256 invocations.
     // If the count is dynamic and may not be divisible by 256, use gl_GlobalInvocationID at the
     // start of the compute shader and return from it if the ID is greater than the number of particles.
+
+    // 
     vkCmdDispatch(commandBuffer, PARTICLE_COUNT / 256, 1, 1);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {

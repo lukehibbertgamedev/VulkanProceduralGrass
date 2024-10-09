@@ -22,7 +22,7 @@
 static constexpr bool kEnableValidationLayers = false;
 static constexpr bool kEnableImGuiDemoWindow = true;
 static constexpr int MAX_FRAMES_IN_FLIGHT = 2; // kMaxFramesInFlight
-static constexpr unsigned int PARTICLE_COUNT = 1u << 9;
+static constexpr unsigned int PARTICLE_COUNT = 1u << 23;
 
 struct DriverData {
 public:
