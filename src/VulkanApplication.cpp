@@ -346,6 +346,15 @@ VkResult VulkanApplication::createPhysicalDevice()
         auto apiVersionMinor = (deviceProperties.apiVersion >> 12) & 0X3FF;
         auto apiVersionPatch = deviceProperties.apiVersion & 0X3FF;
         std::cout << "API version: " << apiVersionMajor << "." << apiVersionMinor << "." << apiVersionPatch << "\n";
+
+        // Enumerate and print relevant device limitations.
+        VkPhysicalDeviceLimits limits = deviceProperties.limits;
+        std::cout << "\nDevice limits:\n";
+        std::cout << "- Max compute shared memory size: " << limits.maxComputeSharedMemorySize << std::endl;
+        std::cout << "- Max compute work group invocations: " << limits.maxComputeWorkGroupInvocations << std::endl;
+        std::cout << "- Max compute work group count: " << limits.maxComputeWorkGroupCount[0] << " " << limits.maxComputeWorkGroupCount[1] << " " << limits.maxComputeWorkGroupCount[2] << std::endl;
+        std::cout << "- Max compute work group size: " << limits.maxComputeWorkGroupSize[0] << " " << limits.maxComputeWorkGroupSize[1] << " " << limits.maxComputeWorkGroupSize[2] << std::endl;
+
     }
 
     if (m_PhysicalDevice == VK_NULL_HANDLE) {
