@@ -8,10 +8,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SRC
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/VulkanApplication.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/GrassBlade.cpp
 )
 
 set(INCLUDE
 	${CMAKE_CURRENT_SOURCE_DIR}/include/VulkanApplication.h
+	${CMAKE_CURRENT_SOURCE_DIR}/include/GrassBlade.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/stb_image.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/tiny_obj_loader.h
 )

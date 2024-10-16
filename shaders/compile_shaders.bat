@@ -23,6 +23,18 @@ for %%f in (*.comp) do (
     %GLSLC_PATH% %%f -o %%~nf.comp.spv
 )
 
-rem pause
+rem Compile .tesc (tessellation control shader) files
+for %%f in (*.tesc) do (
+    echo Compiling %%f to %%~nf.tesc.spv...
+    %GLSLC_PATH% %%f -o %%~nf.tesc.spv
+)
+
+rem Compile .tese (tessellation evaluation shader) files
+for %%f in (*.tese) do (
+    echo Compiling %%f to %%~nf.tese.spv...
+    %GLSLC_PATH% %%f -o %%~nf.tese.spv
+)
+
+pause
 echo All shaders compiled!
 endlocal

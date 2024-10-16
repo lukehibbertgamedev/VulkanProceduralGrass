@@ -349,12 +349,20 @@ VkResult VulkanApplication::createPhysicalDevice()
 
         // Enumerate and print relevant device limitations.
         VkPhysicalDeviceLimits limits = deviceProperties.limits;
-        std::cout << "\nDevice limits:\n";
-        std::cout << "- Max compute shared memory size: " << limits.maxComputeSharedMemorySize << std::endl;
-        std::cout << "- Max compute work group invocations: " << limits.maxComputeWorkGroupInvocations << std::endl;
-        std::cout << "- Max compute work group count: " << limits.maxComputeWorkGroupCount[0] << " " << limits.maxComputeWorkGroupCount[1] << " " << limits.maxComputeWorkGroupCount[2] << std::endl;
-        std::cout << "- Max compute work group size: " << limits.maxComputeWorkGroupSize[0] << " " << limits.maxComputeWorkGroupSize[1] << " " << limits.maxComputeWorkGroupSize[2] << std::endl;
-
+        std::cout << "\nVkPhysicalDeviceLimits:\n";
+        std::cout << "- maxComputeSharedMemorySize: " << limits.maxComputeSharedMemorySize << std::endl;
+        std::cout << "- maxComputeWorkGroupInvocations: " << limits.maxComputeWorkGroupInvocations << std::endl;
+        std::cout << "- maxComputeWorkGroupCount: " << limits.maxComputeWorkGroupCount[0] << " " << limits.maxComputeWorkGroupCount[1] << " " << limits.maxComputeWorkGroupCount[2] << std::endl;
+        std::cout << "- maxComputeWorkGroupSize: " << limits.maxComputeWorkGroupSize[0] << " " << limits.maxComputeWorkGroupSize[1] << " " << limits.maxComputeWorkGroupSize[2] << std::endl;
+        std::cout << "- maxBoundDescriptorSets: " << limits.maxBoundDescriptorSets << std::endl;
+        std::cout << "- maxDescriptorSetStorageBuffers: " << limits.maxDescriptorSetStorageBuffers << std::endl;
+        std::cout << "- maxDescriptorSetUniformBuffers: " << limits.maxDescriptorSetUniformBuffers << std::endl;
+        std::cout << "- maxStorageBufferRange: " << limits.maxStorageBufferRange << std::endl;
+        std::cout << "- maxUniformBufferRange: " << limits.maxUniformBufferRange << std::endl;
+        std::cout << "- minStorageBufferOffsetAlignment: " << limits.minStorageBufferOffsetAlignment << std::endl;
+        std::cout << "- minUniformBufferOffsetAlignment: " << limits.minUniformBufferOffsetAlignment << std::endl;
+        std::cout << "- maxPushConstantsSize: " << limits.maxPushConstantsSize << std::endl;
+        std::cout << "- maxMemoryAllocationCount: " << limits.maxMemoryAllocationCount << std::endl;
     }
 
     if (m_PhysicalDevice == VK_NULL_HANDLE) {
@@ -390,9 +398,10 @@ VkResult VulkanApplication::createLogicalDevice()
 
     VkPhysicalDeviceFeatures deviceFeatures = {};
     deviceFeatures.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+    deviceFeatures.tessellationShader = VK_TRUE; // Enable Vulkan to be able to link and execute tessellation shaders.
+
     //deviceFeatures.samplerAnisotropy = VK_TRUE;
     //deviceFeatures.sampleRateShading = VK_TRUE; // Enable sample shading feature for the device.
-    //deviceFeatures.tessellationShader = VK_TRUE;
     //deviceFeatures.geometryShader = VK_TRUE;
 
     VkDeviceCreateInfo createInfo = {};
@@ -660,25 +669,57 @@ VkResult VulkanApplication::createDescriptorSetLayout()
 
 VkResult VulkanApplication::createGraphicsPipeline()
 {
+    // Standard vertex and fragment shader modules.
     auto vertexShaderCode = readFile("../shaders/basicShader.vert.spv");
     auto pixelShaderCode = readFile("../shaders/basicShader.frag.spv");
-
     VkShaderModule vertShaderModule = createShaderModule(vertexShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(pixelShaderCode);
 
-    VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+    VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
     vertShaderStageInfo.module = vertShaderModule;
     vertShaderStageInfo.pName = "main";
-
-    VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+    
+    VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
     fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     fragShaderStageInfo.module = fragShaderModule;
     fragShaderStageInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+    // See more for tessellation: https://docs.vulkan.org/spec/latest/chapters/tessellation.html
+
+    // Tessellation Shader set up. Tessellation consists of 3 pipeline stages:
+    // 1. tessellation control shader (transforms control points of a patch and produces per-patch data).
+    // 2. fixed-function tessellator (generates multiple primitives corresponding to a tessellation of the patch in parameter space).
+    // 3. tessellation evaluation shader (transforms the vertices of a tessellated patch).
+    
+    // Tessellator is enabled when the pipeline contains both a control and evaluation shader.
+
+    // Tessellation shader modules.
+    auto tessellationControlShaderCode = readFile("../shaders/basicShader.tcs.spv");
+    auto tessellationEvaluationShaderCode = readFile("../shaders/basicShader.tes.spv");
+    VkShaderModule tessellationControlShaderModule = createShaderModule(tessellationControlShaderCode);
+    VkShaderModule tessellationEvaluationShaderModule = createShaderModule(tessellationEvaluationShaderCode);     
+
+    VkPipelineShaderStageCreateInfo tessellationControlShaderStageInfo = {}; 
+    tessellationControlShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    tessellationControlShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    tessellationControlShaderStageInfo.module = tessellationControlShaderModule;
+    tessellationControlShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo tessellationEvaluationShaderStageInfo = {};
+    tessellationEvaluationShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    tessellationEvaluationShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    tessellationEvaluationShaderStageInfo.module = tessellationEvaluationShaderModule;
+    tessellationEvaluationShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = { 
+        vertShaderStageInfo, 
+        fragShaderStageInfo, 
+        tessellationControlShaderStageInfo, 
+        tessellationEvaluationShaderStageInfo 
+    };
 
     auto bindingDescription = Particle::getBindingDescription();
     auto attributeDescriptions = Particle::getAttributeDescriptions();
@@ -1030,6 +1071,67 @@ VkResult VulkanApplication::createTextureSampler()
     }
 
     return VK_SUCCESS;
+}
+
+VkResult VulkanApplication::createVertexBuffer()
+{
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad buffer creation.");
+        return ret;
+    }
+    
+    void* data;
+    vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices.data(), (size_t)bufferSize);
+    vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+    
+    ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad buffer creation.");
+        return ret;
+    }
+    
+    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+    
+    vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
+    
+    return ret;
+}
+
+VkResult VulkanApplication::createIndexBuffer()
+{
+    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+    
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad buffer creation.");
+        return ret;
+    }
+
+    void* data;
+    vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, indices.data(), (size_t)bufferSize);
+    vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+    
+    ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad buffer creation.");
+        return ret;
+    }
+
+    copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+    
+    vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
+
+    return ret;
 }
 
 VkResult VulkanApplication::createUniformBuffers()
@@ -1408,7 +1510,7 @@ void VulkanApplication::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDev
 
 void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer)
 {
-    VkCommandBufferBeginInfo beginInfo{};
+    VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
     if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
@@ -1860,12 +1962,10 @@ bool VulkanApplication::checkPhysicalDeviceSuitability(VkPhysicalDevice device)
     vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
     return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU 
-        && deviceFeatures.geometryShader 
         && deviceFeatures.tessellationShader
         && indices.isComplete()
         && checkPhysicalDeviceExtensionSupport(device)
-        && isSwapchainAdequate
-        && supportedFeatures.samplerAnisotropy;
+        && isSwapchainAdequate;
 }
 
 bool VulkanApplication::checkPhysicalDeviceExtensionSupport(VkPhysicalDevice device)
