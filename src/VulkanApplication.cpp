@@ -414,21 +414,6 @@ VkResult VulkanApplication::createLogicalDevice()
     return VK_SUCCESS;
 }
 
-//VkResult VulkanApplication::createWin32Surface(GLFWwindow* window)
-//{
-//    VkWin32SurfaceCreateInfoKHR createInfo = {};
-//    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-//    createInfo.hwnd = glfwGetWin32Window(window);
-//    createInfo.hinstance = GetModuleHandle(nullptr);
-//
-//    if (vkCreateWin32SurfaceKHR(m_VkInstance, &createInfo, nullptr, &m_SurfaceKHR) != VK_SUCCESS) {
-//        throw std::runtime_error("failed to create win32 window surface!");
-//        return VK_ERROR_INITIALIZATION_FAILED;
-//    }
-//
-//    return VK_SUCCESS;
-//}
-
 VkResult VulkanApplication::createGlfwSurface()
 {
     if (glfwCreateWindowSurface(m_VkInstance, window, nullptr, &m_SurfaceKHR) != VK_SUCCESS) {
@@ -517,18 +502,6 @@ VkResult VulkanApplication::recreateSwapchain()
         throw std::runtime_error("bad swapchain image views.");
         return ret; 
     }
-
-    /*ret = createColourResources();
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad colour resources.");
-        return ret;
-    }
-
-    ret = createDepthResources();
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad depth resources.");
-        return ret;
-    }*/
 
     ret = createFrameBuffers(); 
     if (ret != VK_SUCCESS) {
@@ -713,18 +686,6 @@ VkResult VulkanApplication::createGraphicsPipeline()
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    /*VkViewport viewport = {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (float)swapChainExtent.width;
-    viewport.height = (float)swapChainExtent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-
-    VkRect2D scissor = {};
-    scissor.offset = { 0, 0 };
-    scissor.extent = swapChainExtent;*/
-
     std::vector<VkDynamicState> dynamicStates = {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR
@@ -794,7 +755,6 @@ VkResult VulkanApplication::createGraphicsPipeline()
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState = &multisampling;
-    //pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.layout = pipelineLayout;
@@ -855,7 +815,6 @@ VkResult VulkanApplication::createFrameBuffers()
     swapChainFramebuffers.resize(swapChainImageViews.size());
     for (size_t i = 0; i < swapChainImageViews.size(); i++) {
 
-        //std::array<VkImageView, 3> attachments = { colorImageView, depthImageView, swapChainImageViews[i] };
         VkImageView attachments[] = { swapChainImageViews[i] };
 
         VkFramebufferCreateInfo framebufferInfo{};
@@ -979,10 +938,10 @@ VkResult VulkanApplication::createDepthResources()
 
 VkResult VulkanApplication::createTextureImage()
 {
+    // TODO: Understand and comment this code.
+
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load("../assets/texture01.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    // TODO: Find out
-    // Why are we doing this? ( *4??)
     VkDeviceSize imageSize = texWidth * texHeight * 4;
 
     if (!pixels) {
@@ -1045,8 +1004,6 @@ VkResult VulkanApplication::createTextureSampler()
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    //samplerInfo.anisotropyEnable = VK_TRUE;
-    //samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
     samplerInfo.anisotropyEnable = VK_FALSE;
     samplerInfo.maxAnisotropy = 1.0f;
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -1065,67 +1022,6 @@ VkResult VulkanApplication::createTextureSampler()
 
     return VK_SUCCESS;
 }
-
-//VkResult VulkanApplication::createVertexBuffer()
-//{
-//    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-//    VkBuffer stagingBuffer;
-//    VkDeviceMemory stagingBufferMemory;
-//    VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-//    if (ret != VK_SUCCESS) {
-//        throw std::runtime_error("bad buffer creation.");
-//        return ret;
-//    }
-//    
-//    void* data;
-//    vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-//    memcpy(data, vertices.data(), (size_t)bufferSize);
-//    vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
-//    
-//    ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-//    if (ret != VK_SUCCESS) {
-//        throw std::runtime_error("bad buffer creation.");
-//        return ret;
-//    }
-//    
-//    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-//    
-//    vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
-//    vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
-//    
-//    return ret;
-//}
-
-//VkResult VulkanApplication::createIndexBuffer()
-//{
-//    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-//    
-//    VkBuffer stagingBuffer;
-//    VkDeviceMemory stagingBufferMemory;
-//    VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-//    if (ret != VK_SUCCESS) {
-//        throw std::runtime_error("bad buffer creation.");
-//        return ret;
-//    }
-//
-//    void* data;
-//    vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-//    memcpy(data, indices.data(), (size_t)bufferSize);
-//    vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
-//    
-//    ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
-//    if (ret != VK_SUCCESS) {
-//        throw std::runtime_error("bad buffer creation.");
-//        return ret;
-//    }
-//
-//    copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-//    
-//    vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
-//    vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
-//
-//    return ret;
-//}
 
 VkResult VulkanApplication::createUniformBuffers()
 {
@@ -1156,14 +1052,10 @@ VkResult VulkanApplication::createDescriptorPool()
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
-    //poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    //poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;    
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) * 2; // Multiplication by 2 because our desc sets reference the SSBOs of the last and current frame.
 
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    // Multiplication by 2 because our desc sets reference the SSBOs of the last and current frame.
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) * 2;
-
-    VkDescriptorPoolCreateInfo poolInfo{};
+    VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
@@ -1180,7 +1072,7 @@ VkResult VulkanApplication::createDescriptorPool()
 VkResult VulkanApplication::createComputeDescriptorSets()
 {
     std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, computeDescriptorSetLayout);
-    VkDescriptorSetAllocateInfo allocInfo{};
+    VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptorPool;
     allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
@@ -1193,12 +1085,12 @@ VkResult VulkanApplication::createComputeDescriptorSets()
     }
     
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        VkDescriptorBufferInfo uniformBufferInfo{};
+        VkDescriptorBufferInfo uniformBufferInfo = {};
         uniformBufferInfo.buffer = uniformBuffers[i];
         uniformBufferInfo.offset = 0;
         uniformBufferInfo.range = sizeof(UniformBufferObject);
     
-        std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+        std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = computeDescriptorSets[i];
         descriptorWrites[0].dstBinding = 0;
@@ -1207,7 +1099,7 @@ VkResult VulkanApplication::createComputeDescriptorSets()
         descriptorWrites[0].descriptorCount = 1;
         descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
     
-        VkDescriptorBufferInfo storageBufferInfoLastFrame{};
+        VkDescriptorBufferInfo storageBufferInfoLastFrame = {};
         storageBufferInfoLastFrame.buffer = shaderStorageBuffers[(i - 1) % MAX_FRAMES_IN_FLIGHT];
         storageBufferInfoLastFrame.offset = 0;
         storageBufferInfoLastFrame.range = sizeof(Particle) * PARTICLE_COUNT;
@@ -1220,7 +1112,7 @@ VkResult VulkanApplication::createComputeDescriptorSets()
         descriptorWrites[1].descriptorCount = 1;
         descriptorWrites[1].pBufferInfo = &storageBufferInfoLastFrame;
     
-        VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
+        VkDescriptorBufferInfo storageBufferInfoCurrentFrame = {};
         storageBufferInfoCurrentFrame.buffer = shaderStorageBuffers[i];
         storageBufferInfoCurrentFrame.offset = 0;
         storageBufferInfoCurrentFrame.range = sizeof(Particle) * PARTICLE_COUNT;
@@ -1514,19 +1406,19 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
         throw std::runtime_error("failed to begin recording compute command buffer!");
     }
 
+    // Bind the pipeline specific to compute usage, ensuring that subsequent compute commands use the pipeline configuration and bound shader stages.
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
 
-    // Bind the current frame's compute resources to allow the GPU to work on the particles shader storage buffer object.
+    // Bind the current frame's compute descriptor resources to allow the compute shader access to the particles shader storage buffer object.
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &computeDescriptorSets[currentFrame], 0, nullptr);
 
-    // Dispatch count/256 local workgroups in the x dimension.
-    // The current particle array is linear so we leave the other dimensions at value 1 to get the 
-    // one dimensional dispatch. Divide by 256 because we defined that every compute shader in a workgroup
-    // will do 256 invocations.
-    // If the count is dynamic and may not be divisible by 256, use gl_GlobalInvocationID at the
-    // start of the compute shader and return from it if the ID is greater than the number of particles.
+    // This specific use of vkCmdDispatch works using a linear array of data, so only one dimension of workgroup is set.
+    // Each compute shader is defined to perform 256 invocations, so the workgroup count in any dimension must be divisible by this invocation count.
+    // If the workgroup count is dynamic and potentially is not divisible, you can use gl_GlobalInvocationID at the start of 
+    // the compute shader and return if the ID is greater than the instance count.
 
-    // 
+    // Schedules the GPU execution of a compute shader, with provided workgroup sizes which are executed from invocations.
+    // Each invocation can access shared memory, perform computations, and write results to different resources.
     vkCmdDispatch(commandBuffer, PARTICLE_COUNT / 256, 1, 1);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {

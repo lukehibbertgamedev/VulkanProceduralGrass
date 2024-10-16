@@ -6,7 +6,6 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
-
 #include <VulkanApplication.h>
 
 #include <iostream>
@@ -16,12 +15,13 @@
 #include <set>
 #include <chrono>
 
-
+// TODO: Move to its own header (callbacks.h).
 static void frameBufferResizeCallback(GLFWwindow* window, int width, int height) {
     auto app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
     app->framebufferResized = true;
 }
 
+// TODO: Move to its own header (timer.h).
 class Timer {
 public:
     Timer() {
@@ -41,24 +41,36 @@ private:
 
 int main() {
 
+    // Create an empty application structure.
     VulkanApplication vkApp = {};
+
+    // Create a timer instance to obtain delta time for the application loop, auto initialises timer.lastTime.
+    Timer timer;
 
     // Initialize glfw for window creation.
     if (glfwInit() != GLFW_TRUE) {
         throw std::runtime_error("failed to initialize glfw!");
     }
 
-    // Create the window.
+    // Create the glfw window and its associated context.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan procedural grass rendering", nullptr, nullptr);
     if (window == nullptr) {
         throw std::runtime_error("failed to create glfw window!");
     }
+
+    // Link the application structure to the window.
     glfwSetWindowUserPointer(window, &vkApp);
+
+    // Link functionality to when glfw detects its framebuffer has been resized (window resizing).
     glfwSetFramebufferSizeCallback(window, frameBufferResizeCallback);
+
+    // FIXME: May not be needed since timer has its own lastTime.
+    // Begin the timer to retrieve delta time throughout the application loop.
     vkApp.lastTime = glfwGetTime();
 
-    // Display supported extensions 
+    // TODO: Put in its own static function in its own header (extensionsupport.h).
+    // Enumerate and output supported Vulkan extensions.
     uint32_t extensionCount = 0;
     VkExtensionProperties props = {};
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
@@ -72,137 +84,137 @@ int main() {
 
     // Vulkan application initialization:
 
-
     vkApp.linkWindowToVulkan(window);
 
     VkResult ret = vkApp.createInstance();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad instance.");   
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create instance.");   
 
     ret = vkApp.createDebugMessenger();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad debug messenger.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create debug messenger.");
 
     ret = vkApp.createGlfwSurface();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad surface.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create surface.");
 
     ret = vkApp.createPhysicalDevice();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad physical device.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create physical device.");
 
     ret = vkApp.createLogicalDevice();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad logical device.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create logical device.");
 
     ret = vkApp.createSwapchain();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad swapchain.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create swapchain.");
 
     ret = vkApp.createSwapchainImageViews();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad swapchain image views.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create swapchain image views.");
 
     ret = vkApp.createRenderPass();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad render pass.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create render pass.");
 
     ret = vkApp.createComputeDescriptorSetLayout();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad compute descriptor layout.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute descriptor layout.");
 
     //ret = vkApp.createDescriptorSetLayout();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("bad descriptor layout.");
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor layout.");
 
     ret = vkApp.createGraphicsPipeline();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad graphics pipeline.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create graphics pipeline.");
 
     ret = vkApp.createComputePipeline();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad compute pipeline.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute pipeline.");
 
     ret = vkApp.createFrameBuffers();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad frame buffers.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create frame buffers.");
 
     ret = vkApp.createCommandPool();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad command pool.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command pool.");
 
     //ret = vkApp.createColourResources();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("bad colour resources.");
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create colour resources.");
 
     //ret = vkApp.createDepthResources();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("bad depth resources.");    
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create depth resources.");    
 
     //ret = vkApp.createTextureImage();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("bad texture image.");
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create texture image.");
 
     //ret = vkApp.createTextureImageView();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("bad texture image view.");
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create texture image view.");
 
     //ret = vkApp.createTextureSampler();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("bad texture sampler.");
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create texture sampler.");
 
     //ret = vkApp.createVertexBuffer();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("bad vertex buffer.");
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create vertex buffer.");
 
     //ret = vkApp.createIndexBuffer(); 
-    //if (ret != VK_SUCCESS) throw std::runtime_error("bad index buffer.");
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create index buffer.");
 
     ret = vkApp.createShaderStorageBuffers();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad shader storage buffer.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create shader storage buffer.");
 
     ret = vkApp.createUniformBuffers();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad uniform buffer.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create uniform buffer.");
 
     ret = vkApp.createDescriptorPool();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad descriptor pool.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor pool.");
 
     ret = vkApp.createComputeDescriptorSets();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad compute descriptor sets.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute descriptor sets.");
 
     //ret = vkApp.createDescriptorSets(); 
-    //if (ret != VK_SUCCESS) throw std::runtime_error("bad descriptor sets.");
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor sets.");
 
     ret = vkApp.createCommandBuffer();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad command buffer.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command buffer.");
 
     ret = vkApp.createComputeCommandBuffer();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad compute command buffer.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute command buffer.");
 
     ret = vkApp.createSynchronizationObjects();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad semaphores | fences.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create semaphores | fences.");
 
     ret = vkApp.createImGuiImplementation();
-    if (ret != VK_SUCCESS) throw std::runtime_error("bad imgui implementation.");
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create imgui implementation.");
 
     std::cout << "\nSuccessful initialization.\n";
 
-
-    // Main update & render loop:
-
-    Timer timer;
-
+    // Main application loop:
     while (!glfwWindowShouldClose(window)) {
         
+        // Process any window events, calls any associated callbacks.
         glfwPollEvents();
 
-
+        // Create new ImGui frames via its backend and context.
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        // Prepare ImGui draw data, anything within the ImGui:: namspace this doesn't touch the GPU or graphics API at all.
         vkApp.prepareImGuiDrawData();
 
+        // Prepare the ImGui data for rendering so you can call GetDrawData().
         ImGui::Render();        
+        
+        // Record and execute commands through a compute and graphics pipeline.
         vkApp.render();
 
-        // We want to animate the particle system using the last frames time to get smooth,
-        // frame-rate independent animation
+        // TODO: Remove vkApp.time variables as timer should do this for you.
+        // We want to animate the particle system using the last frames time to get smooth, frame-rate independent animation
         double currentTime = glfwGetTime();
         vkApp.lastFrameTime = (currentTime - vkApp.lastTime) * 1000.0;
         vkApp.lastTime = currentTime;
-
         vkApp.deltaTime = timer.getDeltaTime();
     }
 
-    // All operations in vkApp.render() are asynchronous, ensure all operations have completed before termination.
+    // All operations in vkApp.render() are asynchronous, ensure all operations/commands have completed before termination.
     vkDeviceWaitIdle(vkApp.m_LogicalDevice);
 
-    // Clean up/termination of allocated Vulkan objects (in the reverse order to initialization):
+    // Destroy the ImGui backends and context.
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
+    // Clean up/termination of allocated Vulkan objects (in the reverse order to initialization).
     vkApp.cleanupApplication(window);
 
     return 0;

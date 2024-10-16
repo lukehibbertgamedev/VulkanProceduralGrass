@@ -69,66 +69,10 @@ struct Particle {
 	}
 };
 
-
-//struct Vertex {
-//	glm::vec3 pos;
-//	glm::vec3 color;
-//	glm::vec2 texCoord;
-//
-//	static VkVertexInputBindingDescription getBindingDescription() {
-//		VkVertexInputBindingDescription bindingDescription{};
-//		bindingDescription.binding = 0;
-//		bindingDescription.stride = sizeof(Vertex);
-//		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-//
-//		return bindingDescription;
-//	}
-//
-//	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-//		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
-//		attributeDescriptions[0].binding = 0;
-//		attributeDescriptions[0].location = 0;
-//		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-//		attributeDescriptions[0].offset = offsetof(Vertex, pos);
-//		attributeDescriptions[1].binding = 0;
-//		attributeDescriptions[1].location = 1;
-//		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-//		attributeDescriptions[1].offset = offsetof(Vertex, color);
-//		attributeDescriptions[2].binding = 0;
-//		attributeDescriptions[2].location = 2;
-//		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-//		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-//		return attributeDescriptions;
-//	}
-//};
-
 // See more on alignment: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap15.html#interfaces-resources-layout
-//struct UniformBufferObject {
-//	alignas(16) glm::mat4 model;
-//	alignas(16) glm::mat4 view;
-//	alignas(16) glm::mat4 proj;
-//};
-
 struct UniformBufferObject {
 	float deltaTime = 1.0f;
 };
-
-//const std::vector<Vertex> vertices = {
-//	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {-0.0f, 0.0f}},
-//	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {-1.0f, 0.0f}},
-//	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {-1.0f, 1.0f}},
-//	{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {-0.0f, 1.0f}},
-//
-//	{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {-0.0f, 0.0f}},
-//	{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {-1.0f, 0.0f}},
-//	{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {-1.0f, 1.0f}},
-//	{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {-0.0f, 1.0f}}
-//};
-//
-//const std::vector<uint16_t> indices = {
-//	0, 1, 2, 2, 3, 0,
-//	4, 5, 6, 6, 7, 4
-//};
 
 class VulkanApplication {
 
@@ -279,18 +223,18 @@ public:
 	std::vector<VkDescriptorSet> descriptorSets = {};					// A collection of resources/buffers/images that can be bound to shaders during rendering operations.
 	std::vector<VkDescriptorSet> computeDescriptorSets = {};			// A collection of resources/buffers/images that can be bound to compute shaders during compute operations.
 	
+	// Uniform buffer objects (UBO).
 	std::vector<VkBuffer> uniformBuffers = {};							// A collection of uniform buffer objects that stored constant data for all vertices/fragments within a draw call.
 	std::vector<VkDeviceMemory> uniformBuffersMemory = {};				// A collection of device memory allocations for a uniform buffer.
 	std::vector<void*> uniformBuffersMapped = {};						// A collection of pointers to the mapped memory for the uniform buffers, allowing direct access to modify the buffer's data.
 
-	DriverData driverData = {};											// A custom collection of GPU data to be displayed easily in ImGui.
-	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
-	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
-
+	// Vertex and index buffer with associated memory.
 	VkBuffer vertexBuffer = VK_NULL_HANDLE;								// Currently unused.
 	VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;					// Currently unused.
 	VkBuffer indexBuffer = VK_NULL_HANDLE;								// Currently unused.
 	VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;					// Currently unused.
+	
+	// Texture images with associated image views and memory.
 	VkImage textureImage = VK_NULL_HANDLE;								// Currently unused.
 	VkDeviceMemory textureImageMemory = VK_NULL_HANDLE;					// Currently unused.
 	VkImageView textureImageView = VK_NULL_HANDLE;						// Currently unused.
@@ -298,25 +242,23 @@ public:
 	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;					// Currently unused.
 	VkImageView depthImageView = VK_NULL_HANDLE;						// Currently unused.
 	VkImage	depthImage = VK_NULL_HANDLE;								// Currently unused.
-		
 
-	
+	// Multi-sampling.
+	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;			// ...
+	VkImage colorImage = VK_NULL_HANDLE;								// ...
+	VkDeviceMemory colorImageMemory = VK_NULL_HANDLE;					// ...
+	VkImageView colorImageView = VK_NULL_HANDLE;						// ...
 
-
-	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-	VkImage colorImage = VK_NULL_HANDLE;
-	VkDeviceMemory colorImageMemory = VK_NULL_HANDLE;
-	VkImageView colorImageView = VK_NULL_HANDLE;
-
-	std::vector<VkBuffer> shaderStorageBuffers = {};
-	std::vector<VkDeviceMemory> shaderStorageBuffersMemory = {};
-
-	// Compute related handles.
-	
-	
+	// Shader storage buffer objects (SSBO).
+	std::vector<VkBuffer> shaderStorageBuffers = {};					// ...
+	std::vector<VkDeviceMemory> shaderStorageBuffersMemory = {};		// ...
 
 	// Timing metrics.
-	float lastFrameTime = 0.0f; // Used to calculate FPS.
-	float deltaTime = 0.0f; // Used to smooth out update logic.
-	double lastTime = 0.0f; // Used to calculated lastFrameTime.
+	float lastFrameTime = 0.0f;											// Used to calculate FPS.
+	float deltaTime = 0.0f;												// Used to smooth out update logic.
+	double lastTime = 0.0f;												// Used to calculated lastFrameTime.
+
+	DriverData driverData = {};											// A custom collection of GPU data to be displayed easily in ImGui.
+	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
+	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
 };
