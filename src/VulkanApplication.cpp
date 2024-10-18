@@ -827,6 +827,8 @@ VkResult VulkanApplication::createGraphicsPipeline()
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
+    vkDestroyShaderModule(m_LogicalDevice, tessellationEvaluationShaderModule, nullptr);
+    vkDestroyShaderModule(m_LogicalDevice, tessellationControlShaderModule, nullptr);
     vkDestroyShaderModule(m_LogicalDevice, fragShaderModule, nullptr);
     vkDestroyShaderModule(m_LogicalDevice, vertShaderModule, nullptr);
 

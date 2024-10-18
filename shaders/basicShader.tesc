@@ -10,20 +10,20 @@
 layout(vertices = 3) out;
 
 // Input from the vertex shader.
-layout(location = 0) in vec3 inPosition[];
+layout(location = 0) in vec2 inPosition[];
 layout(location = 1) in vec4 inColor[];
 
 // Output to the tessellation evaluation shader.
-layout (location = 0) out vec3 outPosition[];
+layout (location = 0) out vec2 outPosition[];
 layout (location = 1) out vec4 outColor[];
 
 void main() {
 
     if (gl_InvocationID == 0) {
-        gl_TessLevelInner[0] = 3.0;
-        gl_TessLevelOuter[0] = 3.0;
-        gl_TessLevelOuter[1] = 3.0;
-        gl_TessLevelOuter[2] = 3.0;
+        gl_TessLevelInner[0] = 1.0; // 1.0 = No additional tessellation.
+        gl_TessLevelOuter[0] = 1.0;
+        gl_TessLevelOuter[1] = 1.0;
+        gl_TessLevelOuter[2] = 1.0;
     }
 
     // Passing attributes through.
