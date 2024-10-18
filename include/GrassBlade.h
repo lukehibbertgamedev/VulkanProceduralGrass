@@ -8,6 +8,13 @@
 // Predefined blade of grass, subdivided in a tessellation shader.
 // Additional detail can be generated without needing to store it explicitly
 
+// https://dl.acm.org/doi/pdf/10.1145/3023368.3023380
+// Initially, the blade geometry is a flat quad that is defined by the interpolation parameters u and v, 
+// where u indicates the interpolation along the width of the blade and v the interpolation along the
+// height.By evaluating the curve interpolation of the control points for each generated vertex, the 
+// quad becomes aligned to the Bezier curve. This is achieved by using De Casteljau’s algorithm, 
+// which also calculates the tangent vector t0 as intermediate results.
+
 //
 //	P3 Tip -> o---o <- P1 Height
 //	              |

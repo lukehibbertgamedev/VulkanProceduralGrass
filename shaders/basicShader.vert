@@ -13,6 +13,6 @@ void main() {
     gl_Position = vec4(inPosition.xy, 1.0, 1.0);
 
     // Pass through values to the TCS.
-    outPosition = gl_Position;
+    outPosition = gl_Position.xyz;
     outColor = inColor;
 }

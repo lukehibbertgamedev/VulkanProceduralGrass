@@ -697,8 +697,8 @@ VkResult VulkanApplication::createGraphicsPipeline()
     // Tessellator is enabled when the pipeline contains both a control and evaluation shader.
 
     // Tessellation shader modules.
-    auto tessellationControlShaderCode = readFile("../shaders/basicShader.tcs.spv");
-    auto tessellationEvaluationShaderCode = readFile("../shaders/basicShader.tes.spv");
+    auto tessellationControlShaderCode = readFile("../shaders/basicShader.tesc.spv");
+    auto tessellationEvaluationShaderCode = readFile("../shaders/basicShader.tese.spv");
     VkShaderModule tessellationControlShaderModule = createShaderModule(tessellationControlShaderCode);
     VkShaderModule tessellationEvaluationShaderModule = createShaderModule(tessellationEvaluationShaderCode);     
 
@@ -714,11 +714,18 @@ VkResult VulkanApplication::createGraphicsPipeline()
     tessellationEvaluationShaderStageInfo.module = tessellationEvaluationShaderModule;
     tessellationEvaluationShaderStageInfo.pName = "main";
 
+    VkPipelineTessellationStateCreateInfo tessellationStateInfo = {};
+    tessellationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+    tessellationStateInfo.pNext = nullptr;
+    tessellationStateInfo.flags = 0; // Must be 0, this is reserved by Vulkan for future use.
+    tessellationStateInfo.patchControlPoints = 3; // I would imagine this matches the layout(vertices = 3) out; in the control shader.
+
+    // I don't think they have to be ordered but I've ordered them in calling order anyways.
     VkPipelineShaderStageCreateInfo shaderStages[] = { 
         vertShaderStageInfo, 
-        fragShaderStageInfo, 
         tessellationControlShaderStageInfo, 
-        tessellationEvaluationShaderStageInfo 
+        tessellationEvaluationShaderStageInfo, 
+        fragShaderStageInfo
     };
 
     auto bindingDescription = Particle::getBindingDescription();
@@ -733,7 +740,9 @@ VkResult VulkanApplication::createGraphicsPipeline()
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    
+    // Use patches for the tessellation. May be an issue later on.
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     std::vector<VkDynamicState> dynamicStates = {
@@ -798,7 +807,7 @@ VkResult VulkanApplication::createGraphicsPipeline()
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
+    pipelineInfo.stageCount = sizeof(shaderStages) / sizeof(shaderStages[0]); // Get the size of shader stages array.
     pipelineInfo.pStages = shaderStages;
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -807,6 +816,7 @@ VkResult VulkanApplication::createGraphicsPipeline()
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.pTessellationState = &tessellationStateInfo;
     pipelineInfo.layout = pipelineLayout;
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
