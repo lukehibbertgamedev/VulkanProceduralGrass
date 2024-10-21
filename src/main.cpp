@@ -110,17 +110,17 @@ int main() {
     ret = vkApp.createRenderPass();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create render pass.");
 
-    ret = vkApp.createComputeDescriptorSetLayout();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute descriptor layout.");
+    //ret = vkApp.createComputeDescriptorSetLayout();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute descriptor layout.");
 
-    //ret = vkApp.createDescriptorSetLayout();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor layout.");
+    ret = vkApp.createDescriptorSetLayout();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor layout.");
 
     ret = vkApp.createGraphicsPipeline();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create graphics pipeline.");
 
-    ret = vkApp.createComputePipeline();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute pipeline.");
+    //ret = vkApp.createComputePipeline();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute pipeline.");
 
     ret = vkApp.createFrameBuffers();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create frame buffers.");
@@ -143,14 +143,16 @@ int main() {
     //ret = vkApp.createTextureSampler();
     //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create texture sampler.");
 
-    //ret = vkApp.createVertexBuffer();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create vertex buffer.");
+    vkApp.createMeshObjects();
 
-    //ret = vkApp.createIndexBuffer(); 
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create index buffer.");
+    ret = vkApp.createVertexBuffer();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create vertex buffer.");
 
-    ret = vkApp.createShaderStorageBuffers();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create shader storage buffer.");
+    ret = vkApp.createIndexBuffer();  
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create index buffer.");
+
+    //ret = vkApp.createShaderStorageBuffers();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create shader storage buffer.");
 
     ret = vkApp.createUniformBuffers();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create uniform buffer.");
@@ -158,17 +160,17 @@ int main() {
     ret = vkApp.createDescriptorPool();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor pool.");
 
-    ret = vkApp.createComputeDescriptorSets();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute descriptor sets.");
+    //ret = vkApp.createComputeDescriptorSets();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute descriptor sets.");
 
-    //ret = vkApp.createDescriptorSets(); 
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor sets.");
+    ret = vkApp.createDescriptorSets();  
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor sets."); 
 
     ret = vkApp.createCommandBuffer();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command buffer.");
 
-    ret = vkApp.createComputeCommandBuffer();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute command buffer.");
+    //ret = vkApp.createComputeCommandBuffer();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute command buffer.");
 
     ret = vkApp.createSynchronizationObjects();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create semaphores | fences.");

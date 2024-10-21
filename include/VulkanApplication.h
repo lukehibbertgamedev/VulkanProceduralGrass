@@ -12,8 +12,10 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 
-#include <array>        // For std::array
 #include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
+
+#include "Vertex.h"
+#include "Sphere.h"
 
 #include <optional>
 #include <vector>
@@ -36,38 +38,8 @@ public:
 
 	uint32_t queueFamilyCount = 0;
 	VkQueueFlags queueFlags;
-};
 
-struct Vertex {
-	glm::vec3 pos;
-	glm::vec3 color;
-	glm::vec2 texCoord;
-
-	static VkVertexInputBindingDescription getBindingDescription() {
-		VkVertexInputBindingDescription bindingDescription{};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(Vertex);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		return bindingDescription;
-	}
-
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(Vertex, pos);
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(Vertex, color);
-		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2;
-		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-		return attributeDescriptions;
-	}
+	int vertexCount = 0;
 };
 
 struct Particle {
@@ -106,12 +78,13 @@ struct UniformBufferObject {
 	float deltaTime = 1.0f;
 };
 
-struct QuadUniformBufferObject {
+struct CameraUniformBufferObject {
 	alignas(16) glm::mat4 model;
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
 };
 
+/*
 const std::vector<Vertex> vertices = {
 	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {-0.0f, 0.0f}},
 	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {-1.0f, 0.0f}},
@@ -128,6 +101,7 @@ const std::vector<uint16_t> indices = {
 	0, 1, 2, 2, 3, 0,
 	4, 5, 6, 6, 7, 4
 };
+*/
 
 class VulkanApplication {
 
@@ -185,6 +159,8 @@ public:
 	VkResult createCommandBuffer();
 	VkResult createSynchronizationObjects();
 	VkResult createImGuiImplementation();
+
+	void createMeshObjects();
 
 	void prepareImGuiDrawData();
 
@@ -316,4 +292,6 @@ public:
 	DriverData driverData = {};											// A custom collection of GPU data to be displayed easily in ImGui.
 	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
 	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
+
+	Sphere p0;
 };

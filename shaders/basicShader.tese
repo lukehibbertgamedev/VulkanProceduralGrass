@@ -11,19 +11,20 @@
 layout (triangles, equal_spacing, ccw) in;
 
 // Input from the tessellation control shader.
-layout(location = 0) in vec2 inPosition[];
+layout(location = 0) in vec3 inPosition[];
 layout(location = 1) in vec4 inColor[];
 
 // Output to the tessellation evaluation shader.
-layout (location = 0) out vec2 outPosition;
+layout (location = 0) out vec3 outPosition;
 layout (location = 1) out vec4 outColor;
 
 void main() {    
 
     // Interpolate vertex positions and colors
-    vec2 pos = 
+    vec3 pos = 
         gl_TessCoord.x * inPosition[0] +
-        gl_TessCoord.y * inPosition[1];
+        gl_TessCoord.y * inPosition[1] + 
+        gl_TessCoord.z * inPosition[2];
 
     vec4 color = 
         gl_TessCoord.x * inColor[0] +
@@ -34,5 +35,5 @@ void main() {
     outColor = color;
 
     // Output position
-    gl_Position = vec4(pos.x, pos.y, 0.0, 1.0);
+    gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
 }

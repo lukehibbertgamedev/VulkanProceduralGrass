@@ -10,11 +10,11 @@
 layout(vertices = 3) out;
 
 // Input from the vertex shader.
-layout(location = 0) in vec2 inPosition[];
+layout(location = 0) in vec3 inPosition[];
 layout(location = 1) in vec4 inColor[];
 
 // Output to the tessellation evaluation shader.
-layout (location = 0) out vec2 outPosition[];
+layout (location = 0) out vec3 outPosition[];
 layout (location = 1) out vec4 outColor[];
 
 void main() {
