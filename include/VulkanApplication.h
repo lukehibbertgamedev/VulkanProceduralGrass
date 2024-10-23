@@ -22,6 +22,10 @@
 #include <string>
 
 static constexpr bool kEnableValidationLayers = false;
+const std::vector<const char*> kValidationLayers = {
+	"VK_LAYER_KHRONOS_validation"
+};
+
 static constexpr bool kEnableImGuiDemoWindow = true;
 static constexpr int MAX_FRAMES_IN_FLIGHT = 2; // kMaxFramesInFlight
 static constexpr unsigned int PARTICLE_COUNT = 1u << 23;
@@ -84,24 +88,24 @@ struct CameraUniformBufferObject {
 	alignas(16) glm::mat4 proj;
 };
 
-/*
-const std::vector<Vertex> vertices = {
-	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {-0.0f, 0.0f}},
-	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {-1.0f, 0.0f}},
-	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {-1.0f, 1.0f}},
-	{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {-0.0f, 1.0f}},
 
-	{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {-0.0f, 0.0f}},
-	{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {-1.0f, 0.0f}},
-	{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {-1.0f, 1.0f}},
-	{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {-0.0f, 1.0f}}
+const std::vector<Vertex> vertices = {
+	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f }, {-0.0f, 0.0f}},
+	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f }, {-1.0f, 0.0f}},
+	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f }, {-1.0f, 1.0f}},
+	{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f }, {-0.0f, 1.0f}},
+
+	{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.0f }, {-0.0f, 0.0f}},
+	{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f, 1.0f }, {-1.0f, 0.0f}},
+	{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f, 1.0f }, {-1.0f, 1.0f}},
+	{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f, 1.0f }, {-0.0f, 1.0f}}
 };
 
 const std::vector<uint16_t> indices = {
 	0, 1, 2, 2, 3, 0,
 	4, 5, 6, 6, 7, 4
 };
-*/
+
 
 class VulkanApplication {
 
@@ -293,5 +297,5 @@ public:
 	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
 	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
 
-	Sphere p0;
+	//Sphere p0;
 };

@@ -20,9 +20,6 @@
 #include <random>
 
 // Todo: Wrap in ifdef vk debug
-static const std::vector<const char*> kValidationLayers = {
-    "VK_LAYER_KHRONOS_validation"
-};
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
     std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
@@ -77,7 +74,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverity
 }
 
 static bool checkValidationLayerSupport() {
-    uint32_t layerCount;
+    uint32_t layerCount = 0;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
     std::vector<VkLayerProperties> availableLayers(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
@@ -169,6 +166,8 @@ void VulkanApplication::render()
     // Graphics submission
     //vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); // Wait for compute to finish.
 
+    vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); // Wait for compute to finish.
+
     uint32_t imageIndex;
     VkResult ret = vkAcquireNextImageKHR(m_LogicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
@@ -187,34 +186,44 @@ void VulkanApplication::render()
     vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
     recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
-    VkSemaphore waitSemaphores[] = { /*computeFinishedSemaphores[currentFrame],*/ imageAvailableSemaphores[currentFrame] };
+    //VkSemaphore waitSemaphores[] = { /*computeFinishedSemaphores[currentFrame],*/ imageAvailableSemaphores[currentFrame] };
     //VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     
     VkSubmitInfo submitInfo{};
-    //submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &imageAvailableSemaphores[currentFrame];
+    submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
+
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame];
 
-    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
+    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    ret = vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
+
+    if (ret != VK_SUCCESS) {
+        int a = 5;
         throw std::runtime_error("failed to submit draw command buffer!");
     }
 
-    VkSwapchainKHR swapChains[] = { swapChain };
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &renderFinishedSemaphores[currentFrame];
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = { swapChain };
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
+
     presentInfo.pImageIndices = &imageIndex;
-    presentInfo.pResults = nullptr; // Optional
+    //presentInfo.pResults = nullptr; // Optional
 
     ret = vkQueuePresentKHR(presentQueue, &presentInfo);
 
@@ -407,7 +416,7 @@ VkResult VulkanApplication::createLogicalDevice()
     //VkPhysicalDeviceLimits - has MANY stats that may be useful to know.
 
     VkPhysicalDeviceFeatures deviceFeatures = {};
-    deviceFeatures.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+    //deviceFeatures.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
     deviceFeatures.tessellationShader = VK_TRUE; // Enable Vulkan to be able to link and execute tessellation shaders.
 
     //deviceFeatures.samplerAnisotropy = VK_TRUE;
@@ -1132,7 +1141,7 @@ VkResult VulkanApplication::createVertexBuffer()
     // Non-particle staging buffer version.
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = sizeof(p0.vertices[0]) * p0.vertices.size();
+    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
     bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -1161,7 +1170,7 @@ VkResult VulkanApplication::createVertexBuffer()
 
     void* data;
     vkMapMemory(m_LogicalDevice, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-    memcpy(data, p0.vertices.data(), (size_t)bufferInfo.size);
+    memcpy(data, vertices.data(), (size_t)bufferInfo.size);
     vkUnmapMemory(m_LogicalDevice, vertexBufferMemory);
 
     return ret;
@@ -1169,7 +1178,7 @@ VkResult VulkanApplication::createVertexBuffer()
 
 VkResult VulkanApplication::createIndexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(p0.indices[0]) * p0.indices.size();
+    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
     
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -1181,7 +1190,7 @@ VkResult VulkanApplication::createIndexBuffer()
 
     void* data;
     vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, p0.indices.data(), (size_t)bufferSize);
+    memcpy(data, indices.data(), (size_t)bufferSize);
     vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
     
     ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
@@ -1490,8 +1499,8 @@ VkResult VulkanApplication::createImGuiImplementation()
 
 void VulkanApplication::createMeshObjects()
 {
-    p0.generateFlatSphere(1.0f, 36, 18, 3); // radius, sectors, stacks, Y-up
-    driverData.vertexCount += p0.vertices.size();
+    //p0.generateFlatSphere(1.0f, 36, 18, 3); // radius, sectors, stacks, Y-up
+    //driverData.vertexCount += p0.vertices.size();
 }
 
 void VulkanApplication::prepareImGuiDrawData()
@@ -1668,7 +1677,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr); 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(p0.indices.size()), 1, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
     //vkCmdBindVertexBuffers(commandBuffer, 0, 1, &shaderStorageBuffers[currentFrame], offsets);
     //vkCmdDraw(commandBuffer, PARTICLE_COUNT, 1, 0, 0);
@@ -1854,7 +1863,8 @@ VkResult VulkanApplication::createDebugUtilsMessengerEXT(VkInstance instance, co
 {
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr) {
-        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+        func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+        return VK_SUCCESS;
     }
     else {
         return VK_ERROR_EXTENSION_NOT_PRESENT;
