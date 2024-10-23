@@ -15,7 +15,7 @@ layout(location = 1) out vec4 outColor;
 
 void main() {
 
-    gl_PointSize = 15.0;
+    gl_PointSize = 7.0;
     //gl_Position = vec4(inPosition.xy, 1.0, 1.0);
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
 

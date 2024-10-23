@@ -7,11 +7,9 @@ void Sphere::generateFlatSphere(float radius, int sectorCount, int stackCount, i
 	this->stackCount = stackCount;
 	this->up = up;
 
-	const float PI = acos(-1.0f);
+	//vertices.clear();
 
-	// temp
-	struct TempVertex { float x, y, z, s, t; };
-	std::vector<TempVertex> tmpVertices;
+	const float PI = acos(-1.0f);
 	
 	float sectorStep = 2 * PI / sectorCount;
 	float stackStep = PI / stackCount;
@@ -26,94 +24,49 @@ void Sphere::generateFlatSphere(float radius, int sectorCount, int stackCount, i
 		for (int j = 0; j <= sectorCount; ++j)
 		{
 			sectorAngle = j * sectorStep;
-			TempVertex tmpVertex;
-			tmpVertex.x = xy * cosf(sectorAngle);
-			tmpVertex.y = xy * sinf(sectorAngle);
-			tmpVertex.z = z;
-			tmpVertex.s = (float)j / sectorCount;
-			tmpVertex.t = (float)i / stackCount;
-			tmpVertices.push_back(tmpVertex);
+
+			float vx = xy * cosf(sectorAngle);
+			float vy = xy * sinf(sectorAngle);
+			float vz = z;
+			float s = (float)j / sectorCount;
+			float t = (float)i / stackCount;
+			addVertex(glm::vec3(vx, vy, vz), glm::vec2(s, t), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 	}
 
-	vertices.clear();
-	TempVertex v1, v2, v3, v4;
-	std::vector<float> n;
+	int k1, k2;
+	for (int i = 0; i < stackCount; ++i)
+	{
+		k1 = i * (sectorCount + 1);     // beginning of current stack
+		k2 = k1 + sectorCount + 1;      // beginning of next stack
 
-	int i, j, k, vi1, vi2;
-	int index = 0;
-
-	for (int i = 0; i < stackCount; ++i) {
-		vi1 = i * (sectorCount + 1);
-		vi2 = (i + 1) * (sectorCount + 1);
-
-		for (int j = 0; j < sectorCount; ++j)
+		for (int j = 0; j < sectorCount; ++j, ++k1, ++k2)
 		{
-			v1 = tmpVertices[vi1];
-			v2 = tmpVertices[vi2];
-			v3 = tmpVertices[vi1 + 1]; 
-			v4 = tmpVertices[vi2 + 1];
-
-			if (i == 0) {
-				addVertex(glm::vec3(v1.x, v1.y, v1.z), glm::vec2(v1.s, v1.t));  
-				addVertex(glm::vec3(v2.x, v2.y, v2.z), glm::vec2(v2.s, v2.t)); 
-				addVertex(glm::vec3(v4.x, v4.y, v4.z), glm::vec2(v4.s, v4.t)); 
-
-				n = computeFaceNormal(glm::vec3(v1.x, v1.y, v1.z), glm::vec3(v2.x, v2.y, v2.z), glm::vec3(v4.x, v4.y, v4.z));
-
-				for (int k = 0; k < 3; ++k)
-				{
-					// add normals
-				}
-
-				addIndex(index, index + 1, index + 2);
-				addLineIndex(index);
-				addLineIndex(index + 1);
-				index += 3; // per tri
+			// 2 triangles per sector excluding first and last stacks
+			// k1 => k2 => k1+1
+			if (i != 0)
+			{
+				indices.push_back(k1);
+				indices.push_back(k2);
+				indices.push_back(k1 + 1);
 			}
 
-			else if (i == (stackCount - 1)) {
-				addVertex(glm::vec3(v1.x, v1.y, v1.z), glm::vec2(v1.s, v1.t));
-				addVertex(glm::vec3(v2.x, v2.y, v2.z), glm::vec2(v2.s, v2.t));
-				addVertex(glm::vec3(v3.x, v3.y, v3.z), glm::vec2(v3.s, v3.t));
-
-				n = computeFaceNormal(glm::vec3(v1.x, v1.y, v1.z), glm::vec3(v2.x, v2.y, v2.z), glm::vec3(v3.x, v3.y, v3.z)); 
-
-				for (int k = 0; k < 3; ++k)
-				{
-					// add normals
-				}
-
-				addIndex(index, index + 1, index + 2);
-				addLineIndex(index);
-				addLineIndex(index + 1);
-				addLineIndex(index);
-				addLineIndex(index + 2);
-				index += 3; // per tri
+			// k1+1 => k2 => k2+1
+			if (i != (stackCount - 1))
+			{
+				indices.push_back(k1 + 1);
+				indices.push_back(k2);
+				indices.push_back(k2 + 1);
 			}
 
-			else { // 2 tris for others
-				addVertex(glm::vec3(v1.x, v1.y, v1.z), glm::vec2(v1.s, v1.t));
-				addVertex(glm::vec3(v2.x, v2.y, v2.z), glm::vec2(v2.s, v2.t));
-				addVertex(glm::vec3(v3.x, v3.y, v3.z), glm::vec2(v3.s, v3.t));
-				addVertex(glm::vec3(v4.x, v4.y, v4.z), glm::vec2(v4.s, v4.t));
-
-				n = computeFaceNormal(glm::vec3(v1.x, v1.y, v1.z), glm::vec3(v2.x, v2.y, v2.z), glm::vec3(v3.x, v3.y, v3.z));
-
-				for (int k = 0; k < 3; ++k)
-				{
-					// add normals
-				}
-
-				addIndex(index, index + 1, index + 2);
-				addIndex(index + 2, index + 1, index + 3);
-
-				addLineIndex(index);
-				addLineIndex(index + 1);
-				addLineIndex(index);
-				addLineIndex(index + 2);
-
-				index += 4;
+			// store indices for lines
+			// vertical lines for all stacks, k1 => k2
+			lineIndices.push_back(k1);
+			lineIndices.push_back(k2);
+			if (i != 0)  // horizontal lines except 1st stack, k1 => k+1
+			{
+				lineIndices.push_back(k1);
+				lineIndices.push_back(k1 + 1);
 			}
 		}
 	}
@@ -121,20 +74,15 @@ void Sphere::generateFlatSphere(float radius, int sectorCount, int stackCount, i
 	if (this->up != 3) {
 		changeUpAxis(3, this->up);
 	}
-
-	// make all white
-	for (int i = 0; i < vertices.size(); ++i) {
-		vertices[i].color = { 1.0f, 1.0f, 1.0f, 1.0f };
-	}
 }
 
-void Sphere::addVertex(glm::vec3 pos, glm::vec2 tex)
+void Sphere::addVertex(glm::vec3 pos, glm::vec2 tex, glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f))
 {
-	Vertex vertex;
-	vertex.pos = pos;
+	Vertex vertex; 
+	vertex.pos = pos; 
 	vertex.texCoord = tex;
-
-	vertices.push_back(vertex);
+	vertex.color = color;
+	vertices.push_back(vertex); 
 }
 
 void Sphere::addIndex(uint16_t triIndex1, uint16_t triIndex2, uint16_t triIndex3)

@@ -770,7 +770,7 @@ VkResult VulkanApplication::createGraphicsPipeline()
     
     // Use patches for the tessellation. May be an issue later on.
     //inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -1344,7 +1344,7 @@ VkResult VulkanApplication::createDescriptorSets()
     descriptorWrite.dstBinding = 0;
     descriptorWrite.dstArrayElement = 0;
     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
     descriptorWrite.pBufferInfo = &bufferInfo;
 
     //descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1490,7 +1490,9 @@ VkResult VulkanApplication::createImGuiImplementation()
 
 void VulkanApplication::createMeshObjects()
 {
-    p0.generateFlatSphere(1.0f, 36, 18, 3); // radius, sectors, stacks, Y-up
+    p0.generateFlatSphere(1.0f, 36, 18, 3); // radius, sectors, stacks, Y-up 
+
+    //p0.generateUVSphere(1.0f, 18, 18);
     driverData.vertexCount += p0.vertices.size();
 }
 
@@ -1670,7 +1672,8 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr); 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+    //vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(p0.indices.size()), 1, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(p0.indices.size()), 1, 0, 0, 0);
 
     //vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
