@@ -5,6 +5,36 @@
 
 #include <../PortableVulkanSDK1.3/include/vulkan/vulkan.h>
 
+struct MeshData {
+	uint32_t startIndex = 0;
+	uint32_t numIndices = 0;
+	uint32_t startInstance = 0;
+	glm::vec3 position = glm::vec3(0.0f);
+	uint32_t numVertices = 0;
+};
+
+struct InstanceData {
+
+	glm::vec3 position = glm::vec3(0.0f);
+	glm::vec3 rotation = glm::vec3(0.0f);
+	glm::vec3 scale = glm::vec3(1.0f); 
+
+	/*glm::mat4 calculateTransformationMatrix() {
+		glm::vec3 t(position.x, position.y, position.z);
+		glm::mat4 tm = glm::translate(glm::mat4(1.0f), t);
+
+		glm::mat4 rxm = glm::rotate(glm::mat4(1.0f), glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+		glm::mat4 rym = glm::rotate(glm::mat4(1.0f), glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 rzm = glm::rotate(glm::mat4(1.0f), glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+		glm::mat4 rm = rzm * rym * rxm;
+
+		glm::vec3 s(scale.x, scale.y, scale.z);
+		glm::mat4 sm = glm::scale(glm::mat4(1.0f), s);
+
+		return tm * rm * sm;
+	}*/
+};
+
 struct Vertex {
 	glm::vec3 pos;
 	glm::vec4 color;

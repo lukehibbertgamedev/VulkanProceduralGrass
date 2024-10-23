@@ -1,7 +1,9 @@
 #include "Sphere.h"
 
-void Sphere::generateFlatSphere(float radius, int sectorCount, int stackCount, int up)
+MeshData Sphere::generateFlatSphere(glm::vec3 position, float radius, int sectorCount, int stackCount, int up)
 {
+	// https://www.songho.ca/opengl/gl_sphere.html
+
 	this->radius = radius;
 	this->sectorCount = sectorCount;
 	this->stackCount = stackCount;
@@ -74,6 +76,12 @@ void Sphere::generateFlatSphere(float radius, int sectorCount, int stackCount, i
 	if (this->up != 3) {
 		changeUpAxis(3, this->up);
 	}
+
+	MeshData meshData = {};
+	meshData.numIndices = indices.size();
+	meshData.numVertices = vertices.size();
+	meshData.position = position;
+	return meshData;
 }
 
 void Sphere::addVertex(glm::vec3 pos, glm::vec2 tex, glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f))

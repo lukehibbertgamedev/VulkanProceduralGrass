@@ -246,13 +246,16 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
-    CameraUniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
-    ubo.proj[1][1] *= -1;
+    for (int i = 0; i < meshes.size(); ++i) {
+        CameraUniformBufferObject ubo{};
+        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.model *= glm::translate(glm::mat4(1.0f), meshes[i].position);
+        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+        ubo.proj[1][1] *= -1;
 
-    memcpy(uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
+        memcpy(uniformBuffersMapped[i], &ubo, sizeof(ubo));
+    }
 }
 
 VkResult VulkanApplication::createInstance() {   
@@ -1140,7 +1143,7 @@ VkResult VulkanApplication::createVertexBuffer()
     return ret;*/
 
     // Non-particle staging buffer version.
-    VkDeviceSize bufferSize = sizeof(p0.vertices[0]) * p0.vertices.size();
+    VkDeviceSize bufferSize = sizeof(sphereMesh.vertices[0]) * sphereMesh.vertices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -1152,7 +1155,7 @@ VkResult VulkanApplication::createVertexBuffer()
 
     void* data;
     vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, p0.vertices.data(), (size_t)bufferSize);
+    memcpy(data, sphereMesh.vertices.data(), (size_t)bufferSize);
     vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
 
     ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
@@ -1171,7 +1174,7 @@ VkResult VulkanApplication::createVertexBuffer()
 
 VkResult VulkanApplication::createIndexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(p0.indices[0]) * p0.indices.size();
+    VkDeviceSize bufferSize = sizeof(sphereMesh.indices[0]) * sphereMesh.indices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -1183,7 +1186,7 @@ VkResult VulkanApplication::createIndexBuffer()
 
     void* data;
     vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, p0.indices.data(), (size_t)bufferSize);
+    memcpy(data, sphereMesh.indices.data(), (size_t)bufferSize);
     vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
 
     ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
@@ -1328,42 +1331,33 @@ VkResult VulkanApplication::createDescriptorSets()
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    VkDescriptorBufferInfo bufferInfo = {};
-    bufferInfo.buffer = uniformBuffers[currentFrame];
-    bufferInfo.offset = 0;
-    bufferInfo.range = sizeof(CameraUniformBufferObject);
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 
-    /*VkDescriptorImageInfo imageInfo = {};
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfo.imageView = textureImageView;
-    imageInfo.sampler = textureSampler;*/
+        VkDescriptorBufferInfo bufferInfo = {};
+        bufferInfo.buffer = uniformBuffers[i];
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(CameraUniformBufferObject);
 
-    VkWriteDescriptorSet descriptorWrite = {};
-    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = descriptorSets[currentFrame];
-    descriptorWrite.dstBinding = 0;
-    descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrite.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-    descriptorWrite.pBufferInfo = &bufferInfo;
+        std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
 
-    //descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    //descriptorWrite[0].dstSet = descriptorSets[i];
-    //descriptorWrite[0].dstBinding = 0;
-    //descriptorWrite[0].dstArrayElement = 0;
-    //descriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    //descriptorWrite[0].descriptorCount = 1;
-    //descriptorWrite[0].pBufferInfo = &bufferInfo;
-    // 
-    //descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    //descriptorWrites[1].dstSet = descriptorSets[i];
-    //descriptorWrites[1].dstBinding = 1;
-    //descriptorWrites[1].dstArrayElement = 0;
-    //descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    //descriptorWrites[1].descriptorCount = 1;
-    //descriptorWrites[1].pImageInfo = &imageInfo;
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = descriptorSets[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &bufferInfo;
 
-    vkUpdateDescriptorSets(m_LogicalDevice, 1, &descriptorWrite, 0, nullptr);
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = descriptorSets[i];
+        descriptorWrites[1].dstBinding = 1; // Increase from the last one
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pBufferInfo = &bufferInfo;
+        
+        vkUpdateDescriptorSets(m_LogicalDevice, 2, descriptorWrites.data(), 0, nullptr);
+    }     
 
     return VK_SUCCESS;
 }
@@ -1490,10 +1484,13 @@ VkResult VulkanApplication::createImGuiImplementation()
 
 void VulkanApplication::createMeshObjects()
 {
-    p0.generateFlatSphere(1.0f, 36, 18, 3); // radius, sectors, stacks, Y-up 
+    for (int i = 0; i < 2; ++i) {
 
-    //p0.generateUVSphere(1.0f, 18, 18);
-    driverData.vertexCount += p0.vertices.size();
+        MeshData mesh = sphereMesh.generateFlatSphere(glm::vec3(i), 1.0f, 8, 8, 3); // radius, sectors, stacks, Y-up 
+        driverData.vertexCount += mesh.numVertices;
+
+        meshes.push_back(mesh);
+    }
 }
 
 void VulkanApplication::prepareImGuiDrawData()
@@ -1668,17 +1665,16 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     VkBuffer vertexBuffers[] = { vertexBuffer }; 
     VkDeviceSize offsets[] = { 0 };
+
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets); 
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr); 
-    //vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(p0.indices.size()), 1, 0, 0, 0);
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(p0.indices.size()), 1, 0, 0, 0);
 
-    //vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+    for (int i = 0; i < meshes.size(); ++i) {
+        vkCmdDrawIndexed(commandBuffer, meshes[i].numIndices, 1, meshes[i].startIndex, 0, meshes[i].startInstance);
+    }
 
-    //vkCmdBindVertexBuffers(commandBuffer, 0, 1, &shaderStorageBuffers[currentFrame], offsets);
-    //vkCmdDraw(commandBuffer, PARTICLE_COUNT, 1, 0, 0);
+    //vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(sphereMesh.indices.size()), 1, 0, 0, 0);
 
     // ImGui
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);

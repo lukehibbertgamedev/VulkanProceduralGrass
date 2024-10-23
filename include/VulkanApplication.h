@@ -297,7 +297,9 @@ public:
 	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
 	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
 
-	Sphere p0;
+	Sphere sphereMesh;
 
 	int frameCount = 0;
+
+	std::vector<MeshData> meshes;
 };
