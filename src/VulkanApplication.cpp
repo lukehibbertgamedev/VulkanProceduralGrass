@@ -225,7 +225,7 @@ void VulkanApplication::render()
     presentInfo.pImageIndices = &imageIndex;
     //presentInfo.pResults = nullptr; // Optional
 
-    ret = vkQueuePresentKHR(presentQueue, &presentInfo);
+    ret = vkQueuePresentKHR(presentQueue, &presentInfo); // Send all image data to the screen, this will render this frame.
 
     if (ret == VK_ERROR_OUT_OF_DATE_KHR || ret == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = false;
@@ -237,6 +237,7 @@ void VulkanApplication::render()
 
     // Frame complete, increment frame and wrap if it goes beyond max frames in flight.
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    frameCount++;
 }
 
 void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
@@ -718,29 +719,29 @@ VkResult VulkanApplication::createGraphicsPipeline()
     
     // Tessellator is enabled when the pipeline contains both a control and evaluation shader.
 
-    // Tessellation shader modules.
-    auto tessellationControlShaderCode = readFile("../shaders/basicShader.tesc.spv");
-    auto tessellationEvaluationShaderCode = readFile("../shaders/basicShader.tese.spv");
-    VkShaderModule tessellationControlShaderModule = createShaderModule(tessellationControlShaderCode);
-    VkShaderModule tessellationEvaluationShaderModule = createShaderModule(tessellationEvaluationShaderCode);     
+    //// Tessellation shader modules.
+    //auto tessellationControlShaderCode = readFile("../shaders/basicShader.tesc.spv");
+    //auto tessellationEvaluationShaderCode = readFile("../shaders/basicShader.tese.spv");
+    //VkShaderModule tessellationControlShaderModule = createShaderModule(tessellationControlShaderCode);
+    //VkShaderModule tessellationEvaluationShaderModule = createShaderModule(tessellationEvaluationShaderCode);     
 
-    VkPipelineShaderStageCreateInfo tessellationControlShaderStageInfo = {}; 
-    tessellationControlShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    tessellationControlShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-    tessellationControlShaderStageInfo.module = tessellationControlShaderModule;
-    tessellationControlShaderStageInfo.pName = "main";
+    //VkPipelineShaderStageCreateInfo tessellationControlShaderStageInfo = {}; 
+    //tessellationControlShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    //tessellationControlShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    //tessellationControlShaderStageInfo.module = tessellationControlShaderModule;
+    //tessellationControlShaderStageInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo tessellationEvaluationShaderStageInfo = {};
-    tessellationEvaluationShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    tessellationEvaluationShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-    tessellationEvaluationShaderStageInfo.module = tessellationEvaluationShaderModule;
-    tessellationEvaluationShaderStageInfo.pName = "main";
+    //VkPipelineShaderStageCreateInfo tessellationEvaluationShaderStageInfo = {};
+    //tessellationEvaluationShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    //tessellationEvaluationShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    //tessellationEvaluationShaderStageInfo.module = tessellationEvaluationShaderModule;
+    //tessellationEvaluationShaderStageInfo.pName = "main";
 
-    VkPipelineTessellationStateCreateInfo tessellationStateInfo = {};
-    tessellationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-    tessellationStateInfo.pNext = nullptr;
-    tessellationStateInfo.flags = 0; // Must be 0, this is reserved by Vulkan for future use.
-    tessellationStateInfo.patchControlPoints = 3; // I would imagine this matches the layout(vertices = 3) out; in the control shader.
+    //VkPipelineTessellationStateCreateInfo tessellationStateInfo = {};
+    //tessellationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+    //tessellationStateInfo.pNext = nullptr;
+    //tessellationStateInfo.flags = 0; // Must be 0, this is reserved by Vulkan for future use.
+    //tessellationStateInfo.patchControlPoints = 3; // I would imagine this matches the layout(vertices = 3) out; in the control shader.
 
     // I don't think they have to be ordered but I've ordered them in calling order anyways.
     VkPipelineShaderStageCreateInfo shaderStages[] = { 
@@ -769,7 +770,7 @@ VkResult VulkanApplication::createGraphicsPipeline()
     
     // Use patches for the tessellation. May be an issue later on.
     //inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -851,8 +852,8 @@ VkResult VulkanApplication::createGraphicsPipeline()
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    vkDestroyShaderModule(m_LogicalDevice, tessellationEvaluationShaderModule, nullptr);
-    vkDestroyShaderModule(m_LogicalDevice, tessellationControlShaderModule, nullptr);
+    /*vkDestroyShaderModule(m_LogicalDevice, tessellationEvaluationShaderModule, nullptr);
+    vkDestroyShaderModule(m_LogicalDevice, tessellationControlShaderModule, nullptr);*/
     vkDestroyShaderModule(m_LogicalDevice, fragShaderModule, nullptr);
     vkDestroyShaderModule(m_LogicalDevice, vertShaderModule, nullptr);
 
@@ -1139,68 +1140,60 @@ VkResult VulkanApplication::createVertexBuffer()
     return ret;*/
 
     // Non-particle staging buffer version.
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkDeviceSize bufferSize = sizeof(p0.vertices[0]) * p0.vertices.size();
 
-    VkResult ret = vkCreateBuffer(m_LogicalDevice, &bufferInfo, nullptr, &vertexBuffer);
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
     if (ret != VK_SUCCESS) {
-        throw std::runtime_error("failed to create vertex buffer!");
+        throw std::runtime_error("bad buffer creation");
         return ret;
     }
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(m_LogicalDevice, vertexBuffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findGPUMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    // If it says VK_ERROR_OUT_OF_DEVICE_MEMORY then be warned that your vertices container could be messed up.
-    ret = vkAllocateMemory(m_LogicalDevice, &allocInfo, nullptr, &vertexBufferMemory);
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate vertex buffer memory!");
-        return ret;
-    }
-
-    vkBindBufferMemory(m_LogicalDevice, vertexBuffer, vertexBufferMemory, 0);
 
     void* data;
-    vkMapMemory(m_LogicalDevice, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-    memcpy(data, vertices.data(), (size_t)bufferInfo.size);
-    vkUnmapMemory(m_LogicalDevice, vertexBufferMemory);
+    vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, p0.vertices.data(), (size_t)bufferSize);
+    vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+
+    ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad buffer creation");
+        return ret;
+    }
+
+    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+
+    vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
 
     return ret;
 }
 
 VkResult VulkanApplication::createIndexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-    
+    VkDeviceSize bufferSize = sizeof(p0.indices[0]) * p0.indices.size();
+
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
     VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
     if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation.");
+        throw std::runtime_error("bad buffer creation");
         return ret;
     }
 
     void* data;
     vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices.data(), (size_t)bufferSize);
+    memcpy(data, p0.indices.data(), (size_t)bufferSize);
     vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
-    
+
     ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
     if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation.");
+        throw std::runtime_error("bad buffer creation");
         return ret;
     }
 
     copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-    
+
     vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
     vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
 
@@ -1326,9 +1319,7 @@ VkResult VulkanApplication::createDescriptorSets()
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptorPool;
-    //allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-    //allocInfo.pSetLayouts = layouts.data();
-    allocInfo.descriptorSetCount = 1;
+    allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT); // Big error here, never change this, ever...
     allocInfo.pSetLayouts = layouts.data();
 
     descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1499,8 +1490,8 @@ VkResult VulkanApplication::createImGuiImplementation()
 
 void VulkanApplication::createMeshObjects()
 {
-    //p0.generateFlatSphere(1.0f, 36, 18, 3); // radius, sectors, stacks, Y-up
-    //driverData.vertexCount += p0.vertices.size();
+    p0.generateFlatSphere(1.0f, 36, 18, 3); // radius, sectors, stacks, Y-up
+    driverData.vertexCount += p0.vertices.size();
 }
 
 void VulkanApplication::prepareImGuiDrawData()
@@ -1518,6 +1509,8 @@ void VulkanApplication::prepareImGuiDrawData()
 
     ImGui::Text("Frames per second: %f", 1 / (lastFrameTime / 1000));
     ImGui::Text("Delta time: %f", deltaTime);
+
+    ImGui::Text("Frame number: %i", frameCount);
 
     ImGui::End();
 }
@@ -1678,6 +1671,8 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr); 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+
+    //vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
     //vkCmdBindVertexBuffers(commandBuffer, 0, 1, &shaderStorageBuffers[currentFrame], offsets);
     //vkCmdDraw(commandBuffer, PARTICLE_COUNT, 1, 0, 0);

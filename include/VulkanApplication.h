@@ -21,7 +21,7 @@
 #include <vector>
 #include <string>
 
-static constexpr bool kEnableValidationLayers = false;
+static constexpr bool kEnableValidationLayers = true;
 const std::vector<const char*> kValidationLayers = {
 	"VK_LAYER_KHRONOS_validation"
 };
@@ -297,5 +297,7 @@ public:
 	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
 	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
 
-	//Sphere p0;
+	Sphere p0;
+
+	int frameCount = 0;
 };
