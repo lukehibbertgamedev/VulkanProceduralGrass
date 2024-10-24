@@ -16,6 +16,7 @@
 
 #include "Vertex.h"
 #include "Sphere.h"
+#include "GrassBlade.h"
 
 #include <optional>
 #include <vector>

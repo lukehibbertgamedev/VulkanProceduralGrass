@@ -149,22 +149,22 @@
 namespace bezier {
 
 
-	class quadratic {
+	//class quadratic {
 
-	public:
-
-
-
-	};
+	//public:
 
 
-	const uint8_t kNumPointsAlongBezier = 10;
 
-	struct bezier { 
-	public: 
-		glm::vec3 p0, p1, p2; // Control points where p0 is the base, p1 is the height, p2 is the tip.
-		float interpolation; // Linear interpolation value between 0-1. If this = 0.5 then it is halfway between point A and point B.
-	};
+	//};
+
+
+	//const uint8_t kNumPointsAlongBezier = 10;
+
+	//struct bezier { 
+	//public: 
+	//	glm::vec3 p0, p1, p2; // Control points where p0 is the base, p1 is the height, p2 is the tip.
+	//	float interpolation; // Linear interpolation value between 0-1. If this = 0.5 then it is halfway between point A and point B.
+	//};
 
 	// Given the coordinates of control points Pi, the first control point has coordinates P1 = (x1, y1), the second, P2 = (x2, y2) and so on.
 	// The curve coordinates are described by the equation that depends on parameter t between 0-1.
@@ -173,7 +173,7 @@ namespace bezier {
 
 	// Using De Casteljau's algorithm, which recursively evaluates polynomials in Bézier curves.
 
-	glm::vec3 lerp(const glm::vec3& p0, const glm::vec3& p1, float t) {
+	/*glm::vec3 lerp(const glm::vec3& p0, const glm::vec3& p1, float t) {
 		return glm::vec3((1 - t) * p0.x + t * p1.x, (1 - t) * p0.y + t * p1.y, (1 - t) * p0.z + t * p1.z);
 	}
 
@@ -183,7 +183,7 @@ namespace bezier {
 		glm::vec3 p0p1 = lerp(p0, p1, t); 
 		glm::vec3 p1p2 = lerp(p1, p2, t); 
 		return lerp(p0p1, p1p2, t);
-	}
+	}*/
 }
 
 
@@ -192,13 +192,13 @@ public:
 
 	Blade();
 
-	float lean = 0.3f;
-	float height = 1.0f;
+	float lean = 0.7f;
+	float height = 1.25f;
 
-	glm::vec3 position; // The world space position of this blade.
-	glm::vec3 direction; // In the direction that it will curve/lean.
+	glm::vec3 position = glm::vec3(0.0f); // The world space position of this blade.
+	glm::vec3 direction = glm::vec3(1.0f, 0.0f, 0.0f); // In the direction that it will curve/lean.
 
-	glm::vec3 p0; // Blade base.
-	glm::vec3 p1; // Blade height.
-	glm::vec3 p2; // Blade tip.
+	glm::vec3 p0 = glm::vec3(0.0f); // Blade base.
+	glm::vec3 p1 = glm::vec3(0.0f); // Blade height.
+	glm::vec3 p2 = glm::vec3(0.0f); // Blade tip.
 };

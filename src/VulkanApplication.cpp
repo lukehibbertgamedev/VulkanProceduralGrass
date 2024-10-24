@@ -246,13 +246,17 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
-    glm::mat4 view = glm::lookAt(glm::vec3(2.5f, 3.0f, 1.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)); // Z is the natural UP vector.
+    glm::vec3 cameraPosition = glm::vec3(2.5f, 3.0f, 1.5f);
+    glm::vec3 lookTowardsPoint = glm::vec3(1.0f, 0.5f, 0.5f);
+    glm::vec3 worldUpVector = glm::vec3(0.0f, 0.0f, 1.0f); // Z is the natural UP vector.
+    glm::mat4 view = glm::lookAt(cameraPosition, lookTowardsPoint, worldUpVector); 
+
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
     proj[1][1] *= -1; // Invert the y-axis due to differing coordinate systems.
 
     CameraUniformBufferObject ubo = {};
     for (size_t i = 0; i < meshInstanceCount; ++i) {
-        ubo.model[i] = glm::translate(glm::mat4(1.0f), meshes[i].position) /* * glm::scale(glm::mat4(1.0f, meshes[i].scale)*/;
+        ubo.model[i] = glm::translate(glm::mat4(1.0f), meshes[i].position) * glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f) * 0.5f, glm::vec3(0.0f, 0.0f, 1.0f));
         ubo.view = view;
         ubo.proj = proj;
     }
@@ -1489,10 +1493,25 @@ VkResult VulkanApplication::createImGuiImplementation()
 
 void VulkanApplication::createMeshObjects()
 {
+    const float radius = 0.2f;
+    const int sectors = 10, stacks = 10;
+    const int upAxis = 3; // 1 = X, 2 = Y, 3 = Z. Vulkan uses RH so Z-Up.
+
+    Blade testBlade = Blade();
+
+    MeshInstance base = sphereMesh.generateFlatSphere(testBlade.p0, radius, sectors, stacks, upAxis);
+    meshes.push_back(base);
+
+    MeshInstance height = sphereMesh.generateFlatSphere(testBlade.p1, radius, sectors, stacks, upAxis);
+    meshes.push_back(height);
+
+    MeshInstance tip = sphereMesh.generateFlatSphere(testBlade.p2, radius, sectors, stacks, upAxis);
+    meshes.push_back(tip);
+
     for (int i = 0; i < meshInstanceCount; ++i) {
 
-        MeshInstance mesh = sphereMesh.generateFlatSphere(glm::vec3(i, 0.0f, 0.0f), 0.5f, 8, 8, 3); // position, radius, sectors, stacks, Y-up 
-        meshes.push_back(mesh); 
+        //MeshInstance mesh = sphereMesh.generateFlatSphere(glm::vec3(i, 0.0f, 0.0f), 0.2f, 10, 10, 3); // position, radius, sectors, stacks, Y-up 
+        //meshes.push_back(mesh); 
 
         driverData.vertexCount += sphereMesh.vertices.size(); 
     }
