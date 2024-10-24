@@ -1172,7 +1172,7 @@ VkResult VulkanApplication::createVertexBuffer()
     return ret;*/
 
     // Non-particle staging buffer version.
-    VkDeviceSize bufferSize = sizeof(sphereMesh.vertices[0]) * sphereMesh.vertices.size();
+    VkDeviceSize bufferSize = sizeof(Vertex) * sphereMesh.vertexCount;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -1203,7 +1203,7 @@ VkResult VulkanApplication::createVertexBuffer()
 
 VkResult VulkanApplication::createIndexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(sphereMesh.indices[0]) * sphereMesh.indices.size();
+    VkDeviceSize bufferSize = sizeof(uint16_t) * sphereMesh.indexCount;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -1551,7 +1551,6 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::Text("Driver Version: %i.%i.%i", driverData.versionMajor, driverData.versionMinor, driverData.versionPatch);
     ImGui::Text("Vulkan API Version supported: %i.%i.%i", driverData.apiMajor, driverData.apiMinor, driverData.apiPatch);
 
-    ImGui::Text("Particle count: %i", PARTICLE_COUNT);
     ImGui::Text("Vertex count: %i", driverData.vertexCount);
 
     ImGui::Text("Frames per second: %f", 1 / (lastFrameTime / 1000));
@@ -1719,9 +1718,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr); 
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(sphereMesh.indices.size()), meshInstanceCount + bezier::pointCountToVisualise, 0, 0, 0);
-
-    //vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(sphereMesh.indices.size()), 1, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(sphereMesh.indexCount), meshInstanceCount + bezier::pointCountToVisualise, 0, 0, 0);
 
     // ImGui
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);

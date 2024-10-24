@@ -11,7 +11,7 @@ struct MeshInstance {
 	glm::vec3 rotation = glm::vec3(0.0f);
 	glm::vec3 scale = glm::vec3(1.0f); 
 
-	/*glm::mat4 calculateTransformationMatrix() {
+	glm::mat4 calculateModelMatrix() {
 		glm::vec3 t(position.x, position.y, position.z);
 		glm::mat4 tm = glm::translate(glm::mat4(1.0f), t);
 
@@ -24,7 +24,7 @@ struct MeshInstance {
 		glm::mat4 sm = glm::scale(glm::mat4(1.0f), s);
 
 		return tm * rm * sm;
-	}*/
+	}
 };
 
 struct Vertex {

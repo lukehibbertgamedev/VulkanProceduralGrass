@@ -8,10 +8,13 @@
 // Additional detail can be generated without needing to store it explicitly
 
 
-// 1. Generate a quadratic Bézier curve using 3 control points.
+// 1. [X] Generate a quadratic Bézier curve using 3 control points.
 // 2. Generate a blade shape (typically a quad) that will be subdivided in the tessellation stage.
 // 3. Map/align the base blade quad to the shape of the Bézier curve by evaluating the curve interpolation of the control points for each vertex (see De Casteljau's algorithm).
 // 4. One grass blade generated???
+
+// A quad with a base point at p0, extends by base width in orientation direction. Matches the height of blade.height.
+// Subdivide quad to increase level of detail in vertices for manipulation in compute shader.
 
 
 // Preprocess: Distribute blades over a 3D surface terrain.
