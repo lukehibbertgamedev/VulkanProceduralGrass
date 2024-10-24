@@ -6,7 +6,7 @@ class Sphere {
 
 public:
 
-	MeshData generateFlatSphere(glm::vec3 position, float radius, int sectors, int stacks, int up);
+	MeshInstance generateFlatSphere(glm::vec3 position, float radius, int sectors, int stacks, int up);
 	void generateUVSphere(int radius, int latitudes, int longitudes);
 	std::vector<Vertex> vertices; 
 	std::vector<uint16_t> indices;

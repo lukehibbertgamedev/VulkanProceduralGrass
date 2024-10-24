@@ -1,7 +1,9 @@
 #version 450
 
+#define MESH_INSTANCE_COUNT 3
+
 layout(binding = 0) uniform CameraUniformBufferObject {
-    mat4 model;
+    mat4 model[MESH_INSTANCE_COUNT];
     mat4 view;
     mat4 proj;
 } ubo;
@@ -17,7 +19,7 @@ void main() {
 
     gl_PointSize = 7.0;
     //gl_Position = vec4(inPosition.xy, 1.0, 1.0);
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
+    gl_Position = ubo.proj * ubo.view * ubo.model[gl_InstanceIndex] * vec4(inPosition, 1.0);
 
     // Pass through values to the TCS.
     outPosition = gl_Position.xyz;

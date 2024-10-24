@@ -1,6 +1,6 @@
 #include "Sphere.h"
 
-MeshData Sphere::generateFlatSphere(glm::vec3 position, float radius, int sectorCount, int stackCount, int up)
+MeshInstance Sphere::generateFlatSphere(glm::vec3 position, float radius, int sectorCount, int stackCount, int up)
 {
 	// https://www.songho.ca/opengl/gl_sphere.html
 
@@ -77,9 +77,7 @@ MeshData Sphere::generateFlatSphere(glm::vec3 position, float radius, int sector
 		changeUpAxis(3, this->up);
 	}
 
-	MeshData meshData = {};
-	meshData.numIndices = indices.size();
-	meshData.numVertices = vertices.size();
+	MeshInstance meshData = {};
 	meshData.position = position;
 	return meshData;
 }

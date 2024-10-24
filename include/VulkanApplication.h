@@ -82,8 +82,11 @@ struct UniformBufferObject {
 	float deltaTime = 1.0f;
 };
 
+// Important: If you change this value, you MUST change the macro within the vertex shader as these values are not linked, but matched in writing.
+const int meshInstanceCount = 3;
+
 struct CameraUniformBufferObject {
-	alignas(16) glm::mat4 model;
+	alignas(16) glm::mat4 model[meshInstanceCount];
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
 };
@@ -301,5 +304,6 @@ public:
 
 	int frameCount = 0;
 
-	std::vector<MeshData> meshes;
+	std::vector<MeshInstance> meshes;
+
 };

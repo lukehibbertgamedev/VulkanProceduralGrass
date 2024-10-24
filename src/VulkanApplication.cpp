@@ -246,16 +246,21 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
-    for (int i = 0; i < meshes.size(); ++i) {
-        CameraUniformBufferObject ubo{};
-        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.model *= glm::translate(glm::mat4(1.0f), meshes[i].position);
-        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
-        ubo.proj[1][1] *= -1;
+    glm::mat4 view = glm::lookAt(glm::vec3(2.5f, 3.0f, 1.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)); // Z is the natural UP vector.
+    glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+    proj[1][1] *= -1; // Invert the y-axis due to differing coordinate systems.
 
-        memcpy(uniformBuffersMapped[i], &ubo, sizeof(ubo));
+    CameraUniformBufferObject ubo = {};
+    for (size_t i = 0; i < meshInstanceCount; ++i) {
+        ubo.model[i] = glm::translate(glm::mat4(1.0f), meshes[i].position) /* * glm::scale(glm::mat4(1.0f, meshes[i].scale)*/;
+        ubo.view = view;
+        ubo.proj = proj;
     }
+
+    void* data;
+    vkMapMemory(m_LogicalDevice, uniformBuffersMemory[currentFrame], 0, sizeof(ubo), 0, &data);
+    memcpy(data, &ubo, sizeof(ubo)); 
+    vkUnmapMemory(m_LogicalDevice, uniformBuffersMemory[currentFrame]); 
 }
 
 VkResult VulkanApplication::createInstance() {   
@@ -1484,12 +1489,12 @@ VkResult VulkanApplication::createImGuiImplementation()
 
 void VulkanApplication::createMeshObjects()
 {
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < meshInstanceCount; ++i) {
 
-        MeshData mesh = sphereMesh.generateFlatSphere(glm::vec3(i), 1.0f, 8, 8, 3); // radius, sectors, stacks, Y-up 
-        driverData.vertexCount += mesh.numVertices;
+        MeshInstance mesh = sphereMesh.generateFlatSphere(glm::vec3(i, 0.0f, 0.0f), 0.5f, 8, 8, 3); // position, radius, sectors, stacks, Y-up 
+        meshes.push_back(mesh); 
 
-        meshes.push_back(mesh);
+        driverData.vertexCount += sphereMesh.vertices.size(); 
     }
 }
 
@@ -1668,11 +1673,10 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets); 
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr); 
 
-    for (int i = 0; i < meshes.size(); ++i) {
-        vkCmdDrawIndexed(commandBuffer, meshes[i].numIndices, 1, meshes[i].startIndex, 0, meshes[i].startInstance);
-    }
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(sphereMesh.indices.size()), meshInstanceCount, 0, 0, 0);
 
     //vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(sphereMesh.indices.size()), 1, 0, 0, 0);
 

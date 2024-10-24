@@ -5,15 +5,7 @@
 
 #include <../PortableVulkanSDK1.3/include/vulkan/vulkan.h>
 
-struct MeshData {
-	uint32_t startIndex = 0;
-	uint32_t numIndices = 0;
-	uint32_t startInstance = 0;
-	glm::vec3 position = glm::vec3(0.0f);
-	uint32_t numVertices = 0;
-};
-
-struct InstanceData {
+struct MeshInstance {
 
 	glm::vec3 position = glm::vec3(0.0f);
 	glm::vec3 rotation = glm::vec3(0.0f);
