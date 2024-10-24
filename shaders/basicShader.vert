@@ -1,6 +1,6 @@
 #version 450
 
-#define MESH_INSTANCE_COUNT 3
+#define MESH_INSTANCE_COUNT 13
 
 layout(binding = 0) uniform CameraUniformBufferObject {
     mat4 model[MESH_INSTANCE_COUNT];

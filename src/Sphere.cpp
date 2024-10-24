@@ -79,6 +79,7 @@ MeshInstance Sphere::generateFlatSphere(glm::vec3 position, float radius, int se
 
 	MeshInstance meshData = {};
 	meshData.position = position;
+	meshData.scale = glm::vec3(radius);
 	return meshData;
 }
 

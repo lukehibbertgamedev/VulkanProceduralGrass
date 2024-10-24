@@ -146,9 +146,6 @@
 
 
 
-namespace bezier {
-
-
 	//class quadratic {
 
 	//public:
@@ -184,15 +181,22 @@ namespace bezier {
 		glm::vec3 p1p2 = lerp(p1, p2, t); 
 		return lerp(p0p1, p1p2, t);
 	}*/
-}
 
+namespace bezier {
+
+	static int pointCountToVisualise = 10;
+
+	static glm::vec3 lerp(const glm::vec3& p0, const glm::vec3& p1, float t) {
+		return glm::vec3((1 - t) * p0.x + t * p1.x, (1 - t) * p0.y + t * p1.y, (1 - t) * p0.z + t * p1.z);
+	}
+}
 
 class Blade {
 public:
 
 	Blade();
 
-	float lean = 0.7f;
+	float lean = 1.3f;
 	float height = 1.25f;
 
 	glm::vec3 position = glm::vec3(0.0f); // The world space position of this blade.
@@ -201,4 +205,6 @@ public:
 	glm::vec3 p0 = glm::vec3(0.0f); // Blade base.
 	glm::vec3 p1 = glm::vec3(0.0f); // Blade height.
 	glm::vec3 p2 = glm::vec3(0.0f); // Blade tip.
+
+	glm::vec3 calculatePositionAlongQuadraticBezierCurve(float t);
 };

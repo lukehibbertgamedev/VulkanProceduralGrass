@@ -87,7 +87,7 @@ struct UniformBufferObject {
 const int meshInstanceCount = 3;
 
 struct CameraUniformBufferObject {
-	alignas(16) glm::mat4 model[meshInstanceCount];
+	alignas(16) glm::mat4 model[13];
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
 };
@@ -306,5 +306,7 @@ public:
 	int frameCount = 0;
 
 	std::vector<MeshInstance> meshes;
+
+	Blade test;
 
 };

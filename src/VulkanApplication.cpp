@@ -247,7 +247,7 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     glm::vec3 cameraPosition = glm::vec3(2.5f, 3.0f, 1.5f);
-    glm::vec3 lookTowardsPoint = glm::vec3(1.0f, 0.5f, 0.5f);
+    glm::vec3 lookTowardsPoint = glm::vec3(1.0f, 0.0f, 0.5f);
     glm::vec3 worldUpVector = glm::vec3(0.0f, 0.0f, 1.0f); // Z is the natural UP vector.
     glm::mat4 view = glm::lookAt(cameraPosition, lookTowardsPoint, worldUpVector); 
 
@@ -255,8 +255,28 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     proj[1][1] *= -1; // Invert the y-axis due to differing coordinate systems.
 
     CameraUniformBufferObject ubo = {};
-    for (size_t i = 0; i < meshInstanceCount; ++i) {
-        ubo.model[i] = glm::translate(glm::mat4(1.0f), meshes[i].position) * glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f) * 0.5f, glm::vec3(0.0f, 0.0f, 1.0f));
+    float visualIndex = 0.0f;
+    for (size_t i = 0; i < meshInstanceCount + bezier::pointCountToVisualise; ++i) {
+
+        // Update control points.
+        if (i <= 3) {
+            if (i == 2) {
+                float x = meshes[i].position.x * ((sin(time) + 1) / 2) * 0.8f + 0.35f * 0.5f; // Calculate offset in x by limiting sin to be 0-1 instead of -1-1. Then clamping further between 0.35-0.8.
+                test.p2 = glm::vec3(x, test.p2.y, test.p2.z);
+                ubo.model[i] = glm::translate(glm::mat4(1.0f), glm::vec3(x, meshes[i].position.y, meshes[i].position.z)) * glm::scale(glm::mat4(1.0f), meshes[i].scale), glm::vec3(0.0f, 0.0f, 1.0f);
+            }
+            else ubo.model[i] = glm::translate(glm::mat4(1.0f), meshes[i].position) * glm::scale(glm::mat4(1.0f), meshes[i].scale), glm::vec3(0.0f, 0.0f, 1.0f);
+
+        }
+
+        // Update visual points.
+        else if (i > 3) {
+         
+            glm::vec3 pos = test.calculatePositionAlongQuadraticBezierCurve(visualIndex);  
+            ubo.model[i] = glm::translate(glm::mat4(1.0f), pos) * glm::scale(glm::mat4(1.0f), meshes[i].scale), glm::vec3(0.0f, 0.0f, 1.0f); 
+            visualIndex += 0.1f;
+
+        }
         ubo.view = view;
         ubo.proj = proj;
     }
@@ -276,7 +296,7 @@ VkResult VulkanApplication::createInstance() {
     }
 
     // Set up instance information structures:
-
+    
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "Procedural Grass Demo";
@@ -1493,7 +1513,7 @@ VkResult VulkanApplication::createImGuiImplementation()
 
 void VulkanApplication::createMeshObjects()
 {
-    const float radius = 0.2f;
+    const float radius = 0.3f;
     const int sectors = 10, stacks = 10;
     const int upAxis = 3; // 1 = X, 2 = Y, 3 = Z. Vulkan uses RH so Z-Up.
 
@@ -1501,20 +1521,24 @@ void VulkanApplication::createMeshObjects()
 
     MeshInstance base = sphereMesh.generateFlatSphere(testBlade.p0, radius, sectors, stacks, upAxis);
     meshes.push_back(base);
+    driverData.vertexCount += sphereMesh.vertices.size();
 
     MeshInstance height = sphereMesh.generateFlatSphere(testBlade.p1, radius, sectors, stacks, upAxis);
     meshes.push_back(height);
+    driverData.vertexCount += sphereMesh.vertices.size();
 
     MeshInstance tip = sphereMesh.generateFlatSphere(testBlade.p2, radius, sectors, stacks, upAxis);
     meshes.push_back(tip);
+    driverData.vertexCount += sphereMesh.vertices.size();
 
-    for (int i = 0; i < meshInstanceCount; ++i) {
-
-        //MeshInstance mesh = sphereMesh.generateFlatSphere(glm::vec3(i, 0.0f, 0.0f), 0.2f, 10, 10, 3); // position, radius, sectors, stacks, Y-up 
-        //meshes.push_back(mesh); 
-
+    // Create basic smaller spheres for use along the bezier curve for its visualisation.
+    for (float i = 0.0f; i < bezier::pointCountToVisualise * 0.1f; i += 0.1f) {
+        MeshInstance curveMeshPoint = sphereMesh.generateFlatSphere(testBlade.calculatePositionAlongQuadraticBezierCurve(i), 0.1f, sectors, stacks, upAxis);
+        meshes.push_back(curveMeshPoint);
         driverData.vertexCount += sphereMesh.vertices.size(); 
     }
+
+    test = testBlade;
 }
 
 void VulkanApplication::prepareImGuiDrawData()
@@ -1695,7 +1719,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr); 
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(sphereMesh.indices.size()), meshInstanceCount, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(sphereMesh.indices.size()), meshInstanceCount + bezier::pointCountToVisualise, 0, 0, 0);
 
     //vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(sphereMesh.indices.size()), 1, 0, 0, 0);
 
