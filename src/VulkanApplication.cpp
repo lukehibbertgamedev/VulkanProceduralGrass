@@ -18,6 +18,7 @@
 #include <algorithm> // Necessary for std::clamp
 #include <fstream> // Necssary for std::ifstream
 #include <random>
+#include <glm/gtx/quaternion.hpp>
 
 // Todo: Wrap in ifdef vk debug
 
@@ -282,7 +283,8 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
 
         // Update test quad.
         // FOR SOME REASON UBO.MODEL[0] IS THE QUAD?
-        ubo.model[0] = glm::translate(glm::mat4(1.0f), glm::vec3(test.p0.x, test.p0.y, test.p0.z + (test.height * 0.5f))) * glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, test.height));
+        ubo.model[0] = glm::translate(glm::mat4(1.0f), glm::vec3(test.p0.x - 0.125f, test.p0.y, test.p0.z + (test.height * 0.5f)))  
+            * glm::scale(glm::mat4(1.0f), glm::vec3(0.25f, 0.25f, test.height)); 
 
         ubo.view = view;
         ubo.proj = proj;
