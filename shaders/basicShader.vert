@@ -3,7 +3,7 @@
 #define MESH_INSTANCE_COUNT 14
 
 layout(binding = 0) uniform CameraUniformBufferObject {
-    mat4 model[MESH_INSTANCE_COUNT];
+    mat4 model[14];
     mat4 view;
     mat4 proj;
 } ubo;

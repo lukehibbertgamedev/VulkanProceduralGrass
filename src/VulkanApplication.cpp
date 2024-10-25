@@ -259,35 +259,30 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     for (size_t i = 0; i < meshInstanceCount + bezier::pointCountToVisualise + 1; ++i) {
 
         // Update control points.
+
+        // CONTROL POINTS SHOULD ALSO UPDATE THE POSITION VALUES IN BLADE.
         if (i <= 3) {
             if (i == 2) {
-                float x = meshes[i].position.x * ((sin(time) + 1) / 2) * 0.8f + 0.35f * 0.5f; // Calculate offset in x by limiting sin to be 0-1 instead of -1-1. Then clamping further between 0.35-0.8.
-                test.p2 = glm::vec3(x, test.p2.y, test.p2.z);
-                ubo.model[i] = glm::translate(glm::mat4(1.0f), glm::vec3(x, meshes[i].position.y, meshes[i].position.z)) * glm::scale(glm::mat4(1.0f), meshes[i].scale), glm::vec3(0.0f, 0.0f, 1.0f);
+                float x = meshes[i].position.x * ((sin(time) + 1) / 2) * 0.7f + 0.55f * 0.5f; // Calculate offset in x by limiting sin to be 0-1 instead of -1-1. Then clamping further between 0.35-0.8.
+                test.p2 = glm::vec3(x, test.p2.y, x);
+                ubo.model[i] = glm::translate(glm::mat4(1.0f), test.p2) * glm::scale(glm::mat4(1.0f), meshes[i].scale);
             }
-            else ubo.model[i] = glm::translate(glm::mat4(1.0f), meshes[i].position) * glm::scale(glm::mat4(1.0f), meshes[i].scale), glm::vec3(0.0f, 0.0f, 1.0f);
+            else ubo.model[i] = glm::translate(glm::mat4(1.0f), meshes[i].position) * glm::scale(glm::mat4(1.0f), meshes[i].scale);
 
         }
-
-        // Update test quad.
-        else if (i == 13) {
-
-            float zLength = abs(test.p1.z - test.p0.z);
-
-            glm::vec3 scl = glm::vec3(0.0f);
-            //ubo.model[i] = glm::scale(glm::mat4(1.0f), scl) * glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::translate(glm::mat4(1.0f), meshes[i].position), glm::vec3(0.0f, 0.0f, 1.0f);
-            ubo.model[i] = ubo.model[2]; // THIS ISNT BEING APPLIED TO THE OBJECT. THE QUAD SHOULD MOVE WITH THE SPHERE.
-        }
-
 
         // Update visual points.
         else if (i > 3) {
          
             glm::vec3 pos = test.calculatePositionAlongQuadraticBezierCurve(visualIndex);  
-            ubo.model[i] = glm::translate(glm::mat4(1.0f), pos) * glm::scale(glm::mat4(1.0f), meshes[i].scale), glm::vec3(0.0f, 0.0f, 1.0f); 
+            ubo.model[i] = glm::translate(glm::mat4(1.0f), pos) * glm::scale(glm::mat4(1.0f), meshes[i].scale); 
             visualIndex += 0.1f;
 
         }     
+
+        // Update test quad.
+        // FOR SOME REASON UBO.MODEL[0] IS THE QUAD?
+        ubo.model[0] = glm::translate(glm::mat4(1.0f), glm::vec3(test.p0.x, test.p0.y, test.p0.z + (test.height * 0.5f))) * glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, test.height));
 
         ubo.view = view;
         ubo.proj = proj;
@@ -1440,7 +1435,7 @@ VkResult VulkanApplication::createComputeDescriptorSets()
         VkDescriptorBufferInfo uniformBufferInfo = {};
         uniformBufferInfo.buffer = uniformBuffers[i];
         uniformBufferInfo.offset = 0;
-        uniformBufferInfo.range = sizeof(UniformBufferObject);
+        //uniformBufferInfo.range = sizeof(UniformBufferObject); //FIXME: 
     
         std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1676,7 +1671,7 @@ void VulkanApplication::createMeshObjects()
         driverData.vertexCount += sphereMesh.vertexCount;
     }
 
-    MeshInstance quad = quadMesh.generateQuad(testBlade.p0);
+    MeshInstance quad = quadMesh.generateQuad(testBlade.p2);
     meshes.push_back(quad);
     driverData.vertexCount += quadMesh.vertexCount;
 
@@ -1863,7 +1858,6 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     VkDeviceSize quadOffsets[] = { 0 }; 
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffers, quadOffsets);
     vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16); 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
     vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0);
 
     // ImGui

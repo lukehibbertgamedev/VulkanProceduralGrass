@@ -78,37 +78,38 @@ struct Particle {
 	}
 };
 
-// See more on alignment: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap15.html#interfaces-resources-layout
-struct UniformBufferObject {
-	float deltaTime = 1.0f;
-};
-
-// Important: If you change this value, you MUST change the macro within the vertex shader as these values are not linked, but matched in writing.
 const int meshInstanceCount = 3;
 
+// Important: If you change this value, you MUST change the macro within the vertex shader as these values are not linked, but matched in writing.
 struct CameraUniformBufferObject {
 	alignas(16) glm::mat4 model[14];
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
 };
 
-
-const std::vector<Vertex> vertices = {
-	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f }, {-0.0f, 0.0f}},
-	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f }, {-1.0f, 0.0f}},
-	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f }, {-1.0f, 1.0f}},
-	{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f }, {-0.0f, 1.0f}},
-
-	{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.0f }, {-0.0f, 0.0f}},
-	{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f, 1.0f }, {-1.0f, 0.0f}},
-	{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f, 1.0f }, {-1.0f, 1.0f}},
-	{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f, 1.0f }, {-0.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> indices = {
-	0, 1, 2, 2, 3, 0,
-	4, 5, 6, 6, 7, 4
-};
+//const std::vector<Vertex> vertices = {
+//
+//	// Quad 1
+//	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f }, {-0.0f, 0.0f}},
+//	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f }, {-1.0f, 0.0f}},
+//	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f }, {-1.0f, 1.0f}},
+//	{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f }, {-0.0f, 1.0f}},
+//
+//	// Quad 2
+//	{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.0f }, {-0.0f, 0.0f}},
+//	{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f, 1.0f }, {-1.0f, 0.0f}},
+//	{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f, 1.0f }, {-1.0f, 1.0f}},
+//	{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f, 1.0f }, {-0.0f, 1.0f}}
+//};
+//
+//const std::vector<uint16_t> indices = {
+//
+//	// Quad 1
+//	0, 1, 2, 2, 3, 0,
+//
+//	// Quad 2
+//	4, 5, 6, 6, 7, 4
+//};
 
 
 class VulkanApplication {
