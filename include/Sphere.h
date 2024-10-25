@@ -2,6 +2,19 @@
 
 #include "Vertex.h"
 
+class Quad {
+
+public:
+
+	MeshInstance generateQuad(glm::vec3 position);
+
+	std::vector<Vertex> vertices;
+	std::vector<uint16_t> indices;
+
+	uint32_t vertexCount = 0, indexCount = 0;
+};
+
+
 class Sphere {
 
 public:

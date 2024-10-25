@@ -256,7 +256,7 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
 
     CameraUniformBufferObject ubo = {};
     float visualIndex = 0.0f;
-    for (size_t i = 0; i < meshInstanceCount + bezier::pointCountToVisualise; ++i) {
+    for (size_t i = 0; i < meshInstanceCount + bezier::pointCountToVisualise + 1; ++i) {
 
         // Update control points.
         if (i <= 3) {
@@ -269,6 +269,17 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
 
         }
 
+        // Update test quad.
+        else if (i == 13) {
+
+            float zLength = abs(test.p1.z - test.p0.z);
+
+            glm::vec3 scl = glm::vec3(0.0f);
+            //ubo.model[i] = glm::scale(glm::mat4(1.0f), scl) * glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::translate(glm::mat4(1.0f), meshes[i].position), glm::vec3(0.0f, 0.0f, 1.0f);
+            ubo.model[i] = ubo.model[2]; // THIS ISNT BEING APPLIED TO THE OBJECT. THE QUAD SHOULD MOVE WITH THE SPHERE.
+        }
+
+
         // Update visual points.
         else if (i > 3) {
          
@@ -276,7 +287,8 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
             ubo.model[i] = glm::translate(glm::mat4(1.0f), pos) * glm::scale(glm::mat4(1.0f), meshes[i].scale), glm::vec3(0.0f, 0.0f, 1.0f); 
             visualIndex += 0.1f;
 
-        }
+        }     
+
         ubo.view = view;
         ubo.proj = proj;
     }
@@ -691,6 +703,8 @@ VkResult VulkanApplication::createComputeDescriptorSetLayout()
 
 VkResult VulkanApplication::createDescriptorSetLayout()
 {
+    // Define the type of descriptor/shader resources you will want.
+
     VkDescriptorSetLayoutBinding uboLayoutBinding = {};
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -698,20 +712,9 @@ VkResult VulkanApplication::createDescriptorSetLayout()
     uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     uboLayoutBinding.pImmutableSamplers = nullptr;
 
-    /*VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
-    samplerLayoutBinding.binding = 1;
-    samplerLayoutBinding.descriptorCount = 1;
-    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    samplerLayoutBinding.pImmutableSamplers = nullptr;
-    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;*/
-
-    //std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
-
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    //layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.bindingCount = 1;
-    //layoutInfo.pBindings = bindings.data();
     layoutInfo.pBindings = &uboLayoutBinding;
 
     if (vkCreateDescriptorSetLayout(m_LogicalDevice, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
@@ -730,12 +733,14 @@ VkResult VulkanApplication::createGraphicsPipeline()
     VkShaderModule vertShaderModule = createShaderModule(vertexShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(pixelShaderCode);
 
+    // Configure how the vertex shader stage executes within the pipeline.
     VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
     vertShaderStageInfo.module = vertShaderModule;
     vertShaderStageInfo.pName = "main";
-    
+
+    // Configure how the pixel/fragment shader stage executes within the pipeline.
     VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
     fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -743,6 +748,8 @@ VkResult VulkanApplication::createGraphicsPipeline()
     fragShaderStageInfo.pName = "main";
 
     // See more for tessellation: https://docs.vulkan.org/spec/latest/chapters/tessellation.html
+
+    // It may be worthwhile to create a new pipeline specifically for the grass itself, since it used compute and tessellation but other geometry does not.
 
     // Tessellation Shader set up. Tessellation consists of 3 pipeline stages:
     // 1. tessellation control shader (transforms control points of a patch and produces per-patch data).
@@ -757,25 +764,28 @@ VkResult VulkanApplication::createGraphicsPipeline()
     //VkShaderModule tessellationControlShaderModule = createShaderModule(tessellationControlShaderCode);
     //VkShaderModule tessellationEvaluationShaderModule = createShaderModule(tessellationEvaluationShaderCode);     
 
+    // Configure how the tessellation control shader stage executes within the pipeline.
     //VkPipelineShaderStageCreateInfo tessellationControlShaderStageInfo = {}; 
     //tessellationControlShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     //tessellationControlShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
     //tessellationControlShaderStageInfo.module = tessellationControlShaderModule;
     //tessellationControlShaderStageInfo.pName = "main";
 
+    // Configure how the tessellation evaluation shader stage executes within the pipeline.
     //VkPipelineShaderStageCreateInfo tessellationEvaluationShaderStageInfo = {};
     //tessellationEvaluationShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     //tessellationEvaluationShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
     //tessellationEvaluationShaderStageInfo.module = tessellationEvaluationShaderModule;
     //tessellationEvaluationShaderStageInfo.pName = "main";
 
+    // Configure how the tessellation process performs its subdivisions.
     //VkPipelineTessellationStateCreateInfo tessellationStateInfo = {};
     //tessellationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
     //tessellationStateInfo.pNext = nullptr;
     //tessellationStateInfo.flags = 0; // Must be 0, this is reserved by Vulkan for future use.
     //tessellationStateInfo.patchControlPoints = 3; // I would imagine this matches the layout(vertices = 3) out; in the control shader.
 
-    // I don't think they have to be ordered but I've ordered them in calling order anyways.
+    // Link all configured shader stages into one variable, so the pipeline can connect to all of them.
     VkPipelineShaderStageCreateInfo shaderStages[] = { 
         vertShaderStageInfo, 
         /*tessellationControlShaderStageInfo, 
@@ -783,40 +793,36 @@ VkResult VulkanApplication::createGraphicsPipeline()
         fragShaderStageInfo
     };
 
-    //auto bindingDescription = Particle::getBindingDescription();
-    //auto attributeDescriptions = Particle::getAttributeDescriptions();
+    VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
 
-    auto bindingDescription = Vertex::getBindingDescription();
-    auto attributeDescriptions = Vertex::getAttributeDescriptions();
-
-
+    // Configure how vertex data is structured and passed from a vertex buffer into a graphics pipeline stage.
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(Vertex::getAttributeDescriptions().size()); 
+    vertexInputInfo.pVertexAttributeDescriptions = Vertex::getAttributeDescriptions().data();
 
+    // Specify how the vertices that are provided by the vertex shader are then assembled into primitives for rendering.
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    
-    // Use patches for the tessellation. May be an issue later on.
-    //inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
+    // Specify the structures that may change at runtime.
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-
     VkPipelineDynamicStateCreateInfo dynamicState = {};
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
+    // Configures the viewports and scissors to determine the regions of the framebuffer to render to.
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.viewportCount = 1;
     viewportState.scissorCount = 1;
 
+    // Configures settings for how primitives are transformed into fragments/pixels.
     VkPipelineRasterizationStateCreateInfo rasterizer = {};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
@@ -827,13 +833,14 @@ VkResult VulkanApplication::createGraphicsPipeline()
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
+    // Configure settings for how multisampling performs, reducing aliasing and jagged edges in the rendered image.
     VkPipelineMultisampleStateCreateInfo multisampling = {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.sampleShadingEnable = VK_TRUE; // Enable sample shading in the pipeline.
+    multisampling.sampleShadingEnable = VK_TRUE; 
     multisampling.rasterizationSamples = msaaSamples;
-    //multisampling.minSampleShading = 0.2f; // Min fraction for sample shading where closer to 1 is smooth.
-    multisampling.minSampleShading = 0; // Min fraction for sample shading where closer to 1 is smooth.
+    multisampling.minSampleShading = 0; // Min fraction for sample shading where closer to 1 is smooth. // 0.2f
 
+    // Configure depth and stencil testing where depth refers to whether a fragment should be discarded and stencil refers to complex masking.
     VkPipelineDepthStencilStateCreateInfo depthStencil = {};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable = VK_TRUE;
@@ -842,26 +849,32 @@ VkResult VulkanApplication::createGraphicsPipeline()
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.stencilTestEnable = VK_FALSE;
 
+    // Enables blending settings for colour attachments, allowing transparency and masking effects.
     VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_FALSE;
 
+    // Configure how blending is applied for individual attachments and logic-based colour operations.
     VkPipelineColorBlendStateCreateInfo colorBlending = {};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.logicOpEnable = VK_FALSE;
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
+    // Configure how Vulkan understands to bind resources to shaders, ensuring they can efficiently access required resources.
+    // Note that if you have more descriptor set layouts (currently only using uniform buffer objects) you would need to reference that here.
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
+    // Create the layout/blueprint for how the graphics pipeline will be created.
     if (vkCreatePipelineLayout(m_LogicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
+    // Encapsulate all aspects of the pipeline layout, enabling a pipeline creation optimised for specific rendering tasks (in this case, regular graphics).
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = sizeof(shaderStages) / sizeof(shaderStages[0]); // Get the size of shader stages array.
@@ -883,6 +896,8 @@ VkResult VulkanApplication::createGraphicsPipeline()
         throw std::runtime_error("failed to create graphics pipeline!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
+
+    // The pipeline retains a reference to previously created shader modules, so we no longer need local references.
 
     /*vkDestroyShaderModule(m_LogicalDevice, tessellationEvaluationShaderModule, nullptr);
     vkDestroyShaderModule(m_LogicalDevice, tessellationControlShaderModule, nullptr);*/
@@ -1172,62 +1187,193 @@ VkResult VulkanApplication::createVertexBuffer()
     return ret;*/
 
     // Non-particle staging buffer version.
-    VkDeviceSize bufferSize = sizeof(Vertex) * sphereMesh.vertexCount;
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation");
-        return ret;
+    // Define a return code for potentially dangerous function calls to ensure they ran correctly.
+    VkResult ret = VK_ERROR_INITIALIZATION_FAILED; 
+
+    // Create a vertex buffer for the sphere mesh.
+
+    {
+        // Calculate the total size of the vertex buffers that we will need.
+        VkDeviceSize sphereMeshRequiredBufferSize = sizeof(Vertex) * sphereMesh.vertexCount;
+
+        // Prepare staging buffer and its associated memory for holding the vertex data temporarily before it gets transferred to the GPU.
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+
+        // Create the staging buffer used as a source to send/transfer buffer data.
+        // Note: writes from the CPU are visible to the GPU without explicit flushing.
+        ret = createBuffer(sphereMeshRequiredBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Convert the staging buffer to a pointer to be accessed easier.
+        void* data;
+        vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, sphereMeshRequiredBufferSize, 0, &data);
+
+        // Copy the vertex data from the sphere mesh into the staging buffer.
+        memcpy(data, sphereMesh.vertices.data(), (size_t)sphereMeshRequiredBufferSize);
+
+        // Releases the mapped memory so the GPU can safely access the written data.
+        vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+
+        // Creates the vertex buffer on the GPU used as a destination to receive transfers from a source, and as a vertex buffer for drawing. 
+        // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
+        ret = createBuffer(sphereMeshRequiredBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Transfers the vertex data from the staging buffer to the vertex buffer.
+        copyBuffer(stagingBuffer, vertexBuffer, sphereMeshRequiredBufferSize);
+
+        // Clean up the staging buffer and its associated allocated memory.
+        vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
     }
 
-    void* data;
-    vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, sphereMesh.vertices.data(), (size_t)bufferSize);
-    vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+    // Do this all again for the quad.
 
-    ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation");
-        return ret;
+    {
+        // Calculate the total size of the vertex buffers that we will need.
+        VkDeviceSize quadMeshRequiredBufferSize = sizeof(Vertex) * quadMesh.vertexCount;
+
+        // Prepare staging buffer and its associated memory for holding the vertex data temporarily before it gets transferred to the GPU.
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+
+        // Create the staging buffer used as a source to send/transfer buffer data.
+        // Note: writes from the CPU are visible to the GPU without explicit flushing.
+        ret = createBuffer(quadMeshRequiredBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Convert the staging buffer to a pointer to be accessed easier.
+        void* data;
+        vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, quadMeshRequiredBufferSize, 0, &data);
+
+        // Copy the vertex data from the quad mesh into the staging buffer.
+        memcpy(data, quadMesh.vertices.data(), (size_t)quadMeshRequiredBufferSize);
+
+        // Releases the mapped memory so the GPU can safely access the written data.
+        vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+
+        // Creates the vertex buffer on the GPU used as a destination to receive transfers from a source, and as a vertex buffer for drawing. 
+        // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
+        ret = createBuffer(quadMeshRequiredBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, quadVertexBuffer, quadVertexBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Transfers the vertex data from the staging buffer to the vertex buffer.
+        copyBuffer(stagingBuffer, quadVertexBuffer, quadMeshRequiredBufferSize);
+
+        // Clean up the staging buffer and its associated allocated memory.
+        vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
     }
-
-    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-
-    vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
-    vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
 
     return ret;
 }
 
 VkResult VulkanApplication::createIndexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(uint16_t) * sphereMesh.indexCount;
+    // Define a return code for potentially dangerous function calls to ensure they ran correctly.
+    VkResult ret = VK_ERROR_INITIALIZATION_FAILED;
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation");
-        return ret;
+    // Create an index buffer for the sphere mesh.
+
+    {
+        // Calculate the total size of the index buffers that we will need.
+        VkDeviceSize bufferSize = sizeof(uint16_t) * sphereMesh.indexCount;
+
+        // Prepare staging buffer and its associated memory for holding the index data temporarily before it gets transferred to the GPU.
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+
+        // Create the staging buffer used as a source to send/transfer buffer data.
+        // Note: writes from the CPU are visible to the GPU without explicit flushing.
+        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Convert the staging buffer to a pointer to be accessed easier.
+        void* data;
+        vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+
+        // Copy the index data from the sphere mesh into the staging buffer.
+        memcpy(data, sphereMesh.indices.data(), (size_t)bufferSize);
+
+        // Releases the mapped memory so the GPU can safely access the written data.
+        vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+
+        // Creates the index buffer on the GPU used as a destination to receive transfers from a source, and as a index buffer for drawing. 
+        // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
+        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Transfers the vertex data from the staging buffer to the vertex buffer.
+        copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+
+        // Clean up the staging buffer and its associated allocated memory.
+        vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
     }
 
-    void* data;
-    vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, sphereMesh.indices.data(), (size_t)bufferSize);
-    vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+    // Do this all again for the quad.
 
-    ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation");
-        return ret;
+    {
+        // Calculate the total size of the index buffers that we will need.
+        VkDeviceSize bufferSize = sizeof(uint16_t) * quadMesh.indexCount;
+
+        // Prepare staging buffer and its associated memory for holding the index data temporarily before it gets transferred to the GPU.
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+
+        // Create the staging buffer used as a source to send/transfer buffer data.
+        // Note: writes from the CPU are visible to the GPU without explicit flushing.
+        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Convert the staging buffer to a pointer to be accessed easier.
+        void* data; 
+        vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data); 
+
+        // Copy the index data from the sphere mesh into the staging buffer.
+        memcpy(data, quadMesh.indices.data(), (size_t)bufferSize);
+
+        // Releases the mapped memory so the GPU can safely access the written data.
+        vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+
+        // Creates the index buffer on the GPU used as a destination to receive transfers from a source, and as a index buffer for drawing. 
+        // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
+        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, quadIndexBuffer, quadIndexBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Transfers the vertex data from the staging buffer to the vertex buffer.
+        copyBuffer(stagingBuffer, quadIndexBuffer, bufferSize);
+
+        // Clean up the staging buffer and its associated allocated memory.
+        vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
     }
-
-    copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-
-    vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
-    vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
 
     return ret;
 }
@@ -1257,20 +1403,12 @@ VkResult VulkanApplication::createUniformBuffers()
 
 VkResult VulkanApplication::createDescriptorPool()
 { 
-    //std::array<VkDescriptorPoolSize, 2> poolSizes = {};
     VkDescriptorPoolSize poolSize = {};
-    //poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    //poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
     poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
-    //poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;    
-    //poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) * 2; // Multiplication by 2 because our desc sets reference the SSBOs of the last and current frame.
-
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    //poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    //poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.poolSizeCount = 1;
     poolInfo.pPoolSizes = &poolSize;
     poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
@@ -1513,7 +1651,7 @@ VkResult VulkanApplication::createImGuiImplementation()
 
 void VulkanApplication::createMeshObjects()
 {
-    const float radius = 0.3f;
+    const float radius = 0.15f;
     const int sectors = 10, stacks = 10;
     const int upAxis = 3; // 1 = X, 2 = Y, 3 = Z. Vulkan uses RH so Z-Up.
 
@@ -1521,22 +1659,26 @@ void VulkanApplication::createMeshObjects()
 
     MeshInstance base = sphereMesh.generateFlatSphere(testBlade.p0, radius, sectors, stacks, upAxis);
     meshes.push_back(base);
-    driverData.vertexCount += sphereMesh.vertices.size();
+    driverData.vertexCount += sphereMesh.vertexCount;
 
     MeshInstance height = sphereMesh.generateFlatSphere(testBlade.p1, radius, sectors, stacks, upAxis);
     meshes.push_back(height);
-    driverData.vertexCount += sphereMesh.vertices.size();
+    driverData.vertexCount += sphereMesh.vertexCount;
 
     MeshInstance tip = sphereMesh.generateFlatSphere(testBlade.p2, radius, sectors, stacks, upAxis);
     meshes.push_back(tip);
-    driverData.vertexCount += sphereMesh.vertices.size();
+    driverData.vertexCount += sphereMesh.vertexCount;
 
     // Create basic smaller spheres for use along the bezier curve for its visualisation.
     for (float i = 0.0f; i < bezier::pointCountToVisualise * 0.1f; i += 0.1f) {
-        MeshInstance curveMeshPoint = sphereMesh.generateFlatSphere(testBlade.calculatePositionAlongQuadraticBezierCurve(i), 0.1f, sectors, stacks, upAxis);
+        MeshInstance curveMeshPoint = sphereMesh.generateFlatSphere(testBlade.calculatePositionAlongQuadraticBezierCurve(i), 0.05f, sectors, stacks, upAxis);
         meshes.push_back(curveMeshPoint);
-        driverData.vertexCount += sphereMesh.vertices.size(); 
+        driverData.vertexCount += sphereMesh.vertexCount;
     }
+
+    MeshInstance quad = quadMesh.generateQuad(testBlade.p0);
+    meshes.push_back(quad);
+    driverData.vertexCount += quadMesh.vertexCount;
 
     test = testBlade;
 }
@@ -1710,20 +1852,22 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     scissor.extent = swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    VkBuffer vertexBuffers[] = { vertexBuffer }; 
-    VkDeviceSize offsets[] = { 0 };
-
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets); 
+    VkBuffer sphereVertexBuffers[] = { vertexBuffer }; 
+    VkDeviceSize sphereOffsets[] = { 0 };
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, sphereVertexBuffers, sphereOffsets);
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr); 
+    vkCmdDrawIndexed(commandBuffer, sphereMesh.indexCount, meshInstanceCount + bezier::pointCountToVisualise, 0, 0, 0);
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(sphereMesh.indexCount), meshInstanceCount + bezier::pointCountToVisualise, 0, 0, 0);
+    VkBuffer quadVertexBuffers[] = { quadVertexBuffer };
+    VkDeviceSize quadOffsets[] = { 0 }; 
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffers, quadOffsets);
+    vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16); 
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+    vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0);
 
     // ImGui
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
-
-    // Record commands above.
 
     vkCmdEndRenderPass(commandBuffer);
 

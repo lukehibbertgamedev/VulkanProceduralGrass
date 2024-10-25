@@ -87,7 +87,7 @@ struct UniformBufferObject {
 const int meshInstanceCount = 3;
 
 struct CameraUniformBufferObject {
-	alignas(16) glm::mat4 model[13];
+	alignas(16) glm::mat4 model[14];
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
 };
@@ -261,17 +261,23 @@ public:
 	VkDescriptorSetLayout computeDescriptorSetLayout = VK_NULL_HANDLE;	// A description of how descriptor sets (ie., resources/buffers) are accessed specifically by compute shaders.
 	std::vector<VkDescriptorSet> descriptorSets = {};					// A collection of resources/buffers/images that can be bound to shaders during rendering operations.
 	std::vector<VkDescriptorSet> computeDescriptorSets = {};			// A collection of resources/buffers/images that can be bound to compute shaders during compute operations.
-	
+
+	VkDescriptorSet quadDescriptorSet = VK_NULL_HANDLE;					// ... 
+	VkBuffer quadVertexBuffer = VK_NULL_HANDLE;							// ... 
+	VkDeviceMemory quadVertexBufferMemory = VK_NULL_HANDLE;				// ... 
+	VkBuffer quadIndexBuffer = VK_NULL_HANDLE;							// ... 
+	VkDeviceMemory quadIndexBufferMemory = VK_NULL_HANDLE;				// ... 
+
 	// Uniform buffer objects (UBO).
 	std::vector<VkBuffer> uniformBuffers = {};							// A collection of uniform buffer objects that stored constant data for all vertices/fragments within a draw call.
 	std::vector<VkDeviceMemory> uniformBuffersMemory = {};				// A collection of device memory allocations for a uniform buffer.
 	std::vector<void*> uniformBuffersMapped = {};						// A collection of pointers to the mapped memory for the uniform buffers, allowing direct access to modify the buffer's data.
 
 	// Vertex and index buffer with associated memory.
-	VkBuffer vertexBuffer = VK_NULL_HANDLE;								// Currently unused.
-	VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;					// Currently unused.
-	VkBuffer indexBuffer = VK_NULL_HANDLE;								// Currently unused.
-	VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;					// Currently unused.
+	VkBuffer vertexBuffer = VK_NULL_HANDLE;								// ...
+	VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;					// ...
+	VkBuffer indexBuffer = VK_NULL_HANDLE;								// ...
+	VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;					// ...
 	
 	// Texture images with associated image views and memory.
 	VkImage textureImage = VK_NULL_HANDLE;								// Currently unused.
@@ -283,14 +289,14 @@ public:
 	VkImage	depthImage = VK_NULL_HANDLE;								// Currently unused.
 
 	// Multi-sampling.
-	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;			// ...
-	VkImage colorImage = VK_NULL_HANDLE;								// ...
-	VkDeviceMemory colorImageMemory = VK_NULL_HANDLE;					// ...
-	VkImageView colorImageView = VK_NULL_HANDLE;						// ...
+	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;			// Currently unused.
+	VkImage colorImage = VK_NULL_HANDLE;								// Currently unused.
+	VkDeviceMemory colorImageMemory = VK_NULL_HANDLE;					// Currently unused.
+	VkImageView colorImageView = VK_NULL_HANDLE;						// Currently unused.
 
 	// Shader storage buffer objects (SSBO).
-	std::vector<VkBuffer> shaderStorageBuffers = {};					// ...
-	std::vector<VkDeviceMemory> shaderStorageBuffersMemory = {};		// ...
+	std::vector<VkBuffer> shaderStorageBuffers = {};					// Currently unused.
+	std::vector<VkDeviceMemory> shaderStorageBuffersMemory = {};		// Currently unused.
 
 	// Timing metrics.
 	float lastFrameTime = 0.0f;											// Used to calculate FPS.
@@ -302,6 +308,7 @@ public:
 	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
 
 	Sphere sphereMesh;
+	Quad quadMesh;
 
 	int frameCount = 0;
 

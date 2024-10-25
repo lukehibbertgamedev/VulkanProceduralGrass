@@ -142,3 +142,24 @@ void Sphere::changeUpAxis(int from, int to)
 		vertices[i + 2].pos.z = tx[2] * vx + ty[2] * vy + tz[2] * vz;   // z
 	}
 }
+
+MeshInstance Quad::generateQuad(glm::vec3 position)
+{
+	vertices = {
+		{{0.0f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.0f }, {-0.0f, 0.0f}},
+		{{0.0f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f, 1.0f }, {-1.0f, 0.0f}},
+		{{0.0f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f, 1.0f }, {-1.0f, 1.0f}},
+		{{0.0f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f, 1.0f }, {-0.0f, 1.0f}}
+	}; 
+	 
+	indices = {	0, 1, 2, 2, 3, 0 }; 
+
+	MeshInstance meshData = {}; 
+	meshData.position = position; 
+	meshData.scale = glm::vec3(1.0f);
+
+	vertexCount = vertices.size();
+	indexCount = indices.size();
+
+	return meshData;
+}
