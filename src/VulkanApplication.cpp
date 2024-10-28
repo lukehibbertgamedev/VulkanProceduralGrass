@@ -247,8 +247,8 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
-    glm::vec3 cameraPosition = glm::vec3(2.5f, 3.0f, 1.5f);
-    glm::vec3 lookTowardsPoint = glm::vec3(1.0f, 0.0f, 0.5f);
+    glm::vec3 cameraPosition = glm::vec3(0.0f, 3.0f, 1.5f);
+    glm::vec3 lookTowardsPoint = glm::vec3(0.0f, 0.0f, 0.5f);
     glm::vec3 worldUpVector = glm::vec3(0.0f, 0.0f, 1.0f); // Z is the natural UP vector.
     glm::mat4 view = glm::lookAt(cameraPosition, lookTowardsPoint, worldUpVector); 
 
@@ -1230,7 +1230,7 @@ void VulkanApplication::createMeshObjects()
     // Construct a plane mesh, for the ground.
     MeshInstance _groundPlane = quadMesh.generateQuad(glm::vec3(0.0f, 0.0f, 0.0f));
     _groundPlane.position = glm::vec3(0.0f);
-    _groundPlane.rotation = glm::vec3(0.0f, 90.0f, 0.0f);
+    _groundPlane.rotation = glm::vec3(0.0f, 90, 0.0f);
     _groundPlane.scale = glm::vec3(1.f, 2.0f, 2.0f); // YZ is correct when rotated 90 degrees 
     groundPlane = _groundPlane;
 
