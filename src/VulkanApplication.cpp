@@ -247,10 +247,10 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
-    glm::vec3 cameraPosition = glm::vec3(0.0f, 3.0f, 1.5f);
+    glm::vec3 cameraPosition = glm::vec3(0.0f, -3.0f, 1.5f);
     glm::vec3 lookTowardsPoint = glm::vec3(0.0f, 0.0f, 0.5f);
     glm::vec3 worldUpVector = glm::vec3(0.0f, 0.0f, 1.0f); // Z is the natural UP vector.
-    glm::mat4 view = glm::lookAt(cameraPosition, lookTowardsPoint, worldUpVector); 
+    glm::mat4 view = glm::lookAtRH(cameraPosition, lookTowardsPoint, worldUpVector); 
 
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
     proj[1][1] *= -1; // Invert the y-axis due to differing coordinate systems.
@@ -961,6 +961,28 @@ VkResult VulkanApplication::createCommandPool()
     return VK_SUCCESS;
 }
 
+VkResult VulkanApplication::createShaderStorageBuffers()
+{
+    VkDeviceSize bufferSize = sizeof(localBladeInstanceBuffer);
+
+    VkResult ret = createBuffer(
+        bufferSize, 
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // warning
+        bladeInstanceDataBuffer,
+        bladeInstanceDataBufferMemory
+    );
+
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad buffer creation.");
+        return ret;
+    }
+
+    vkMapMemory(m_LogicalDevice, bladeInstanceDataBufferMemory, 0, bufferSize, 0, &bladeInstanceDataBufferMapped);
+
+    return ret;
+}
+
 VkResult VulkanApplication::createVertexBuffer()
 {
     // Define a return code for potentially dangerous function calls to ensure they ran correctly.
@@ -1073,6 +1095,8 @@ VkResult VulkanApplication::createUniformBuffers()
         return ret;
     }
     vkMapMemory(m_LogicalDevice, uniformBufferMemory, 0, bufferSize, 0, &uniformBufferMapped);
+
+
 
     return ret;
 }
@@ -1229,9 +1253,9 @@ void VulkanApplication::createMeshObjects()
 {
     // Construct a plane mesh, for the ground.
     MeshInstance _groundPlane = quadMesh.generateQuad(glm::vec3(0.0f, 0.0f, 0.0f));
-    _groundPlane.position = glm::vec3(0.0f);
-    _groundPlane.rotation = glm::vec3(0.0f, 90, 0.0f);
-    _groundPlane.scale = glm::vec3(1.f, 2.0f, 2.0f); // YZ is correct when rotated 90 degrees 
+    _groundPlane.position = glm::vec3(0.0f, -0.5f, 0.0f);
+    _groundPlane.rotation = glm::vec3(0.0f, 90.0f, 0.0f);
+    _groundPlane.scale = glm::vec3(MEADOW_SCALE_X, MEADOW_SCALE_Y, MEADOW_SCALE_Z); 
     groundPlane = _groundPlane;
 
     driverData.vertexCount += quadMesh.vertexCount;

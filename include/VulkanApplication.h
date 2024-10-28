@@ -22,6 +22,11 @@
 #include <vector>
 #include <string>
 
+// Ground plane bounds definitions
+#define MEADOW_SCALE_X 2
+#define MEADOW_SCALE_Y 1
+#define MEADOW_SCALE_Z 2
+
 static constexpr bool kEnableValidationLayers = true;
 const std::vector<const char*> kValidationLayers = {
 	"VK_LAYER_KHRONOS_validation"
@@ -124,7 +129,7 @@ public:
 	VkResult createComputePipeline(); // Compute relevant
 	VkResult createFrameBuffers();
 	VkResult createCommandPool();
-	VkResult createShaderStorageBuffers(); // Compute relevant
+	VkResult createShaderStorageBuffers(); // For blade <3
 	VkResult createColourResources();
 	VkResult createDepthResources();
 	VkResult createTextureImage();
@@ -290,7 +295,14 @@ public:
 
 	MeshInstance groundPlane;
 
+	// Populate
 	std::vector<BladeInstanceData> localBladeInstanceBuffer; // A holding buffer of instance data per-blade.
+
+	// Allocate and upload to this.
+	// Gets uploaded to GPU, created as ssbo.
+	VkBuffer bladeInstanceDataBuffer;
+	VkDeviceMemory bladeInstanceDataBufferMemory;
+	void* bladeInstanceDataBufferMapped;
 
 	Blade test;
 

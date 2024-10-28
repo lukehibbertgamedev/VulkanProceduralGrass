@@ -145,14 +145,16 @@ int main() {
 
     vkApp.createMeshObjects();
 
+    //create grass pos
+
     ret = vkApp.createVertexBuffer();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create vertex buffer.");
 
     ret = vkApp.createIndexBuffer();  
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create index buffer.");
 
-    //ret = vkApp.createShaderStorageBuffers();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create shader storage buffer.");
+    ret = vkApp.createShaderStorageBuffers();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create shader storage buffer.");
 
     ret = vkApp.createUniformBuffers();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create uniform buffer.");
