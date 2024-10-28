@@ -255,16 +255,21 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
     proj[1][1] *= -1; // Invert the y-axis due to differing coordinate systems.
 
+    // Calculate correct rotation matrix for the plane to be flat ground.
+    glm::mat4 rotationMatrixX = glm::rotate(glm::mat4(1.0f), glm::radians(groundPlane.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::mat4 rotationMatrixY = glm::rotate(glm::mat4(1.0f), glm::radians(groundPlane.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 rotationMatrixZ = glm::rotate(glm::mat4(1.0f), glm::radians(groundPlane.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 rotationMatrix = rotationMatrixX * rotationMatrixY * rotationMatrixZ;
+
+    // Calculate the model, view, and projection matrix used by the vertex shader.
     CameraUniformBufferObject ubo = {};
-    ubo.model = 
-        glm::translate(glm::mat4(1.0f), groundPlane.position) 
-        * glm::lookAt(groundPlane.position, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f))
-        * glm::scale(glm::mat4(1.0f), groundPlane.scale);
+    ubo.model = glm::translate(glm::mat4(1.0f), groundPlane.position) *  rotationMatrix * glm::scale(glm::mat4(1.0f), groundPlane.scale);
     ubo.view = view;
     ubo.proj = proj;
 
+    // Copy the contents of the ubo structure into a mapped memory location effectively updating the uniform buffer with the most recent data.
     void* data;
-    vkMapMemory(m_LogicalDevice, uniformBufferMemory, 0, sizeof(ubo), 0, &data);
+    vkMapMemory(m_LogicalDevice, uniformBufferMemory, 0, sizeof(ubo), 0, &data); // Validation error: attempting to map memory on already mapped memory.
     memcpy(data, &ubo, sizeof(ubo));
     vkUnmapMemory(m_LogicalDevice, uniformBufferMemory);
 }
@@ -1223,11 +1228,11 @@ VkResult VulkanApplication::createImGuiImplementation()
 void VulkanApplication::createMeshObjects()
 {
     // Construct a plane mesh, for the ground.
-    MeshInstance groundPlane = quadMesh.generateQuad(glm::vec3(0.0f, 0.0f, 0.0f));
-    groundPlane.position = glm::vec3(0.0f);
-    groundPlane.rotation = glm::vec3(0.0f);
-    groundPlane.scale = glm::vec3(10.f);
-    this->groundPlane = groundPlane;
+    MeshInstance _groundPlane = quadMesh.generateQuad(glm::vec3(0.0f, 0.0f, 0.0f));
+    _groundPlane.position = glm::vec3(0.0f);
+    _groundPlane.rotation = glm::vec3(0.0f, 90.0f, 0.0f);
+    _groundPlane.scale = glm::vec3(1.f, 2.0f, 2.0f); // YZ is correct when rotated 90 degrees 
+    groundPlane = _groundPlane;
 
     driverData.vertexCount += quadMesh.vertexCount;
 }
