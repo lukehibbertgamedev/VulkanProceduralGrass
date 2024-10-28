@@ -79,7 +79,6 @@ void Sphere::addVertex(glm::vec3 pos, glm::vec2 tex, glm::vec4 color = glm::vec4
 {
 	Vertex vertex;
 	vertex.pos = pos;
-	vertex.texCoord = tex;
 	vertex.color = color;
 	vertices.push_back(vertex);
 }
@@ -146,10 +145,10 @@ void Sphere::changeUpAxis(int from, int to)
 MeshInstance Quad::generateQuad(glm::vec3 position)
 {
 	vertices = {
-		{{0.0f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.0f }, {-0.0f, 0.0f}},
-		{{0.0f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f, 1.0f }, {-1.0f, 0.0f}},
-		{{0.0f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f, 1.0f }, {-1.0f, 1.0f}},
-		{{0.0f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f, 1.0f }, {-0.0f, 1.0f}}
+		{{0.0f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.0f }},
+		{{0.0f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f, 1.0f }},
+		{{0.0f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f, 1.0f }},
+		{{0.0f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f, 1.0f }}
 	}; 
 	 
 	indices = {	0, 1, 2, 2, 3, 0 }; 

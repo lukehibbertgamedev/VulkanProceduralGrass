@@ -23,8 +23,8 @@
 // Todo: Wrap in ifdef vk debug
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
-    std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
-    std::cout << "Debug Messenger\n";
+    std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl << std::endl;
+    /*std::cout << "Debug Messenger\n";
     std::cout << "Type: ";
     if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) std::cout << "General\n ";
     else {
@@ -69,7 +69,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverity
     }
     std::cout << "Message ID Number: " << pCallbackData->messageIdNumber << "\n";
     std::cout << "Message ID Name: " << pCallbackData->pMessageIdName << "\n";
-    std::cout << "Message: " << pCallbackData->pMessage << "\n";
+    std::cout << "Message: " << pCallbackData->pMessage << "\n";*/
 
     return VK_FALSE;
 }
@@ -256,44 +256,17 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     proj[1][1] *= -1; // Invert the y-axis due to differing coordinate systems.
 
     CameraUniformBufferObject ubo = {};
-    float visualIndex = 0.0f;
-    for (size_t i = 0; i < meshInstanceCount + bezier::pointCountToVisualise + 1; ++i) {
-
-        // Update control points.
-
-        // CONTROL POINTS SHOULD ALSO UPDATE THE POSITION VALUES IN BLADE.
-        if (i <= 3) {
-            if (i == 2) {
-                float x = meshes[i].position.x * ((sin(time) + 1) / 2) * 0.7f + 0.55f * 0.5f; // Calculate offset in x by limiting sin to be 0-1 instead of -1-1. Then clamping further between 0.35-0.8.
-                test.p2 = glm::vec3(x, test.p2.y, x);
-                ubo.model[i] = glm::translate(glm::mat4(1.0f), test.p2) * glm::scale(glm::mat4(1.0f), meshes[i].scale);
-            }
-            else ubo.model[i] = glm::translate(glm::mat4(1.0f), meshes[i].position) * glm::scale(glm::mat4(1.0f), meshes[i].scale);
-
-        }
-
-        // Update visual points.
-        else if (i > 3) {
-         
-            glm::vec3 pos = test.calculatePositionAlongQuadraticBezierCurve(visualIndex);  
-            ubo.model[i] = glm::translate(glm::mat4(1.0f), pos) * glm::scale(glm::mat4(1.0f), meshes[i].scale); 
-            visualIndex += 0.1f;
-
-        }     
-
-        // Update test quad.
-        // FOR SOME REASON UBO.MODEL[0] IS THE QUAD?
-        ubo.model[0] = glm::translate(glm::mat4(1.0f), glm::vec3(test.p0.x - 0.125f, test.p0.y, test.p0.z + (test.height * 0.5f)))  
-            * glm::scale(glm::mat4(1.0f), glm::vec3(0.25f, 0.25f, test.height)); 
-
-        ubo.view = view;
-        ubo.proj = proj;
-    }
+    ubo.model = 
+        glm::translate(glm::mat4(1.0f), groundPlane.position) 
+        * glm::lookAt(groundPlane.position, glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f))
+        * glm::scale(glm::mat4(1.0f), groundPlane.scale);
+    ubo.view = view;
+    ubo.proj = proj;
 
     void* data;
-    vkMapMemory(m_LogicalDevice, uniformBuffersMemory[currentFrame], 0, sizeof(ubo), 0, &data);
-    memcpy(data, &ubo, sizeof(ubo)); 
-    vkUnmapMemory(m_LogicalDevice, uniformBuffersMemory[currentFrame]); 
+    vkMapMemory(m_LogicalDevice, uniformBufferMemory, 0, sizeof(ubo), 0, &data);
+    memcpy(data, &ubo, sizeof(ubo));
+    vkUnmapMemory(m_LogicalDevice, uniformBufferMemory);
 }
 
 VkResult VulkanApplication::createInstance() {   
@@ -833,7 +806,7 @@ VkResult VulkanApplication::createGraphicsPipeline()
     // Configure settings for how multisampling performs, reducing aliasing and jagged edges in the rendered image.
     VkPipelineMultisampleStateCreateInfo multisampling = {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.sampleShadingEnable = VK_TRUE; 
+    multisampling.sampleShadingEnable = VK_FALSE; 
     multisampling.rasterizationSamples = msaaSamples;
     multisampling.minSampleShading = 0; // Min fraction for sample shading where closer to 1 is smooth. // 0.2f
 
@@ -983,257 +956,12 @@ VkResult VulkanApplication::createCommandPool()
     return VK_SUCCESS;
 }
 
-VkResult VulkanApplication::createShaderStorageBuffers()
-{
-    // Initialize particles
-    std::default_random_engine rndEngine((unsigned)time(nullptr));
-    std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
-
-    // Initial particle positions on a circle
-    std::vector<Particle> particles(PARTICLE_COUNT);
-    for (auto& particle : particles) {
-        float r = 2.25f * sqrt(rndDist(rndEngine));
-        float theta = rndDist(rndEngine) * 2.0f * 3.14159265358979323846f;
-        float x = r * cos(theta) * 800 / 600;
-        float y = r * sin(theta) * 600 / 800;
-        particle.position = glm::vec2(x, y);
-        particle.velocity = glm::normalize(glm::vec2(x, y)) * 0.00025f;
-        particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine) * 0.1f, rndDist(rndEngine) * 0.1f, 1.0f);
-    }
-
-    VkDeviceSize bufferSize = sizeof(Particle) * PARTICLE_COUNT;
-
-    // Create a staging buffer used to upload data to the gpu
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation.");
-        return ret;
-    }
-
-    void* data;
-    vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, particles.data(), (size_t)bufferSize);
-    vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
-
-    shaderStorageBuffers.resize(MAX_FRAMES_IN_FLIGHT); 
-    shaderStorageBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT); 
-
-    // Copy initial particle data to all storage buffers
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) { 
-        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, shaderStorageBuffers[i], shaderStorageBuffersMemory[i]);
-        if (ret != VK_SUCCESS) {
-            throw std::runtime_error("bad buffer creation.");
-            return ret;
-        }
-        
-        copyBuffer(stagingBuffer, shaderStorageBuffers[i], bufferSize); 
-    }
-
-    vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
-    vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
-
-    return ret;
-}
-
-VkResult VulkanApplication::createColourResources()
-{
-    VkFormat colorFormat = swapChainImageFormat;
-
-    VkResult ret = createImage(swapChainExtent.width, swapChainExtent.height, 1, msaaSamples, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, colorImage, colorImageMemory);
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad image creation.");
-        return ret;
-    }
-    
-    colorImageView = createImageView(colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT);  
-
-    return ret;
-}
-
-VkResult VulkanApplication::createDepthResources()
-{
-    VkFormat depthFormat = findDepthFormat();
-
-    VkResult ret = createImage(swapChainExtent.width, swapChainExtent.height, 1, msaaSamples, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad image creation.");
-        return ret;
-    }
-
-    depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-
-    return VK_SUCCESS;
-}
-
-VkResult VulkanApplication::createTextureImage()
-{
-    // TODO: Understand and comment this code.
-
-    int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load("../assets/texture01.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    VkDeviceSize imageSize = texWidth * texHeight * 4;
-
-    if (!pixels) {
-        throw std::runtime_error("failed to load texture image!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    VkResult ret = createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation.");
-        return ret;
-    }
-
-    void* data;
-    vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixels, static_cast<size_t>(imageSize));
-    vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
-
-    stbi_image_free(pixels);
-
-    ret = createImage(texWidth, texHeight, 1, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory); 
-    
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad image creation.");
-        return ret;
-    }
-
-    transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-    transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-    vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
-    vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
-
-    return ret;
-}
-
-VkResult VulkanApplication::createTextureImageView()
-{
-    textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
-    if (!textureImageView) {
-        throw std::runtime_error("bad texture image view.");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-    return VK_SUCCESS;
-}
-
-VkResult VulkanApplication::createTextureSampler()
-{
-    VkPhysicalDeviceProperties properties{};
-    vkGetPhysicalDeviceProperties(m_PhysicalDevice, &properties);
-
-    VkSamplerCreateInfo samplerInfo = {};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.anisotropyEnable = VK_FALSE;
-    samplerInfo.maxAnisotropy = 1.0f;
-    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.mipLodBias = 0.0f;
-    samplerInfo.minLod = 0.0f;
-    samplerInfo.maxLod = 0.0f;
-
-    if (vkCreateSampler(m_LogicalDevice, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create texture sampler!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-    return VK_SUCCESS;
-}
-
 VkResult VulkanApplication::createVertexBuffer()
 {
-    /*VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation.");
-        return ret;
-    }
-    
-    void* data;
-    vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data(), (size_t)bufferSize);
-    vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
-    
-    ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation.");
-        return ret;
-    }
-    
-    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-    
-    vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
-    vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
-    
-    return ret;*/
-
-    // Non-particle staging buffer version.
-
     // Define a return code for potentially dangerous function calls to ensure they ran correctly.
     VkResult ret = VK_ERROR_INITIALIZATION_FAILED; 
 
-    // Create a vertex buffer for the sphere mesh.
-
-    {
-        // Calculate the total size of the vertex buffers that we will need.
-        VkDeviceSize sphereMeshRequiredBufferSize = sizeof(Vertex) * sphereMesh.vertexCount;
-
-        // Prepare staging buffer and its associated memory for holding the vertex data temporarily before it gets transferred to the GPU.
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
-
-        // Create the staging buffer used as a source to send/transfer buffer data.
-        // Note: writes from the CPU are visible to the GPU without explicit flushing.
-        ret = createBuffer(sphereMeshRequiredBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-        if (ret != VK_SUCCESS) {
-            throw std::runtime_error("bad buffer creation");
-            return ret;
-        }
-
-        // Convert the staging buffer to a pointer to be accessed easier.
-        void* data;
-        vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, sphereMeshRequiredBufferSize, 0, &data);
-
-        // Copy the vertex data from the sphere mesh into the staging buffer.
-        memcpy(data, sphereMesh.vertices.data(), (size_t)sphereMeshRequiredBufferSize);
-
-        // Releases the mapped memory so the GPU can safely access the written data.
-        vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
-
-        // Creates the vertex buffer on the GPU used as a destination to receive transfers from a source, and as a vertex buffer for drawing. 
-        // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
-        ret = createBuffer(sphereMeshRequiredBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-        if (ret != VK_SUCCESS) {
-            throw std::runtime_error("bad buffer creation");
-            return ret;
-        }
-
-        // Transfers the vertex data from the staging buffer to the vertex buffer.
-        copyBuffer(stagingBuffer, vertexBuffer, sphereMeshRequiredBufferSize);
-
-        // Clean up the staging buffer and its associated allocated memory.
-        vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
-        vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
-    }
-
-    // Do this all again for the quad.
-
+    // for the quad.
     {
         // Calculate the total size of the vertex buffers that we will need.
         VkDeviceSize quadMeshRequiredBufferSize = sizeof(Vertex) * quadMesh.vertexCount;
@@ -1284,52 +1012,7 @@ VkResult VulkanApplication::createIndexBuffer()
     // Define a return code for potentially dangerous function calls to ensure they ran correctly.
     VkResult ret = VK_ERROR_INITIALIZATION_FAILED;
 
-    // Create an index buffer for the sphere mesh.
-
-    {
-        // Calculate the total size of the index buffers that we will need.
-        VkDeviceSize bufferSize = sizeof(uint16_t) * sphereMesh.indexCount;
-
-        // Prepare staging buffer and its associated memory for holding the index data temporarily before it gets transferred to the GPU.
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
-
-        // Create the staging buffer used as a source to send/transfer buffer data.
-        // Note: writes from the CPU are visible to the GPU without explicit flushing.
-        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-        if (ret != VK_SUCCESS) {
-            throw std::runtime_error("bad buffer creation");
-            return ret;
-        }
-
-        // Convert the staging buffer to a pointer to be accessed easier.
-        void* data;
-        vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-
-        // Copy the index data from the sphere mesh into the staging buffer.
-        memcpy(data, sphereMesh.indices.data(), (size_t)bufferSize);
-
-        // Releases the mapped memory so the GPU can safely access the written data.
-        vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
-
-        // Creates the index buffer on the GPU used as a destination to receive transfers from a source, and as a index buffer for drawing. 
-        // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
-        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
-        if (ret != VK_SUCCESS) {
-            throw std::runtime_error("bad buffer creation");
-            return ret;
-        }
-
-        // Transfers the vertex data from the staging buffer to the vertex buffer.
-        copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-
-        // Clean up the staging buffer and its associated allocated memory.
-        vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
-        vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
-    }
-
-    // Do this all again for the quad.
-
+    // for the quad.
     {
         // Calculate the total size of the index buffers that we will need.
         VkDeviceSize bufferSize = sizeof(uint16_t) * quadMesh.indexCount;
@@ -1379,21 +1062,12 @@ VkResult VulkanApplication::createUniformBuffers()
 {
     VkDeviceSize bufferSize = sizeof(CameraUniformBufferObject);
 
-    uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-    uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
-    uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
-
-    VkResult ret = VK_SUCCESS;
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
-        if (ret != VK_SUCCESS) {
-            throw std::runtime_error("bad buffer creation.");
-            return ret;
-        }
-
-        vkMapMemory(m_LogicalDevice, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+    VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffer, uniformBufferMemory);
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad buffer creation.");
+        return ret;
     }
+    vkMapMemory(m_LogicalDevice, uniformBufferMemory, 0, bufferSize, 0, &uniformBufferMapped);
 
     return ret;
 }
@@ -1418,128 +1092,35 @@ VkResult VulkanApplication::createDescriptorPool()
     return VK_SUCCESS;
 }
 
-VkResult VulkanApplication::createComputeDescriptorSets()
-{
-    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, computeDescriptorSetLayout);
-    VkDescriptorSetAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = descriptorPool;
-    allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-    allocInfo.pSetLayouts = layouts.data();
-    
-    computeDescriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
-    if (vkAllocateDescriptorSets(m_LogicalDevice, &allocInfo, computeDescriptorSets.data()) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor sets!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-    
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        VkDescriptorBufferInfo uniformBufferInfo = {};
-        uniformBufferInfo.buffer = uniformBuffers[i];
-        uniformBufferInfo.offset = 0;
-        //uniformBufferInfo.range = sizeof(UniformBufferObject); //FIXME: 
-    
-        std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = computeDescriptorSets[i];
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
-    
-        VkDescriptorBufferInfo storageBufferInfoLastFrame = {};
-        storageBufferInfoLastFrame.buffer = shaderStorageBuffers[(i - 1) % MAX_FRAMES_IN_FLIGHT];
-        storageBufferInfoLastFrame.offset = 0;
-        storageBufferInfoLastFrame.range = sizeof(Particle) * PARTICLE_COUNT;
-    
-        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet = computeDescriptorSets[i];
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pBufferInfo = &storageBufferInfoLastFrame;
-    
-        VkDescriptorBufferInfo storageBufferInfoCurrentFrame = {};
-        storageBufferInfoCurrentFrame.buffer = shaderStorageBuffers[i];
-        storageBufferInfoCurrentFrame.offset = 0;
-        storageBufferInfoCurrentFrame.range = sizeof(Particle) * PARTICLE_COUNT;
-    
-        descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[2].dstSet = computeDescriptorSets[i];
-        descriptorWrites[2].dstBinding = 2;
-        descriptorWrites[2].dstArrayElement = 0;
-        descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        descriptorWrites[2].descriptorCount = 1;
-        descriptorWrites[2].pBufferInfo = &storageBufferInfoCurrentFrame;
-    
-        vkUpdateDescriptorSets(m_LogicalDevice, 3, descriptorWrites.data(), 0, nullptr);
-    }
-
-    return VK_SUCCESS;
-}
-
 VkResult VulkanApplication::createDescriptorSets()
 {
-    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
+    VkDescriptorSetLayout layout(descriptorSetLayout);
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptorPool;
-    allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT); // Big error here, never change this, ever...
-    allocInfo.pSetLayouts = layouts.data();
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &layout;
 
-    descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
-    if (vkAllocateDescriptorSets(m_LogicalDevice, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
+    if (vkAllocateDescriptorSets(m_LogicalDevice, &allocInfo, &uniformBufferDescriptorSet) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+    VkDescriptorBufferInfo bufferInfo = {};
+    bufferInfo.buffer = uniformBuffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range = sizeof(CameraUniformBufferObject);
 
-        VkDescriptorBufferInfo bufferInfo = {};
-        bufferInfo.buffer = uniformBuffers[i];
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(CameraUniformBufferObject);
+    VkWriteDescriptorSet descriptorWrite = {};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = uniformBufferDescriptorSet;
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pBufferInfo = &bufferInfo;
 
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
-
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = descriptorSets[i];
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &bufferInfo;
-
-        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet = descriptorSets[i];
-        descriptorWrites[1].dstBinding = 1; // Increase from the last one
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pBufferInfo = &bufferInfo;
-        
-        vkUpdateDescriptorSets(m_LogicalDevice, 2, descriptorWrites.data(), 0, nullptr);
-    }     
-
-    return VK_SUCCESS;
-}
-
-VkResult VulkanApplication::createComputeCommandBuffer()
-{
-    computeCommandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t)computeCommandBuffers.size();
-
-    if (vkAllocateCommandBuffers(m_LogicalDevice, &allocInfo, computeCommandBuffers.data()) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate compute command buffers!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
+    vkUpdateDescriptorSets(m_LogicalDevice, 1, &descriptorWrite, 0, nullptr); 
 
     return VK_SUCCESS;
 }
@@ -1565,9 +1146,7 @@ VkResult VulkanApplication::createSynchronizationObjects()
 {
     imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    computeFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-    computeInFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1581,11 +1160,6 @@ VkResult VulkanApplication::createSynchronizationObjects()
             vkCreateSemaphore(m_LogicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
             vkCreateFence(m_LogicalDevice, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create graphics synchronization objects for a frame!");
-            return VK_ERROR_INITIALIZATION_FAILED;
-        }
-        if (vkCreateSemaphore(m_LogicalDevice, &semaphoreInfo, nullptr, &computeFinishedSemaphores[i]) != VK_SUCCESS ||
-            vkCreateFence(m_LogicalDevice, &fenceInfo, nullptr, &computeInFlightFences[i]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create compute synchronization objects for a frame!");
             return VK_ERROR_INITIALIZATION_FAILED;
         }
     }
@@ -1648,36 +1222,14 @@ VkResult VulkanApplication::createImGuiImplementation()
 
 void VulkanApplication::createMeshObjects()
 {
-    const float radius = 0.15f;
-    const int sectors = 10, stacks = 10;
-    const int upAxis = 3; // 1 = X, 2 = Y, 3 = Z. Vulkan uses RH so Z-Up.
+    // Construct a plane mesh, for the ground.
+    MeshInstance groundPlane = quadMesh.generateQuad(glm::vec3(0.0f, 0.0f, 0.0f));
+    groundPlane.position = glm::vec3(0.0f);
+    groundPlane.rotation = glm::vec3(0.0f);
+    groundPlane.scale = glm::vec3(10.f);
+    this->groundPlane = groundPlane;
 
-    Blade testBlade = Blade();
-
-    MeshInstance base = sphereMesh.generateFlatSphere(testBlade.p0, radius, sectors, stacks, upAxis);
-    meshes.push_back(base);
-    driverData.vertexCount += sphereMesh.vertexCount;
-
-    MeshInstance height = sphereMesh.generateFlatSphere(testBlade.p1, radius, sectors, stacks, upAxis);
-    meshes.push_back(height);
-    driverData.vertexCount += sphereMesh.vertexCount;
-
-    MeshInstance tip = sphereMesh.generateFlatSphere(testBlade.p2, radius, sectors, stacks, upAxis);
-    meshes.push_back(tip);
-    driverData.vertexCount += sphereMesh.vertexCount;
-
-    // Create basic smaller spheres for use along the bezier curve for its visualisation.
-    for (float i = 0.0f; i < bezier::pointCountToVisualise * 0.1f; i += 0.1f) {
-        MeshInstance curveMeshPoint = sphereMesh.generateFlatSphere(testBlade.calculatePositionAlongQuadraticBezierCurve(i), 0.05f, sectors, stacks, upAxis);
-        meshes.push_back(curveMeshPoint);
-        driverData.vertexCount += sphereMesh.vertexCount;
-    }
-
-    MeshInstance quad = quadMesh.generateQuad(testBlade.p2);
-    meshes.push_back(quad);
     driverData.vertexCount += quadMesh.vertexCount;
-
-    test = testBlade;
 }
 
 void VulkanApplication::prepareImGuiDrawData()
@@ -1782,35 +1334,6 @@ void VulkanApplication::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDev
     endSingleTimeCommands(commandBuffer);
 }
 
-void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer)
-{
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-        throw std::runtime_error("failed to begin recording compute command buffer!");
-    }
-
-    // Bind the pipeline specific to compute usage, ensuring that subsequent compute commands use the pipeline configuration and bound shader stages.
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
-
-    // Bind the current frame's compute descriptor resources to allow the compute shader access to the particles shader storage buffer object.
-    //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &computeDescriptorSets[currentFrame], 0, nullptr);
-
-    // This specific use of vkCmdDispatch works using a linear array of data, so only one dimension of workgroup is set.
-    // Each compute shader is defined to perform 256 invocations, so the workgroup count in any dimension must be divisible by this invocation count.
-    // If the workgroup count is dynamic and potentially is not divisible, you can use gl_GlobalInvocationID at the start of 
-    // the compute shader and return if the ID is greater than the instance count.
-
-    // Schedules the GPU execution of a compute shader, with provided workgroup sizes which are executed from invocations.
-    // Each invocation can access shared memory, perform computations, and write results to different resources.
-    //vkCmdDispatch(commandBuffer, PARTICLE_COUNT / 256, 1, 1);
-
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to record compute command buffer!");
-    }
-}
-
 void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
 {
     VkCommandBufferBeginInfo beginInfo{};
@@ -1849,24 +1372,18 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     scissor.extent = swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    VkBuffer sphereVertexBuffers[] = { vertexBuffer }; 
-    VkDeviceSize sphereOffsets[] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, sphereVertexBuffers, sphereOffsets);
-    vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr); 
-    vkCmdDrawIndexed(commandBuffer, sphereMesh.indexCount, meshInstanceCount + bezier::pointCountToVisualise, 0, 0, 0);
-
-    VkBuffer quadVertexBuffers[] = { quadVertexBuffer };
-    VkDeviceSize quadOffsets[] = { 0 }; 
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffers, quadOffsets);
-    vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16); 
-    vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0);
+    VkBuffer quadVertexBuffers[] = { quadVertexBuffer };                                        
+    VkDeviceSize quadOffsets[] = { 0 };                                                         
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffers, quadOffsets);                
+    vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);              
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &uniformBufferDescriptorSet, 0, nullptr); 
+    vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0); 
 
     // ImGui
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer); 
 
-    vkCmdEndRenderPass(commandBuffer);
-
+    vkCmdEndRenderPass(commandBuffer); 
+     
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }
@@ -1888,11 +1405,8 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     vkDestroyImageView(m_LogicalDevice, textureImageView, nullptr);
     vkDestroyImage(m_LogicalDevice, textureImage, nullptr);
     vkFreeMemory(m_LogicalDevice, textureImageMemory, nullptr);
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vkDestroyBuffer(m_LogicalDevice, uniformBuffers[i], nullptr);
-        vkFreeMemory(m_LogicalDevice, uniformBuffersMemory[i], nullptr);
-    }
+    vkDestroyBuffer(m_LogicalDevice, uniformBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, uniformBufferMemory, nullptr);
 
     vkDestroyDescriptorPool(m_LogicalDevice, descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(m_LogicalDevice, descriptorSetLayout, nullptr);
@@ -2072,16 +1586,6 @@ VkSampleCountFlagBits VulkanApplication::getMaxUsableMSAASampleCount()
     if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
 
     return VK_SAMPLE_COUNT_1_BIT;
-}
-
-bool VulkanApplication::depthFormatHasStencilComponent(VkFormat format)
-{
-    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-}
-
-VkFormat VulkanApplication::findDepthFormat()
-{
-    return findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT }, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 VkFormat VulkanApplication::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
@@ -2281,11 +1785,6 @@ VulkanApplication::QueueFamilyIndices VulkanApplication::findQueueFamilies(VkPhy
         if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
             indices.graphicsAndComputeFamily = i;
         }
-
-        // Graphics queue family only.
-        /*if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            indices.graphicsFamily = i;
-        }*/
 
         // Present queue family.
         if (presentSupport) {

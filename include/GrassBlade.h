@@ -190,31 +190,21 @@
 		return lerp(p0p1, p1p2, t);
 	}*/
 
-namespace bezier {
-
-	static int pointCountToVisualise = 10;
-
-	// Uses De Casteljau's algorithm to evaluate polynomials in Bézier curves.
-	static glm::vec3 lerp(const glm::vec3& p0, const glm::vec3& p1, float t) {
-		return glm::vec3((1 - t) * p0.x + t * p1.x, (1 - t) * p0.y + t * p1.y, (1 - t) * p0.z + t * p1.z);
-	}
-}
-
 // See more on alignment: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap15.html#interfaces-resources-layout
-struct ModelMatrixUniformBufferObject {
-	alignas(16) glm::mat4 modelMatrix;
-};
+//struct ModelMatrixUniformBufferObject {
+//	alignas(16) glm::mat4 modelMatrix;
+//};
 
 // Indirect structure allows the GPU to execute draw commands without use of the CPU. This will reduce 
 // CPU-GPU synchronisation overhead, and efficiently perform instanced rendering, minimising draw calls 
 // and data transfers. This structure will act as a single draw call for all grass blades, and allows 
 // for parameters to be updated in the GPU buffers without reissuing draw calls from the CPU.
-struct BladeDrawIndirect {
-	uint32_t vertexCount;	// Number of vertices per blade instance.
-	uint32_t instanceCount;	// Number of blade instances.
-	uint32_t firstVertex;	// Index of the first vertex.
-	uint32_t firstInstance;	// Index of the first instance.
-};
+//struct BladeDrawIndirect {
+//	uint32_t vertexCount;	// Number of vertices per blade instance.
+//	uint32_t instanceCount;	// Number of blade instances.
+//	uint32_t firstVertex;	// Index of the first vertex.
+//	uint32_t firstInstance;	// Index of the first instance.
+//};
 
 //struct Blade {
 //
@@ -231,42 +221,86 @@ struct BladeDrawIndirect {
 //	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescription();
 //};
 
-constexpr static unsigned int MAX_BLADES = 1 << 18; // 1 << 18 = 262,144
+//constexpr static unsigned int MAX_BLADES = 1 << 18; // 1 << 18 = 262,144
+//
+//struct Blades {
+//
+//	Blades();
+//
+//	// Holds all blade instances.
+//	VkBuffer bladesBuffer;
+//	VkDeviceMemory bladesBufferMemory;
+//
+//	VkBuffer bladeCountBuffer;
+//	VkDeviceMemory bladeCountBufferMemory;
+//
+//	ModelMatrixUniformBufferObject modelMatrixUBO;
+//	VkBuffer modelMatrixBuffer;
+//	VkDeviceMemory modelMatrixBufferMemory;
+//};
+//
+//class Blade {
+//public:
+//
+//	Blade();
+//
+//	float lean = 1.3f;
+//	float height = 1.25f;
+//
+//	glm::vec3 position = glm::vec3(0.0f); // The world space position of this blade.
+//	glm::vec3 direction = glm::vec3(1.0f, 0.0f, 0.0f); // In the direction that it will curve/lean.
+//
+//	float width = 1.0f;
+//
+//	// All control points contain a width value which define the total width of the blade. 
+//	// Each control point is pushed out in the blade's facing direction to generate vertices along.
+//	glm::vec3 p0 = glm::vec3(0.0f, 0.0f, 0.0f); // Blade base.
+//	glm::vec3 p1 = glm::vec3(0.0f, 0.0f, 0.0f); // Blade height.
+//	glm::vec3 p2 = glm::vec3(0.0f, 0.0f, 0.0f); // Blade tip.
+//
+//	glm::vec3 calculatePositionAlongQuadraticBezierCurve(float t);
+//};
 
-struct Blades {
+namespace bezier {
 
-	Blades();
+	static int pointCountToVisualise = 10;
 
-	// Holds all blade instances.
-	VkBuffer bladesBuffer;
-	VkDeviceMemory bladesBufferMemory;
+	// Uses De Casteljau's algorithm to evaluate polynomials in Bézier curves.
+	static glm::vec3 lerp(const glm::vec3& p0, const glm::vec3& p1, float t) {
+		return glm::vec3((1 - t) * p0.x + t * p1.x, (1 - t) * p0.y + t * p1.y, (1 - t) * p0.z + t * p1.z);
+	}
+}
 
-	VkBuffer bladeCountBuffer;
-	VkDeviceMemory bladeCountBufferMemory;
+#define GRASS_WIDTH 1.0f
+#define GRASS_HEIGHT 1.5f
+#define GRASS_LEAN 0.7f
+#define GRASS_STIFFNESS 0.5f
+#define GRASS_NO_ANGLE 0.0f
 
-	ModelMatrixUniformBufferObject modelMatrixUBO;
-	VkBuffer modelMatrixBuffer;
-	VkDeviceMemory modelMatrixBufferMemory;
+// 32 bytes large, 4 byte alignment.
+struct BladeInstanceData {
+
+	glm::vec4 worldPosition = glm::vec4(0.0f);
+	float width = GRASS_WIDTH;
+	float height = GRASS_HEIGHT;
+	float directionAngle = GRASS_NO_ANGLE;
+	float stiffness = GRASS_STIFFNESS;
+
 };
 
 class Blade {
 public:
 
-	Blade();
+	void initialise(); // Sets up packed 4 v4 values.
 
-	float lean = 1.3f;
-	float height = 1.25f;
+	glm::vec3 calculatePositionAlongBezierCurve(float interpolationValue); // Quadratic bezier curve.
 
-	glm::vec3 position = glm::vec3(0.0f); // The world space position of this blade.
-	glm::vec3 direction = glm::vec3(1.0f, 0.0f, 0.0f); // In the direction that it will curve/lean.
+	// All grass members can be defined in four packed vector4s where xyz represents a vector3 and w represents a float.
+	glm::vec4 p0AndWidth = glm::vec4(0.0f);		// P0 and grass width.
+	glm::vec4 p1AndHeight = glm::vec4(0.0f);	// P1 and grass height.
+	glm::vec4 p2AndDirection = glm::vec4(0.0f);	// P2 and blade direction angle.
+	glm::vec4 upAndStiffness = glm::vec4(0.0f);	// Grass up vector and stiffness coefficient.
 
-	float width = 1.0f;
-
-	// All control points contain a width value which define the total width of the blade. 
-	// Each control point is pushed out in the blade's facing direction to generate vertices along.
-	glm::vec3 p0 = glm::vec3(0.0f, 0.0f, 0.0f); // Blade base.
-	glm::vec3 p1 = glm::vec3(0.0f, 0.0f, 0.0f); // Blade height.
-	glm::vec3 p2 = glm::vec3(0.0f, 0.0f, 0.0f); // Blade tip.
-
-	glm::vec3 calculatePositionAlongQuadraticBezierCurve(float t);
+	static VkVertexInputBindingDescription getBindingDescription();
+ 	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescription();
 };

@@ -78,39 +78,11 @@ struct Particle {
 	}
 };
 
-const int meshInstanceCount = 3;
-
-// Important: If you change this value, you MUST change the macro within the vertex shader as these values are not linked, but matched in writing.
 struct CameraUniformBufferObject {
-	alignas(16) glm::mat4 model[14];
+	alignas(16) glm::mat4 model;
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
 };
-
-//const std::vector<Vertex> vertices = {
-//
-//	// Quad 1
-//	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f }, {-0.0f, 0.0f}},
-//	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f }, {-1.0f, 0.0f}},
-//	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f }, {-1.0f, 1.0f}},
-//	{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f }, {-0.0f, 1.0f}},
-//
-//	// Quad 2
-//	{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.0f }, {-0.0f, 0.0f}},
-//	{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f, 1.0f }, {-1.0f, 0.0f}},
-//	{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f, 1.0f }, {-1.0f, 1.0f}},
-//	{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f, 1.0f }, {-0.0f, 1.0f}}
-//};
-//
-//const std::vector<uint16_t> indices = {
-//
-//	// Quad 1
-//	0, 1, 2, 2, 3, 0,
-//
-//	// Quad 2
-//	4, 5, 6, 6, 7, 4
-//};
-
 
 class VulkanApplication {
 
@@ -260,7 +232,7 @@ public:
 	VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;				// A handle to the manager that allocates descriptor sets specifically for ImGui resources necessary for rendering its interface.
 	VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;			// A description of how descriptor sets (ie., resources/buffers) are accessed by shaders.
 	VkDescriptorSetLayout computeDescriptorSetLayout = VK_NULL_HANDLE;	// A description of how descriptor sets (ie., resources/buffers) are accessed specifically by compute shaders.
-	std::vector<VkDescriptorSet> descriptorSets = {};					// A collection of resources/buffers/images that can be bound to shaders during rendering operations.
+	//std::vector<VkDescriptorSet> descriptorSets = {};					// A collection of resources/buffers/images that can be bound to shaders during rendering operations.
 	std::vector<VkDescriptorSet> computeDescriptorSets = {};			// A collection of resources/buffers/images that can be bound to compute shaders during compute operations.
 
 	VkDescriptorSet quadDescriptorSet = VK_NULL_HANDLE;					// ... 
@@ -270,9 +242,10 @@ public:
 	VkDeviceMemory quadIndexBufferMemory = VK_NULL_HANDLE;				// ... 
 
 	// Uniform buffer objects (UBO).
-	std::vector<VkBuffer> uniformBuffers = {};							// A collection of uniform buffer objects that stored constant data for all vertices/fragments within a draw call.
-	std::vector<VkDeviceMemory> uniformBuffersMemory = {};				// A collection of device memory allocations for a uniform buffer.
-	std::vector<void*> uniformBuffersMapped = {};						// A collection of pointers to the mapped memory for the uniform buffers, allowing direct access to modify the buffer's data.
+	VkBuffer uniformBuffer;
+	VkDeviceMemory uniformBufferMemory;
+	void* uniformBufferMapped;
+	VkDescriptorSet uniformBufferDescriptorSet;
 
 	// Vertex and index buffer with associated memory.
 	VkBuffer vertexBuffer = VK_NULL_HANDLE;								// ...
@@ -314,6 +287,10 @@ public:
 	int frameCount = 0;
 
 	std::vector<MeshInstance> meshes;
+
+	MeshInstance groundPlane;
+
+	std::vector<BladeInstanceData> localBladeInstanceBuffer; // A holding buffer of instance data per-blade.
 
 	Blade test;
 
