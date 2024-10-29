@@ -27,7 +27,7 @@
 #define MEADOW_SCALE_Y 1
 #define MEADOW_SCALE_Z 2
 
-static constexpr bool kEnableValidationLayers = true;
+static constexpr bool kEnableValidationLayers = false;
 const std::vector<const char*> kValidationLayers = {
 	"VK_LAYER_KHRONOS_validation"
 };
@@ -147,6 +147,7 @@ public:
 	VkResult createImGuiImplementation();
 
 	void createMeshObjects();
+	void populateBladeInstanceBuffer();
 
 	void prepareImGuiDrawData();
 

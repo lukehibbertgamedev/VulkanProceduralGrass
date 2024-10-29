@@ -21,7 +21,6 @@
 #include <glm/gtx/quaternion.hpp>
 
 // Todo: Wrap in ifdef vk debug
-
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
     std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl << std::endl;
     /*std::cout << "Debug Messenger\n";
@@ -680,17 +679,27 @@ VkResult VulkanApplication::createDescriptorSetLayout()
 {
     // Define the type of descriptor/shader resources you will want.
 
-    VkDescriptorSetLayoutBinding uboLayoutBinding = {};
-    uboLayoutBinding.binding = 0;
-    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboLayoutBinding.descriptorCount = 1;
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    uboLayoutBinding.pImmutableSamplers = nullptr;
+    std::array<VkDescriptorSetLayoutBinding, 2> layoutBindings = {};
+
+    // Set up for the uniform buffer object used for camera matrix data.
+    layoutBindings[0].binding = 0;
+    layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBindings[0].descriptorCount = 1;
+    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layoutBindings[0].pImmutableSamplers = nullptr;
+
+    // Set up for the shader storage buffer object used for the grass blades to be put on the GPU.
+    layoutBindings[1].binding = 1;
+    layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // Warning: This may need to be dynamic SSBO down the line.
+    layoutBindings[1].descriptorCount = 1;
+    // Warning: This is setting the availability for this descriptor type to be used in all shaders that we currently have in use.
+    layoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    layoutBindings[0].pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &uboLayoutBinding;
+    layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
+    layoutInfo.pBindings = layoutBindings.data();
 
     if (vkCreateDescriptorSetLayout(m_LogicalDevice, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor set layout!");
@@ -1103,14 +1112,25 @@ VkResult VulkanApplication::createUniformBuffers()
 
 VkResult VulkanApplication::createDescriptorPool()
 { 
-    VkDescriptorPoolSize poolSize = {};
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    // Pool sizes containing uniform buffer objects (UBO) and shader storage buffer objects (SSBO).
+    // Also include one here for the dynamic storage buffer to be used for an arbitrary number of grass blade objects.
+
+    // Type, Descriptor Count.
+    std::array< VkDescriptorPoolSize, 2> poolSizes = {};
+
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[0].descriptorCount = 1;
+
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    poolSizes[0].descriptorCount = 1;
+
+    //poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    //poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
     if (vkCreateDescriptorPool(m_LogicalDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
@@ -1261,6 +1281,28 @@ void VulkanApplication::createMeshObjects()
     driverData.vertexCount += quadMesh.vertexCount;
 }
 
+void VulkanApplication::populateBladeInstanceBuffer()
+{
+    // Based on the bounds of the plane, populate the blade instance container with values to be staged to the GPU later.
+
+    // MEADOW_SIZE
+    // localBladeInstanceBuffer
+
+    // Prepare the instance 
+    localBladeInstanceBuffer.reserve(MAX_BLADES);
+
+    for (size_t i = 0; i < MAX_BLADES; ++i) {
+
+        // TOOD: Use noise to generate positions along the plane.
+
+        // i = 1 grass blade instance.
+
+
+
+
+    }
+}
+
 void VulkanApplication::prepareImGuiDrawData()
 {
     ImGui::Begin("Driver Details", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar);
@@ -1279,46 +1321,6 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::Text("Frame number: %i", frameCount);
 
     ImGui::End();
-}
-
-VkResult VulkanApplication::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory)
-{
-    VkImageCreateInfo imageInfo = {};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = width;
-    imageInfo.extent.height = height;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = mipLevels;
-    imageInfo.arrayLayers = 1;
-    imageInfo.format = format;
-    imageInfo.tiling = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; 
-    imageInfo.usage = usage;
-    imageInfo.samples = numSamples;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateImage(m_LogicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create image!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(m_LogicalDevice, image, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findGPUMemoryType(memRequirements.memoryTypeBits, properties);
-
-    if (vkAllocateMemory(m_LogicalDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate image memory!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-    vkBindImageMemory(m_LogicalDevice, image, imageMemory, 0);
-
-    return VK_SUCCESS;
 }
 
 VkResult VulkanApplication::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)

@@ -145,7 +145,7 @@ int main() {
 
     vkApp.createMeshObjects();
 
-    //create grass pos
+    vkApp.populateBladeInstanceBuffer(); // SSBO data.
 
     ret = vkApp.createVertexBuffer();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create vertex buffer.");
