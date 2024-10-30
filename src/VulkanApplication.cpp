@@ -20,6 +20,8 @@
 #include <random>
 #include <glm/gtx/quaternion.hpp>
 
+#include "Utility.h"
+
 // Todo: Wrap in ifdef vk debug
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
     std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl << std::endl;
@@ -1283,23 +1285,37 @@ void VulkanApplication::createMeshObjects()
 
 void VulkanApplication::populateBladeInstanceBuffer()
 {
+    // TODO: Use noise to generate the positions along the plane.
+    // TODO: Use noise to modify the terrain for the plane.
+
     // Based on the bounds of the plane, populate the blade instance container with values to be staged to the GPU later.
 
-    // MEADOW_SIZE
-    // localBladeInstanceBuffer
-
-    // Prepare the instance 
+    // Prepare the instance buffer.
     localBladeInstanceBuffer.reserve(MAX_BLADES);
+
+    // Calculate the bounds of the flat plane (Y is not needed yet as there is no terrain height).
+    // [0, 0, 0] is the origin of the plane, the bounds extend half the scale in each direction.
+    // Warning: This does not take into account the position of the ground plane.
+    glm::vec2 planeBoundsX = glm::vec2(-(MEADOW_SCALE_X / 2), MEADOW_SCALE_X / 2);
+    glm::vec2 planeBoundsZ = glm::vec2(-(MEADOW_SCALE_Z / 2), MEADOW_SCALE_Z / 2);
+    
+    // Do this outside the loop to avoid continuously creating struct instances, just change the data inside it.
+    BladeInstanceData bladeInstanceData = {};
 
     for (size_t i = 0; i < MAX_BLADES; ++i) {
 
-        // TOOD: Use noise to generate positions along the plane.
+        // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
+        glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, glm::vec2(1.0f, 1.0f), planeBoundsZ, false);
 
-        // i = 1 grass blade instance.
+        // Populate this instance of blade data.
+        bladeInstanceData.worldPosition = glm::vec4(randomPositionOnPlaneBounds, 1.0f);
+        bladeInstanceData.width = GRASS_WIDTH;
+        bladeInstanceData.height = GRASS_HEIGHT;
+        bladeInstanceData.directionAngle = GRASS_NO_ANGLE;
+        bladeInstanceData.stiffness = GRASS_STIFFNESS;
 
-
-
-
+        // Add this blade to the instance buffer.
+        localBladeInstanceBuffer.push_back(bladeInstanceData);
     }
 }
 

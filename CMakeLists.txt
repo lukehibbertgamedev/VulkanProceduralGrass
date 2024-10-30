@@ -17,6 +17,7 @@ set(INCLUDE
 	${CMAKE_CURRENT_SOURCE_DIR}/include/GrassBlade.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Sphere.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Vertex.h
+	${CMAKE_CURRENT_SOURCE_DIR}/include/Utility.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/stb_image.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/tiny_obj_loader.h
 )

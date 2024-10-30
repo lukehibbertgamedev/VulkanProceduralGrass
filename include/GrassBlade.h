@@ -287,7 +287,6 @@ struct BladeInstanceData {
 	float height = GRASS_HEIGHT;
 	float directionAngle = GRASS_NO_ANGLE;
 	float stiffness = GRASS_STIFFNESS;
-
 };
 
 class Blade {
