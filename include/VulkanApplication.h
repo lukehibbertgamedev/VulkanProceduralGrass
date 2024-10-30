@@ -124,14 +124,13 @@ public:
 	VkResult createSwapchainImageViews();
 	VkResult createRenderPass();
 	VkResult createComputeDescriptorSetLayout(); // Compute relevant
-	VkResult createDescriptorSetLayout();
-	
-	
-	VkResult createGraphicsPipeline();
-	VkResult createComputePipeline(); // Compute relevant
 
-	VkResult createMeshPipeline(); // For regular rendering of meshes.
-	VkResult createGrassPipeline(); // Exclusively for grass rendering.
+	VkResult createDescriptorSetLayouts();	
+	
+	VkResult createPipelines();
+
+	VkResult createGraphicsPipeline();
+	VkResult createComputePipeline(); // Compute relevant	
 
 	VkResult createFrameBuffers();
 	VkResult createCommandPool();
@@ -144,9 +143,13 @@ public:
 	VkResult createVertexBuffer();
 	VkResult createIndexBuffer();
 	VkResult createUniformBuffers();
+
 	VkResult createDescriptorPool();
+
 	VkResult createComputeDescriptorSets(); // Compute relevant
+
 	VkResult createDescriptorSets();
+
 	VkResult createComputeCommandBuffer(); // Compute relevant
 	VkResult createCommandBuffer();
 	VkResult createSynchronizationObjects();
@@ -180,6 +183,15 @@ public:
 
 	void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 private:
+	VkResult createModelDescriptorSetLayout(); // For camera ubo.
+	VkResult createGrassDescriptorSetLayout(); // For grass data ssbo.
+
+	VkResult createModelDescriptorSets(); // For camera buffer object.
+	VkResult createGrassDescriptorSets(); // For grass data buffer.
+
+	VkResult createMeshPipeline(); // For regular rendering of meshes.
+	VkResult createGrassPipeline(); // Exclusively for grass rendering.
+
 	VkSampleCountFlagBits getMaxUsableMSAASampleCount();
 	bool depthFormatHasStencilComponent(VkFormat format);
 	VkFormat findDepthFormat();

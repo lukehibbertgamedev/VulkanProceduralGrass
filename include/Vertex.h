@@ -14,9 +14,10 @@ struct MeshInstance {
 	glm::vec3 scale = glm::vec3(1.0f); 
 };
 
+// Note: Whatever variables are here, must match the IN parameters for the vertex shader.
 struct Vertex {
-	glm::vec3 pos;
-	glm::vec4 color;
+	glm::vec3 pos;		// layout(location = 0) in vec3
+	glm::vec4 color;	// layout(location = 1) in vec4
 
 	// Describes how vertex data is grouped in memory.
 	static VkVertexInputBindingDescription getBindingDescription() {

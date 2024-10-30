@@ -679,7 +679,7 @@ VkResult VulkanApplication::createComputeDescriptorSetLayout()
     return VK_SUCCESS;
 }
 
-VkResult VulkanApplication::createDescriptorSetLayout()
+VkResult VulkanApplication::createDescriptorSetLayouts()
 {
     // Define the type of descriptor/shader resources you will want.
 
@@ -687,47 +687,44 @@ VkResult VulkanApplication::createDescriptorSetLayout()
     // Create a descriptor set layout for objects/models.
     //
 
-    VkDescriptorSetLayoutBinding uboBinding = {};
-    uboBinding.binding = 0;
-    uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboBinding.descriptorCount = 1;
-    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    uboBinding.pImmutableSamplers = nullptr;    
+    VkResult ret = VK_SUCCESS;
 
-    VkDescriptorSetLayoutCreateInfo uboLayoutInfo = {};
-    uboLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    uboLayoutInfo.bindingCount = 1;
-    uboLayoutInfo.pBindings = &uboBinding;
-
-    if (vkCreateDescriptorSetLayout(m_LogicalDevice, &uboLayoutInfo, nullptr, &modelDescriptorSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create model descriptor set layout!");
-        return VK_ERROR_INITIALIZATION_FAILED;
+    ret = createModelDescriptorSetLayout();
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("could not create model descriptor set layout.");
+        return ret;
     }
 
     //
     // Create a descriptor set layout for grass objects as a data buffer.
     //
 
-    VkDescriptorSetLayoutBinding ssboBinding = {};
-    ssboBinding.binding = 0;
-    ssboBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // Warning: This may need to be dynamic SSBO down the line.
-    ssboBinding.descriptorCount = 1;
-
-    // Warning: This is setting the availability for this descriptor type to be used in all shaders that we currently have in use.
-    ssboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT /*| VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT*/;
-    ssboBinding.pImmutableSamplers = nullptr;
-
-    VkDescriptorSetLayoutCreateInfo ssboLayoutInfo = {};
-    ssboLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    ssboLayoutInfo.bindingCount = 1;
-    ssboLayoutInfo.pBindings = &ssboBinding;
-
-    if (vkCreateDescriptorSetLayout(m_LogicalDevice, &ssboLayoutInfo, nullptr, &grassDescriptorSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create grass descriptor set layout!");
-        return VK_ERROR_INITIALIZATION_FAILED;
+    ret = createGrassDescriptorSetLayout();
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("could not create grass descriptor set layout.");
+        return ret;
     }
 
-    return VK_SUCCESS;
+    return ret;
+}
+
+VkResult VulkanApplication::createPipelines()
+{
+    VkResult ret = VK_SUCCESS;
+     
+    ret = createMeshPipeline();
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("could not create model pipeline.");
+        return ret;
+    }
+
+    ret = createGrassPipeline();
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("could not create grass pipeline.");
+        return ret;
+    }
+
+    return ret;
 }
 
 VkResult VulkanApplication::createGraphicsPipeline()
@@ -1378,7 +1375,6 @@ VkResult VulkanApplication::createUniformBuffers()
         throw std::runtime_error("bad buffer creation.");
         return ret;
     }
-    vkMapMemory(m_LogicalDevice, uniformBufferMemory, 0, bufferSize, 0, &uniformBufferMapped);
 
     return ret;
 }
@@ -1414,75 +1410,21 @@ VkResult VulkanApplication::createDescriptorPool()
 
 VkResult VulkanApplication::createDescriptorSets()
 {
-    //
-    // Create descriptor sets for the model pipeline.
-    //
+    VkResult ret = VK_SUCCESS; 
 
-    VkDescriptorSetLayout modelLayout(modelDescriptorSetLayout);
-
-    VkDescriptorSetAllocateInfo modelAllocInfo = {};
-    modelAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    modelAllocInfo.descriptorPool = descriptorPool;
-    modelAllocInfo.descriptorSetCount = 1;
-    modelAllocInfo.pSetLayouts = &modelLayout;
-
-    // Allocate uniform buffer descriptor set memory.
-    if (vkAllocateDescriptorSets(m_LogicalDevice, &modelAllocInfo, &uniformBufferDescriptorSet) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor sets!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }    
-
-    VkDescriptorBufferInfo uboBufferInfo = {};
-    uboBufferInfo.buffer = uniformBuffer;
-    uboBufferInfo.offset = 0;
-    uboBufferInfo.range = sizeof(CameraUniformBufferObject); // Assumes only one CameraUniformBufferObject will be sent.    
-
-    VkWriteDescriptorSet modelDescriptorWrite = {};
-    modelDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    modelDescriptorWrite.dstSet = uniformBufferDescriptorSet;
-    modelDescriptorWrite.dstBinding = 0;
-    modelDescriptorWrite.dstArrayElement = 0;
-    modelDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    modelDescriptorWrite.descriptorCount = 1;
-    modelDescriptorWrite.pBufferInfo = &uboBufferInfo;
-
-    vkUpdateDescriptorSets(m_LogicalDevice, 1, &modelDescriptorWrite, 0, nullptr);
-
-    //
-    // Create descriptor sets for the model pipeline.
-    //
-
-    VkDescriptorSetLayout grassLayout(grassDescriptorSetLayout);
-
-    VkDescriptorSetAllocateInfo grassAllocInfo = {};
-    grassAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    grassAllocInfo.descriptorPool = descriptorPool;
-    grassAllocInfo.descriptorSetCount = 1;
-    grassAllocInfo.pSetLayouts = &grassLayout;
-
-    // Allocate shader storage buffer descriptor set memory.
-    if (vkAllocateDescriptorSets(m_LogicalDevice, &grassAllocInfo, &bladeInstanceSSBODescriptorSet) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor sets!");
-        return VK_ERROR_INITIALIZATION_FAILED;
+    ret = createModelDescriptorSets();
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("could not create model descriptor sets.");
+        return ret;
     }
 
-    VkDescriptorBufferInfo ssboBufferInfo = {};
-    ssboBufferInfo.buffer = bladeInstanceDataBuffer;
-    ssboBufferInfo.offset = 0;
-    ssboBufferInfo.range = sizeof(BladeInstanceData) * MAX_BLADES;
-    
-    VkWriteDescriptorSet grassDescriptorWrite = {};
-    grassDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    grassDescriptorWrite.dstSet = bladeInstanceSSBODescriptorSet;
-    grassDescriptorWrite.dstBinding = 0;
-    grassDescriptorWrite.dstArrayElement = 0;
-    grassDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    grassDescriptorWrite.descriptorCount = 1;
-    grassDescriptorWrite.pBufferInfo = &ssboBufferInfo;
+    ret = createGrassDescriptorSets();
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("could not create grass descriptor sets.");
+        return ret;
+    }
 
-    vkUpdateDescriptorSets(m_LogicalDevice, 1, &grassDescriptorWrite, 0, nullptr);
-
-    return VK_SUCCESS;
+    return ret;
 }
 
 VkResult VulkanApplication::createCommandBuffer()
@@ -1975,6 +1917,130 @@ void VulkanApplication::destroyDebugUtilsMessengerEXT(VkInstance instance, VkDeb
     if (func != nullptr) {
         func(instance, debugMessenger, pAllocator);
     }
+}
+
+VkResult VulkanApplication::createModelDescriptorSetLayout()
+{
+    VkDescriptorSetLayoutBinding uboBinding = {};
+    uboBinding.binding = 0;
+    uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboBinding.descriptorCount = 1;
+    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    uboBinding.pImmutableSamplers = nullptr;
+
+    VkDescriptorSetLayoutCreateInfo uboLayoutInfo = {};
+    uboLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    uboLayoutInfo.bindingCount = 1;
+    uboLayoutInfo.pBindings = &uboBinding;
+
+    if (vkCreateDescriptorSetLayout(m_LogicalDevice, &uboLayoutInfo, nullptr, &modelDescriptorSetLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create model descriptor set layout!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    return VK_SUCCESS;
+}
+
+VkResult VulkanApplication::createGrassDescriptorSetLayout()
+{
+    VkDescriptorSetLayoutBinding ssboBinding = {};
+    ssboBinding.binding = 0;
+    ssboBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // Warning: This may need to be dynamic SSBO down the line.
+    ssboBinding.descriptorCount = 1;
+
+    // Warning: This is setting the availability for this descriptor type to be used in all shaders that we currently have in use.
+    ssboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT /*| VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT*/;
+    ssboBinding.pImmutableSamplers = nullptr;
+
+    VkDescriptorSetLayoutCreateInfo ssboLayoutInfo = {};
+    ssboLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ssboLayoutInfo.bindingCount = 1;
+    ssboLayoutInfo.pBindings = &ssboBinding;
+
+    if (vkCreateDescriptorSetLayout(m_LogicalDevice, &ssboLayoutInfo, nullptr, &grassDescriptorSetLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create grass descriptor set layout!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    return VK_SUCCESS;
+}
+
+VkResult VulkanApplication::createModelDescriptorSets()
+{
+    //
+    // Create descriptor sets for the model pipeline.
+    //
+
+    VkDescriptorSetLayout modelLayout(modelDescriptorSetLayout);
+
+    VkDescriptorSetAllocateInfo modelAllocInfo = {};
+    modelAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    modelAllocInfo.descriptorPool = descriptorPool;
+    modelAllocInfo.descriptorSetCount = 1;
+    modelAllocInfo.pSetLayouts = &modelLayout;
+
+    // Allocate uniform buffer descriptor set memory.
+    if (vkAllocateDescriptorSets(m_LogicalDevice, &modelAllocInfo, &uniformBufferDescriptorSet) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    VkDescriptorBufferInfo uboBufferInfo = {};
+    uboBufferInfo.buffer = uniformBuffer;
+    uboBufferInfo.offset = 0;
+    uboBufferInfo.range = sizeof(CameraUniformBufferObject); // Assumes only one CameraUniformBufferObject will be sent.    
+
+    VkWriteDescriptorSet modelDescriptorWrite = {};
+    modelDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    modelDescriptorWrite.dstSet = uniformBufferDescriptorSet;
+    modelDescriptorWrite.dstBinding = 0;
+    modelDescriptorWrite.dstArrayElement = 0;
+    modelDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    modelDescriptorWrite.descriptorCount = 1;
+    modelDescriptorWrite.pBufferInfo = &uboBufferInfo;
+
+    vkUpdateDescriptorSets(m_LogicalDevice, 1, &modelDescriptorWrite, 0, nullptr);
+
+    return VK_SUCCESS;
+}
+
+VkResult VulkanApplication::createGrassDescriptorSets()
+{
+    //
+    // Create descriptor sets for the grass pipeline.
+    //
+
+    VkDescriptorSetLayout grassLayout(grassDescriptorSetLayout);
+
+    VkDescriptorSetAllocateInfo grassAllocInfo = {};
+    grassAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    grassAllocInfo.descriptorPool = descriptorPool;
+    grassAllocInfo.descriptorSetCount = 1;
+    grassAllocInfo.pSetLayouts = &grassLayout;
+
+    // Allocate shader storage buffer descriptor set memory.
+    if (vkAllocateDescriptorSets(m_LogicalDevice, &grassAllocInfo, &bladeInstanceSSBODescriptorSet) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    VkDescriptorBufferInfo ssboBufferInfo = {};
+    ssboBufferInfo.buffer = bladeInstanceDataBuffer;
+    ssboBufferInfo.offset = 0;
+    ssboBufferInfo.range = sizeof(BladeInstanceData) * MAX_BLADES;
+
+    VkWriteDescriptorSet grassDescriptorWrite = {};
+    grassDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    grassDescriptorWrite.dstSet = bladeInstanceSSBODescriptorSet;
+    grassDescriptorWrite.dstBinding = 0;
+    grassDescriptorWrite.dstArrayElement = 0;
+    grassDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    grassDescriptorWrite.descriptorCount = 1;
+    grassDescriptorWrite.pBufferInfo = &ssboBufferInfo;
+
+    vkUpdateDescriptorSets(m_LogicalDevice, 1, &grassDescriptorWrite, 0, nullptr);
+
+    return VK_SUCCESS;
 }
 
 VkSampleCountFlagBits VulkanApplication::getMaxUsableMSAASampleCount()

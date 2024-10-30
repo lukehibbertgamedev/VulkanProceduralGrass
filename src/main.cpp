@@ -110,44 +110,17 @@ int main() {
     ret = vkApp.createRenderPass();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create render pass.");
 
-    //ret = vkApp.createComputeDescriptorSetLayout();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute descriptor layout.");
-
-    ret = vkApp.createDescriptorSetLayout();
+    ret = vkApp.createDescriptorSetLayouts();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor layout.");
 
-    //ret = vkApp.createGraphicsPipeline();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create graphics pipeline.");
-
-    ret = vkApp.createMeshPipeline();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create mesh/model pipeline.");
-
-    ret = vkApp.createGrassPipeline();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create grass pipeline.");
-
-    //ret = vkApp.createComputePipeline();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute pipeline.");
+    ret = vkApp.createPipelines();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create model | grass pipeline.");
 
     ret = vkApp.createFrameBuffers();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create frame buffers.");
 
     ret = vkApp.createCommandPool();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command pool.");
-
-    //ret = vkApp.createColourResources();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create colour resources.");
-
-    //ret = vkApp.createDepthResources();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create depth resources.");    
-
-    //ret = vkApp.createTextureImage();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create texture image.");
-
-    //ret = vkApp.createTextureImageView();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create texture image view.");
-
-    //ret = vkApp.createTextureSampler();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create texture sampler.");
 
     vkApp.createMeshObjects();
 
@@ -168,9 +141,6 @@ int main() {
     ret = vkApp.createDescriptorPool();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor pool.");
 
-    //ret = vkApp.createComputeDescriptorSets();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute descriptor sets.");
-
     ret = vkApp.createDescriptorSets();  
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor sets."); 
 
@@ -178,9 +148,6 @@ int main() {
 
     ret = vkApp.createCommandBuffer(); 
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command buffer.");
-
-    //ret = vkApp.createComputeCommandBuffer();
-    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute command buffer.");
 
     ret = vkApp.createSynchronizationObjects();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create semaphores | fences.");
