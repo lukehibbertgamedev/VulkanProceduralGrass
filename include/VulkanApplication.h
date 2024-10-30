@@ -27,7 +27,7 @@
 #define MEADOW_SCALE_Y 1
 #define MEADOW_SCALE_Z 2
 
-static constexpr bool kEnableValidationLayers = false;
+static constexpr bool kEnableValidationLayers = true;
 const std::vector<const char*> kValidationLayers = {
 	"VK_LAYER_KHRONOS_validation"
 };
@@ -246,78 +246,47 @@ public:
 	// Descriptors.
 	VkDescriptorPool descriptorPool = VK_NULL_HANDLE;					// A handle to the manager that allocates descriptor sets to increase correct resource allocation.
 	VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;				// A handle to the manager that allocates descriptor sets specifically for ImGui resources necessary for rendering its interface.
-	//VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;			// A description of how descriptor sets (ie., resources/buffers) are accessed by shaders.
 	VkDescriptorSetLayout computeDescriptorSetLayout = VK_NULL_HANDLE;	// A description of how descriptor sets (ie., resources/buffers) are accessed specifically by compute shaders.
-	//std::vector<VkDescriptorSet> descriptorSets = {};					// A collection of resources/buffers/images that can be bound to shaders during rendering operations.
 	std::vector<VkDescriptorSet> computeDescriptorSets = {};			// A collection of resources/buffers/images that can be bound to compute shaders during compute operations.
 
-	VkDescriptorSet quadDescriptorSet = VK_NULL_HANDLE;					// ... 
 	VkBuffer quadVertexBuffer = VK_NULL_HANDLE;							// ... 
 	VkDeviceMemory quadVertexBufferMemory = VK_NULL_HANDLE;				// ... 
 	VkBuffer quadIndexBuffer = VK_NULL_HANDLE;							// ... 
 	VkDeviceMemory quadIndexBufferMemory = VK_NULL_HANDLE;				// ... 
 
-	// Vertex and index buffer with associated memory.
-	VkBuffer vertexBuffer = VK_NULL_HANDLE;								// ...
-	VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;					// ...
-	VkBuffer indexBuffer = VK_NULL_HANDLE;								// ...
-	VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;					// ...
-	
-	// Texture images with associated image views and memory.
-	VkImage textureImage = VK_NULL_HANDLE;								// Currently unused.
-	VkDeviceMemory textureImageMemory = VK_NULL_HANDLE;					// Currently unused.
-	VkImageView textureImageView = VK_NULL_HANDLE;						// Currently unused.
-	VkSampler textureSampler = VK_NULL_HANDLE;							// Currently unused.
-	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;					// Currently unused.
-	VkImageView depthImageView = VK_NULL_HANDLE;						// Currently unused.
-	VkImage	depthImage = VK_NULL_HANDLE;								// Currently unused.
-
 	// Multi-sampling.
-	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;			// Currently unused.
-	VkImage colorImage = VK_NULL_HANDLE;								// Currently unused.
-	VkDeviceMemory colorImageMemory = VK_NULL_HANDLE;					// Currently unused.
-	VkImageView colorImageView = VK_NULL_HANDLE;						// Currently unused.
+	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;			// ...
 
-	// Shader storage buffer objects (SSBO).
-	std::vector<VkBuffer> shaderStorageBuffers = {};					// Currently unused.
-	std::vector<VkDeviceMemory> shaderStorageBuffersMemory = {};		// Currently unused.
-
-	// Timing metrics.
+	// Other.
 	float lastFrameTime = 0.0f;											// Used to calculate FPS.
 	float deltaTime = 0.0f;												// Used to smooth out update logic.
 	double lastTime = 0.0f;												// Used to calculated lastFrameTime.
-
 	DriverData driverData = {};											// A custom collection of GPU data to be displayed easily in ImGui.
 	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
 	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
+	int frameCount = 0;
 
 	Sphere sphereMesh;
 	Quad quadMesh;
-
-	int frameCount = 0;
 
 	// Uniform buffer objects (UBO).
 	VkBuffer uniformBuffer;
 	VkDeviceMemory uniformBufferMemory;
 	void* uniformBufferMapped;
 	VkDescriptorSet uniformBufferDescriptorSet;
+	 
+	// Prepare staging buffer and its associated memory for holding the instance data temporarily before it gets transferred to the GPU.
+	VkBuffer bladeInstanceStagingBuffer;
+	VkDeviceMemory bladeInstanceStagingBufferMemory;
+	std::vector<BladeInstanceData> localBladeInstanceBuffer; // A holding buffer of instance data per-blade. 
 
-	std::vector<MeshInstance> meshes;
-	MeshInstance groundPlane;
-	std::vector<BladeInstanceData> localBladeInstanceBuffer; // A holding buffer of instance data per-blade.
-
-	// This is created as a shader storage buffer 
+	// Shader storage buffer objects (SSBO). 
 	VkBuffer bladeInstanceDataBuffer;
 	VkDeviceMemory bladeInstanceDataBufferMemory;
 	void* bladeInstanceDataBufferMapped;
 	VkDescriptorSet bladeInstanceSSBODescriptorSet;
 
-	// Prepare staging buffer and its associated memory for holding the instance data temporarily before it gets transferred to the GPU.
-	VkBuffer bladeInstanceStagingBuffer;
-	VkDeviceMemory bladeInstanceStagingBufferMemory;
-
-	Blade test;
-
+	MeshInstance groundPlane;
 
 	VkDescriptorSetLayout modelDescriptorSetLayout; // Contains UBO for models (ie plane)
 	VkDescriptorSetLayout grassDescriptorSetLayout; // Contains SSBO for grass buffer

@@ -18,6 +18,8 @@ layout(set = 0, binding = 1) buffer BladeInstanceDataBuffer {
 // An index to the current instance of blade to be processed.
 layout(location = 0) in uint instanceIndex;
 
+layout(location = 0) out vec4 outColor; 
+
 void main() {
 
     // Set the point size for a visual on-screen.
@@ -26,4 +28,6 @@ void main() {
     // Get access to the instance data using the instance index.
     BladeInstanceData blade = blades[instanceIndex];
     gl_Position = vec4(blade.worldPosition.xyz, 1.0f);
+
+    outColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 }

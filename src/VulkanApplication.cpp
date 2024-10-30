@@ -440,6 +440,7 @@ VkResult VulkanApplication::createLogicalDevice()
     VkPhysicalDeviceFeatures deviceFeatures = {};
     //deviceFeatures.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
     deviceFeatures.tessellationShader = VK_TRUE; // Enable Vulkan to be able to link and execute tessellation shaders.
+    deviceFeatures.fillModeNonSolid = VK_TRUE; // Enable Vulkan to use VK_POLYGON_MODE_POINT or LINE.
 
     //deviceFeatures.samplerAnisotropy = VK_TRUE;
     //deviceFeatures.sampleRateShading = VK_TRUE; // Enable sample shading feature for the device.
@@ -713,7 +714,7 @@ VkResult VulkanApplication::createDescriptorSetLayout()
     ssboBinding.descriptorCount = 1;
 
     // Warning: This is setting the availability for this descriptor type to be used in all shaders that we currently have in use.
-    ssboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    ssboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT /*| VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT*/;
     ssboBinding.pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo ssboLayoutInfo = {};
@@ -1379,8 +1380,6 @@ VkResult VulkanApplication::createUniformBuffers()
     }
     vkMapMemory(m_LogicalDevice, uniformBufferMemory, 0, bufferSize, 0, &uniformBufferMapped);
 
-
-
     return ret;
 }
 
@@ -1760,14 +1759,14 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     // Start model pipeline.
     //
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipeline);    
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipeline);     
 
     // Ground plane rendering.
     VkBuffer quadVertexBuffers[] = { quadVertexBuffer };                                        
     VkDeviceSize quadOffsets[] = { 0 };                                                         
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffers, quadOffsets);                
     vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);              
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipelineLayout, 0, 1, &uniformBufferDescriptorSet, 0, nullptr); 
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipelineLayout, 0, 1, &uniformBufferDescriptorSet, 0, nullptr);
     vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0); 
 
     //
@@ -1778,9 +1777,9 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     // Start grass pipeline.
     //
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipeline);
+    //vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipeline);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &bladeInstanceSSBODescriptorSet, 0, nullptr);
+    //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &bladeInstanceSSBODescriptorSet, 0, nullptr);
 
     // Define a region of data to copy the blade instance staging buffer to the shader storage buffer (blade instance data buffer).
     VkBufferCopy copyRegion = {};
@@ -1789,7 +1788,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     copyRegion.size = sizeof(BladeInstanceData) * MAX_BLADES;
     
     // Copy from the staging buffer into the shader storage buffer, where the data will reside on the GPU for its use in shaders.
-    vkCmdCopyBuffer(commandBuffer, bladeInstanceStagingBuffer, bladeInstanceDataBuffer, 1, &copyRegion);
+    //vkCmdCopyBuffer(commandBuffer, bladeInstanceStagingBuffer, bladeInstanceDataBuffer, 1, &copyRegion);
 
     //
     // End grass pipeline.
@@ -1816,28 +1815,11 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
 {
     cleanupSwapchain();
 
-    vkDestroyImageView(m_LogicalDevice, colorImageView, nullptr);
-    vkDestroyImage(m_LogicalDevice, colorImage, nullptr);
-    vkFreeMemory(m_LogicalDevice, colorImageMemory, nullptr);
-
-    vkDestroyImageView(m_LogicalDevice, depthImageView, nullptr);
-    vkDestroyImage(m_LogicalDevice, depthImage, nullptr);
-    vkFreeMemory(m_LogicalDevice, depthImageMemory, nullptr);
-
-    vkDestroySampler(m_LogicalDevice, textureSampler, nullptr);
-    vkDestroyImageView(m_LogicalDevice, textureImageView, nullptr);
-    vkDestroyImage(m_LogicalDevice, textureImage, nullptr);
-    vkFreeMemory(m_LogicalDevice, textureImageMemory, nullptr);
     vkDestroyBuffer(m_LogicalDevice, uniformBuffer, nullptr);
     vkFreeMemory(m_LogicalDevice, uniformBufferMemory, nullptr);
 
     vkDestroyDescriptorPool(m_LogicalDevice, descriptorPool, nullptr);
     //vkDestroyDescriptorSetLayout(m_LogicalDevice, descriptorSetLayout, nullptr);
-
-    vkDestroyBuffer(m_LogicalDevice, indexBuffer, nullptr);
-    vkFreeMemory(m_LogicalDevice, indexBufferMemory, nullptr);
-    vkDestroyBuffer(m_LogicalDevice, vertexBuffer, nullptr);
-    vkFreeMemory(m_LogicalDevice, vertexBufferMemory, nullptr);
 
     //vkDestroyPipeline(m_LogicalDevice, graphicsPipeline, nullptr);
     //vkDestroyPipelineLayout(m_LogicalDevice, pipelineLayout, nullptr);
