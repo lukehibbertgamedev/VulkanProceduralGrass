@@ -1154,7 +1154,14 @@ VkResult VulkanApplication::createDescriptorSets()
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts = &layout;
 
+    // Allocate uniform buffer descriptor set memory.
     if (vkAllocateDescriptorSets(m_LogicalDevice, &allocInfo, &uniformBufferDescriptorSet) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Allocate shader storage buffer descriptor set memory.
+    if (vkAllocateDescriptorSets(m_LogicalDevice, &allocInfo, &bladeInstanceSSBODescriptorSet) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -1337,7 +1344,7 @@ void VulkanApplication::populateBladeInstanceBuffer()
     }
 }
 
-void VulkanApplication::uploadGrassBladeInstanceBufferToGpu()
+void VulkanApplication::copyCPUBladeInstanceBufferToHostVisibleMemory()
 {
     // Calculate the required size for the staging buffer.
     VkDeviceSize bladeInstanceBufferRequiredSize = sizeof(BladeInstanceData) * MAX_BLADES;
@@ -1473,7 +1480,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &uniformBufferDescriptorSet, 0, nullptr); 
     vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0); 
 
-    // Copy the blade instance staging buffer to the shader storage buffer.
+    // Define a region of data to copy the blade instance staging buffer to the shader storage buffer (blade instance data buffer).
     VkBufferCopy copyRegion = {};
     copyRegion.srcOffset = 0;
     copyRegion.dstOffset = 0;

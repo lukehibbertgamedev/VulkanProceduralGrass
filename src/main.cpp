@@ -168,7 +168,9 @@ int main() {
     ret = vkApp.createDescriptorSets();  
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor sets."); 
 
-    ret = vkApp.createCommandBuffer();
+    vkApp.copyCPUBladeInstanceBufferToHostVisibleMemory(); 
+
+    ret = vkApp.createCommandBuffer(); 
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command buffer.");
 
     //ret = vkApp.createComputeCommandBuffer();

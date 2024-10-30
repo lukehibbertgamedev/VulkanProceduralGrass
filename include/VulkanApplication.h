@@ -148,7 +148,7 @@ public:
 
 	void createMeshObjects();
 	void populateBladeInstanceBuffer();
-	void uploadGrassBladeInstanceBufferToGpu();
+	void copyCPUBladeInstanceBufferToHostVisibleMemory();
 
 	void prepareImGuiDrawData();
 
@@ -300,8 +300,7 @@ public:
 	MeshInstance groundPlane;
 	std::vector<BladeInstanceData> localBladeInstanceBuffer; // A holding buffer of instance data per-blade.
 
-	// Allocate and upload to this.
-	// Gets uploaded to GPU, created as ssbo.
+	// This is created as a shader storage buffer 
 	VkBuffer bladeInstanceDataBuffer;
 	VkDeviceMemory bladeInstanceDataBufferMemory;
 	void* bladeInstanceDataBufferMapped;
