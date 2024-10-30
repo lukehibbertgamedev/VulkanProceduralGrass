@@ -1248,7 +1248,7 @@ VkResult VulkanApplication::createShaderStorageBuffers()
 
     VkResult ret = createBuffer(
         bufferSize, 
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,      // warning
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // warning
         bladeInstanceDataBuffer,
         bladeInstanceDataBufferMemory
@@ -1259,6 +1259,7 @@ VkResult VulkanApplication::createShaderStorageBuffers()
         return ret;
     }
 
+    // if u get a map memory validation error from here, you can remove this i think.
     vkMapMemory(m_LogicalDevice, bladeInstanceDataBufferMemory, 0, bufferSize, 0, &bladeInstanceDataBufferMapped);
 
     return ret;
@@ -1571,15 +1572,17 @@ void VulkanApplication::populateBladeInstanceBuffer()
     }
 }
 
-void VulkanApplication::copyCPUBladeInstanceBufferToHostVisibleMemory()
+void VulkanApplication::createBladeInstanceStagingBuffer()
 {
+    // copyCPUBladeInstanceBufferToHostVisibleMemory
+
     // Calculate the required size for the staging buffer.
     VkDeviceSize bladeInstanceBufferRequiredSize = sizeof(BladeInstanceData) * MAX_BLADES;
 
     // Create the staging buffer used as a source to send/transfer buffer data. Note: writes from the CPU are visible to the GPU without explicit flushing.
     VkResult ret = createBuffer(
         bladeInstanceBufferRequiredSize, 
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
         bladeInstanceStagingBuffer,  
         bladeInstanceStagingBufferMemory 
@@ -1681,9 +1684,21 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
     
+    // Copy from the staging buffer into the shader storage buffer, where the data will reside on the GPU for its use in shaders.
+    // Copy buffer outside of a render pass (WHY????? just got told to, figure this out)
+    copyBuffer(bladeInstanceStagingBuffer, bladeInstanceDataBuffer, sizeof(BladeInstanceData) * MAX_BLADES);
+
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    VkViewport viewport{};
+    
+
+    //
+    // Start model pipeline.
+    //
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipeline);     
+
+    VkViewport viewport = {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
     viewport.width = static_cast<float>(swapChainExtent.width);
@@ -1692,16 +1707,10 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-    VkRect2D scissor{};
+    VkRect2D scissor = {};
     scissor.offset = { 0, 0 };
     scissor.extent = swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-    //
-    // Start model pipeline.
-    //
-
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipeline);     
 
     // Ground plane rendering.
     VkBuffer quadVertexBuffers[] = { quadVertexBuffer };                                        
@@ -1709,7 +1718,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffers, quadOffsets);                
     vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);              
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipelineLayout, 0, 1, &uniformBufferDescriptorSet, 0, nullptr);
-    vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0); 
+    //vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0); 
 
     //
     // End model pipeline.
@@ -1719,15 +1728,15 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     // Start grass pipeline.
     //
 
-    //vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipeline);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipeline);
 
-    //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &bladeInstanceSSBODescriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &bladeInstanceSSBODescriptorSet, 0, nullptr);
 
     // Define a region of data to copy the blade instance staging buffer to the shader storage buffer (blade instance data buffer).
-    VkBufferCopy copyRegion = {};
-    copyRegion.srcOffset = 0;
-    copyRegion.dstOffset = 0;
-    copyRegion.size = sizeof(BladeInstanceData) * MAX_BLADES;
+    //VkBufferCopy copyRegion = {};
+    //copyRegion.srcOffset = 0;
+    //copyRegion.dstOffset = 0;
+    //copyRegion.size = sizeof(BladeInstanceData) * MAX_BLADES;
     
     // Copy from the staging buffer into the shader storage buffer, where the data will reside on the GPU for its use in shaders.
     //vkCmdCopyBuffer(commandBuffer, bladeInstanceStagingBuffer, bladeInstanceDataBuffer, 1, &copyRegion);
@@ -1736,18 +1745,12 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     // End grass pipeline.
     //
 
-    //
     // Start ImGui rendering.
-    // 
-
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer); 
-
-    //
     // End ImGui rendering.
-    //
 
     vkCmdEndRenderPass(commandBuffer); 
-     
+
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }

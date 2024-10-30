@@ -89,6 +89,23 @@ struct CameraUniformBufferObject {
 	alignas(16) glm::mat4 proj;
 };
 
+
+//
+//
+//
+//
+//
+// TODO:: PASS IN CAMERA TO SSBO, DO THE SAME CAMERA SPACE VIEW*PROJ STUFF TO THE WORLD POS OF GRASS.
+//
+//
+//
+//
+//
+//
+
+
+
+
 class VulkanApplication {
 
 public:
@@ -157,7 +174,7 @@ public:
 
 	void createMeshObjects();
 	void populateBladeInstanceBuffer();
-	void copyCPUBladeInstanceBufferToHostVisibleMemory();
+	void createBladeInstanceStagingBuffer();
 
 	void prepareImGuiDrawData();
 

@@ -23,15 +23,17 @@ layout(location = 3) in vec4 up_Stiffness;
 
 layout(location = 0) out vec4 outColor; 
 
-void main() {
-
-    // Set the point size for a visual on-screen.
-    gl_PointSize = 7.0;
+void main() {   
 
     // Get access to the instance data using the instance index.
     // gl_InstanceIndex provides the index of the current instance being processed.
     BladeInstanceData blade = blades[gl_InstanceIndex];
-    gl_Position = vec4(blade.worldPosition.xyz, 1.0f);
 
-    outColor = vec4(0.0f, 1.0f, 0.0f, 1.0f); // Base green for now (it's grass, of course).
+    // Transform world position to clip space??
+    gl_Position = vec4(blade.worldPosition, 1.0f);
+
+    // Set the point size for a visual on-screen.
+    gl_PointSize = 14.0;
+
+    outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f); 
 }
