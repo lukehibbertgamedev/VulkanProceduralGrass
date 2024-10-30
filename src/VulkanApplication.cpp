@@ -682,32 +682,47 @@ VkResult VulkanApplication::createDescriptorSetLayout()
 {
     // Define the type of descriptor/shader resources you will want.
 
-    std::array<VkDescriptorSetLayoutBinding, 2> layoutBindings = {};
+    //
+    // Create a descriptor set layout for objects/models.
+    //
 
-    // Set up for the uniform buffer object used for camera matrix data.
-    layoutBindings[0] = {};
-    layoutBindings[0].binding = 0;
-    layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layoutBindings[0].descriptorCount = 1;
-    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    layoutBindings[0].pImmutableSamplers = nullptr;
+    VkDescriptorSetLayoutBinding uboBinding = {};
+    uboBinding.binding = 0;
+    uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboBinding.descriptorCount = 1;
+    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    uboBinding.pImmutableSamplers = nullptr;    
 
-    // Set up for the shader storage buffer object used for the grass blades to be put on the GPU.
-    layoutBindings[1] = {};
-    layoutBindings[1].binding = 1;
-    layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // Warning: This may need to be dynamic SSBO down the line.
-    layoutBindings[1].descriptorCount = 1;
+    VkDescriptorSetLayoutCreateInfo uboLayoutInfo = {};
+    uboLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    uboLayoutInfo.bindingCount = 1;
+    uboLayoutInfo.pBindings = &uboBinding;
+
+    if (vkCreateDescriptorSetLayout(m_LogicalDevice, &uboLayoutInfo, nullptr, &modelDescriptorSetLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create model descriptor set layout!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    //
+    // Create a descriptor set layout for grass objects as a data buffer.
+    //
+
+    VkDescriptorSetLayoutBinding ssboBinding = {};
+    ssboBinding.binding = 0;
+    ssboBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // Warning: This may need to be dynamic SSBO down the line.
+    ssboBinding.descriptorCount = 1;
+
     // Warning: This is setting the availability for this descriptor type to be used in all shaders that we currently have in use.
-    layoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    layoutBindings[1].pImmutableSamplers = nullptr;
+    ssboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    ssboBinding.pImmutableSamplers = nullptr;
 
-    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
-    layoutInfo.pBindings = layoutBindings.data();
+    VkDescriptorSetLayoutCreateInfo ssboLayoutInfo = {};
+    ssboLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ssboLayoutInfo.bindingCount = 1;
+    ssboLayoutInfo.pBindings = &ssboBinding;
 
-    if (vkCreateDescriptorSetLayout(m_LogicalDevice, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create descriptor set layout!");
+    if (vkCreateDescriptorSetLayout(m_LogicalDevice, &ssboLayoutInfo, nullptr, &grassDescriptorSetLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create grass descriptor set layout!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -716,182 +731,182 @@ VkResult VulkanApplication::createDescriptorSetLayout()
 
 VkResult VulkanApplication::createGraphicsPipeline()
 {
-    // Standard vertex and fragment shader modules.
-    auto vertexShaderCode = readFile("../shaders/basicShader.vert.spv");
-    auto pixelShaderCode = readFile("../shaders/basicShader.frag.spv");
-    VkShaderModule vertShaderModule = createShaderModule(vertexShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(pixelShaderCode);
+    //// Standard vertex and fragment shader modules.
+    //auto vertexShaderCode = readFile("../shaders/basicShader.vert.spv");
+    //auto pixelShaderCode = readFile("../shaders/basicShader.frag.spv");
+    //VkShaderModule vertShaderModule = createShaderModule(vertexShaderCode);
+    //VkShaderModule fragShaderModule = createShaderModule(pixelShaderCode);
 
-    // Configure how the vertex shader stage executes within the pipeline.
-    VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
-    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vertShaderStageInfo.module = vertShaderModule;
-    vertShaderStageInfo.pName = "main";
+    //// Configure how the vertex shader stage executes within the pipeline.
+    //VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
+    //vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    //vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    //vertShaderStageInfo.module = vertShaderModule;
+    //vertShaderStageInfo.pName = "main";
 
-    // Configure how the pixel/fragment shader stage executes within the pipeline.
-    VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
-    fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragShaderStageInfo.module = fragShaderModule;
-    fragShaderStageInfo.pName = "main";
+    //// Configure how the pixel/fragment shader stage executes within the pipeline.
+    //VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
+    //fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    //fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    //fragShaderStageInfo.module = fragShaderModule;
+    //fragShaderStageInfo.pName = "main";
 
-    // See more for tessellation: https://docs.vulkan.org/spec/latest/chapters/tessellation.html
+    //// See more for tessellation: https://docs.vulkan.org/spec/latest/chapters/tessellation.html
 
-    // It may be worthwhile to create a new pipeline specifically for the grass itself, since it used compute and tessellation but other geometry does not.
+    //// It may be worthwhile to create a new pipeline specifically for the grass itself, since it used compute and tessellation but other geometry does not.
 
-    // Tessellation Shader set up. Tessellation consists of 3 pipeline stages:
-    // 1. tessellation control shader (transforms control points of a patch and produces per-patch data).
-    // 2. fixed-function tessellator (generates multiple primitives corresponding to a tessellation of the patch in parameter space).
-    // 3. tessellation evaluation shader (transforms the vertices of a tessellated patch).
-    
-    // Tessellator is enabled when the pipeline contains both a control and evaluation shader.
+    //// Tessellation Shader set up. Tessellation consists of 3 pipeline stages:
+    //// 1. tessellation control shader (transforms control points of a patch and produces per-patch data).
+    //// 2. fixed-function tessellator (generates multiple primitives corresponding to a tessellation of the patch in parameter space).
+    //// 3. tessellation evaluation shader (transforms the vertices of a tessellated patch).
+    //
+    //// Tessellator is enabled when the pipeline contains both a control and evaluation shader.
 
-    //// Tessellation shader modules.
-    //auto tessellationControlShaderCode = readFile("../shaders/basicShader.tesc.spv");
-    //auto tessellationEvaluationShaderCode = readFile("../shaders/basicShader.tese.spv");
-    //VkShaderModule tessellationControlShaderModule = createShaderModule(tessellationControlShaderCode);
-    //VkShaderModule tessellationEvaluationShaderModule = createShaderModule(tessellationEvaluationShaderCode);     
+    ////// Tessellation shader modules.
+    ////auto tessellationControlShaderCode = readFile("../shaders/basicShader.tesc.spv");
+    ////auto tessellationEvaluationShaderCode = readFile("../shaders/basicShader.tese.spv");
+    ////VkShaderModule tessellationControlShaderModule = createShaderModule(tessellationControlShaderCode);
+    ////VkShaderModule tessellationEvaluationShaderModule = createShaderModule(tessellationEvaluationShaderCode);     
 
-    // Configure how the tessellation control shader stage executes within the pipeline.
-    //VkPipelineShaderStageCreateInfo tessellationControlShaderStageInfo = {}; 
-    //tessellationControlShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    //tessellationControlShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-    //tessellationControlShaderStageInfo.module = tessellationControlShaderModule;
-    //tessellationControlShaderStageInfo.pName = "main";
+    //// Configure how the tessellation control shader stage executes within the pipeline.
+    ////VkPipelineShaderStageCreateInfo tessellationControlShaderStageInfo = {}; 
+    ////tessellationControlShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ////tessellationControlShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    ////tessellationControlShaderStageInfo.module = tessellationControlShaderModule;
+    ////tessellationControlShaderStageInfo.pName = "main";
 
-    // Configure how the tessellation evaluation shader stage executes within the pipeline.
-    //VkPipelineShaderStageCreateInfo tessellationEvaluationShaderStageInfo = {};
-    //tessellationEvaluationShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    //tessellationEvaluationShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-    //tessellationEvaluationShaderStageInfo.module = tessellationEvaluationShaderModule;
-    //tessellationEvaluationShaderStageInfo.pName = "main";
+    //// Configure how the tessellation evaluation shader stage executes within the pipeline.
+    ////VkPipelineShaderStageCreateInfo tessellationEvaluationShaderStageInfo = {};
+    ////tessellationEvaluationShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ////tessellationEvaluationShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    ////tessellationEvaluationShaderStageInfo.module = tessellationEvaluationShaderModule;
+    ////tessellationEvaluationShaderStageInfo.pName = "main";
 
-    // Configure how the tessellation process performs its subdivisions.
-    //VkPipelineTessellationStateCreateInfo tessellationStateInfo = {};
-    //tessellationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-    //tessellationStateInfo.pNext = nullptr;
-    //tessellationStateInfo.flags = 0; // Must be 0, this is reserved by Vulkan for future use.
-    //tessellationStateInfo.patchControlPoints = 3; // I would imagine this matches the layout(vertices = 3) out; in the control shader.
+    //// Configure how the tessellation process performs its subdivisions.
+    ////VkPipelineTessellationStateCreateInfo tessellationStateInfo = {};
+    ////tessellationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+    ////tessellationStateInfo.pNext = nullptr;
+    ////tessellationStateInfo.flags = 0; // Must be 0, this is reserved by Vulkan for future use.
+    ////tessellationStateInfo.patchControlPoints = 3; // I would imagine this matches the layout(vertices = 3) out; in the control shader.
 
-    // Link all configured shader stages into one variable, so the pipeline can connect to all of them.
-    VkPipelineShaderStageCreateInfo shaderStages[] = { 
-        vertShaderStageInfo, 
-        /*tessellationControlShaderStageInfo, 
-        tessellationEvaluationShaderStageInfo, */
-        fragShaderStageInfo
-    };
+    //// Link all configured shader stages into one variable, so the pipeline can connect to all of them.
+    //VkPipelineShaderStageCreateInfo shaderStages[] = { 
+    //    vertShaderStageInfo, 
+    //    /*tessellationControlShaderStageInfo, 
+    //    tessellationEvaluationShaderStageInfo, */
+    //    fragShaderStageInfo
+    //};
 
-    VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
+    //VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
 
-    // Configure how vertex data is structured and passed from a vertex buffer into a graphics pipeline stage.
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(Vertex::getAttributeDescriptions().size()); 
-    vertexInputInfo.pVertexAttributeDescriptions = Vertex::getAttributeDescriptions().data();
+    //// Configure how vertex data is structured and passed from a vertex buffer into a graphics pipeline stage.
+    //VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+    //vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    //vertexInputInfo.vertexBindingDescriptionCount = 1;
+    //vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    //vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(Vertex::getAttributeDescriptions().size()); 
+    //vertexInputInfo.pVertexAttributeDescriptions = Vertex::getAttributeDescriptions().data();
 
-    // Specify how the vertices that are provided by the vertex shader are then assembled into primitives for rendering.
-    VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    inputAssembly.primitiveRestartEnable = VK_FALSE;
+    //// Specify how the vertices that are provided by the vertex shader are then assembled into primitives for rendering.
+    //VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
+    //inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    //inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    //inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    // Specify the structures that may change at runtime.
-    std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    VkPipelineDynamicStateCreateInfo dynamicState = {};
-    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-    dynamicState.pDynamicStates = dynamicStates.data();
+    //// Specify the structures that may change at runtime.
+    //std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    //VkPipelineDynamicStateCreateInfo dynamicState = {};
+    //dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    //dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    //dynamicState.pDynamicStates = dynamicStates.data();
 
-    // Configures the viewports and scissors to determine the regions of the framebuffer to render to.
-    VkPipelineViewportStateCreateInfo viewportState{};
-    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewportState.viewportCount = 1;
-    viewportState.scissorCount = 1;
+    //// Configures the viewports and scissors to determine the regions of the framebuffer to render to.
+    //VkPipelineViewportStateCreateInfo viewportState{};
+    //viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    //viewportState.viewportCount = 1;
+    //viewportState.scissorCount = 1;
 
-    // Configures settings for how primitives are transformed into fragments/pixels.
-    VkPipelineRasterizationStateCreateInfo rasterizer = {};
-    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.depthClampEnable = VK_FALSE;
-    rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_NONE; // VK_CULL_MODE_BACK_BIT
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterizer.depthBiasEnable = VK_FALSE;
+    //// Configures settings for how primitives are transformed into fragments/pixels.
+    //VkPipelineRasterizationStateCreateInfo rasterizer = {};
+    //rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    //rasterizer.depthClampEnable = VK_FALSE;
+    //rasterizer.rasterizerDiscardEnable = VK_FALSE;
+    //rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    //rasterizer.lineWidth = 1.0f;
+    //rasterizer.cullMode = VK_CULL_MODE_NONE; // VK_CULL_MODE_BACK_BIT
+    //rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    //rasterizer.depthBiasEnable = VK_FALSE;
 
-    // Configure settings for how multisampling performs, reducing aliasing and jagged edges in the rendered image.
-    VkPipelineMultisampleStateCreateInfo multisampling = {};
-    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.sampleShadingEnable = VK_FALSE; 
-    multisampling.rasterizationSamples = msaaSamples;
-    multisampling.minSampleShading = 0; // Min fraction for sample shading where closer to 1 is smooth. // 0.2f
+    //// Configure settings for how multisampling performs, reducing aliasing and jagged edges in the rendered image.
+    //VkPipelineMultisampleStateCreateInfo multisampling = {};
+    //multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    //multisampling.sampleShadingEnable = VK_FALSE; 
+    //multisampling.rasterizationSamples = msaaSamples;
+    //multisampling.minSampleShading = 0; // Min fraction for sample shading where closer to 1 is smooth. // 0.2f
 
-    // Configure depth and stencil testing where depth refers to whether a fragment should be discarded and stencil refers to complex masking.
-    VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable = VK_TRUE;
-    depthStencil.depthWriteEnable = VK_TRUE;
-    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-    depthStencil.depthBoundsTestEnable = VK_FALSE;
-    depthStencil.stencilTestEnable = VK_FALSE;
+    //// Configure depth and stencil testing where depth refers to whether a fragment should be discarded and stencil refers to complex masking.
+    //VkPipelineDepthStencilStateCreateInfo depthStencil = {};
+    //depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    //depthStencil.depthTestEnable = VK_TRUE;
+    //depthStencil.depthWriteEnable = VK_TRUE;
+    //depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    //depthStencil.depthBoundsTestEnable = VK_FALSE;
+    //depthStencil.stencilTestEnable = VK_FALSE;
 
-    // Enables blending settings for colour attachments, allowing transparency and masking effects.
-    VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
+    //// Enables blending settings for colour attachments, allowing transparency and masking effects.
+    //VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+    //colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    //colorBlendAttachment.blendEnable = VK_FALSE;
 
-    // Configure how blending is applied for individual attachments and logic-based colour operations.
-    VkPipelineColorBlendStateCreateInfo colorBlending = {};
-    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &colorBlendAttachment;
+    //// Configure how blending is applied for individual attachments and logic-based colour operations.
+    //VkPipelineColorBlendStateCreateInfo colorBlending = {};
+    //colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    //colorBlending.logicOpEnable = VK_FALSE;
+    //colorBlending.attachmentCount = 1;
+    //colorBlending.pAttachments = &colorBlendAttachment;
 
-    // Configure how Vulkan understands to bind resources to shaders, ensuring they can efficiently access required resources.
-    // Note that if you have more descriptor set layouts (currently only using uniform buffer objects) you would need to reference that here.
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    //// Configure how Vulkan understands to bind resources to shaders, ensuring they can efficiently access required resources.
+    //// Note that if you have more descriptor set layouts (currently only using uniform buffer objects) you would need to reference that here.
+    //VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    //pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    //pipelineLayoutInfo.setLayoutCount = 1;
+    //pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
-    // Create the layout/blueprint for how the graphics pipeline will be created.
-    if (vkCreatePipelineLayout(m_LogicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create pipeline layout!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
+    //// Create the layout/blueprint for how the graphics pipeline will be created.
+    //if (vkCreatePipelineLayout(m_LogicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    //    throw std::runtime_error("failed to create pipeline layout!");
+    //    return VK_ERROR_INITIALIZATION_FAILED;
+    //}
 
-    // Encapsulate all aspects of the pipeline layout, enabling a pipeline creation optimised for specific rendering tasks (in this case, regular graphics).
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = sizeof(shaderStages) / sizeof(shaderStages[0]); // Get the size of shader stages array.
-    pipelineInfo.pStages = shaderStages;
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-    pipelineInfo.pViewportState = &viewportState;
-    pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.pDynamicState = &dynamicState;
-    //pipelineInfo.pTessellationState = &tessellationStateInfo;
-    pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = renderPass;
-    pipelineInfo.subpass = 0;
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    //// Encapsulate all aspects of the pipeline layout, enabling a pipeline creation optimised for specific rendering tasks (in this case, regular graphics).
+    //VkGraphicsPipelineCreateInfo pipelineInfo{};
+    //pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    //pipelineInfo.stageCount = sizeof(shaderStages) / sizeof(shaderStages[0]); // Get the size of shader stages array.
+    //pipelineInfo.pStages = shaderStages;
+    //pipelineInfo.pVertexInputState = &vertexInputInfo;
+    //pipelineInfo.pInputAssemblyState = &inputAssembly;
+    //pipelineInfo.pViewportState = &viewportState;
+    //pipelineInfo.pRasterizationState = &rasterizer;
+    //pipelineInfo.pMultisampleState = &multisampling;
+    //pipelineInfo.pColorBlendState = &colorBlending;
+    //pipelineInfo.pDynamicState = &dynamicState;
+    ////pipelineInfo.pTessellationState = &tessellationStateInfo;
+    //pipelineInfo.layout = pipelineLayout;
+    //pipelineInfo.renderPass = renderPass;
+    //pipelineInfo.subpass = 0;
+    //pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    if (vkCreateGraphicsPipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create graphics pipeline!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
+    //if (vkCreateGraphicsPipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+    //    throw std::runtime_error("failed to create graphics pipeline!");
+    //    return VK_ERROR_INITIALIZATION_FAILED;
+    //}
 
-    // The pipeline retains a reference to previously created shader modules, so we no longer need local references.
+    //// The pipeline retains a reference to previously created shader modules, so we no longer need local references.
 
-    /*vkDestroyShaderModule(m_LogicalDevice, tessellationEvaluationShaderModule, nullptr);
-    vkDestroyShaderModule(m_LogicalDevice, tessellationControlShaderModule, nullptr);*/
-    vkDestroyShaderModule(m_LogicalDevice, fragShaderModule, nullptr);
-    vkDestroyShaderModule(m_LogicalDevice, vertShaderModule, nullptr);
+    ///*vkDestroyShaderModule(m_LogicalDevice, tessellationEvaluationShaderModule, nullptr);
+    //vkDestroyShaderModule(m_LogicalDevice, tessellationControlShaderModule, nullptr);*/
+    //vkDestroyShaderModule(m_LogicalDevice, fragShaderModule, nullptr);
+    //vkDestroyShaderModule(m_LogicalDevice, vertShaderModule, nullptr);
 
     return VK_SUCCESS;
 }
@@ -929,6 +944,260 @@ VkResult VulkanApplication::createComputePipeline()
     }
 
     vkDestroyShaderModule(m_LogicalDevice, computeShaderModule, nullptr);
+
+    return VK_SUCCESS;
+}
+
+VkResult VulkanApplication::createMeshPipeline()
+{
+    // Read SPIR-V files.
+    auto meshVertexShaderCode = readFile("../shaders/mesh.vert.spv"); 
+    auto fragmentShaderCode = readFile("../shaders/basicShader.frag.spv");
+
+    // Load shader modules.
+    VkShaderModule meshVertexShaderModule = createShaderModule(meshVertexShaderCode); 
+    VkShaderModule fragmentShaderModule = createShaderModule(fragmentShaderCode);
+
+    // Configure how the vertex shader will execute within the pipeline.
+    VkPipelineShaderStageCreateInfo meshVertexShaderStageInfo = {}; 
+    meshVertexShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO; 
+    meshVertexShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT; 
+    meshVertexShaderStageInfo.module = meshVertexShaderModule; 
+    meshVertexShaderStageInfo.pName = "main"; 
+
+    // Configure the same for the fragment shader.
+    VkPipelineShaderStageCreateInfo fragmentShaderStageInfo = {}; 
+    fragmentShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO; 
+    fragmentShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT; 
+    fragmentShaderStageInfo.module = fragmentShaderModule; 
+    fragmentShaderStageInfo.pName = "main"; 
+
+    // Connect all shader stages for this pipeline.
+    VkPipelineShaderStageCreateInfo shaderStages[] = { meshVertexShaderStageInfo, fragmentShaderStageInfo };
+
+    // Configure how vertex data is structured and passed from a vertex buffer into a pipeline stage.
+    VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo = {}; 
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO; 
+    vertexInputInfo.vertexBindingDescriptionCount = 1; 
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(Vertex::getAttributeDescriptions().size()); 
+    vertexInputInfo.pVertexAttributeDescriptions = Vertex::getAttributeDescriptions().data();
+
+    // Specify how the vertices that are provided by the vertex shader are then assembled into primitives for rendering.
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly = {}; 
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO; 
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; 
+    inputAssembly.primitiveRestartEnable = VK_FALSE; 
+
+    // Specify the structures that may change at runtime.
+    std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    VkPipelineDynamicStateCreateInfo dynamicState = {};
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    dynamicState.pDynamicStates = dynamicStates.data(); 
+
+    // Configures the viewports and scissors to determine the regions of the framebuffer to render to.
+    VkPipelineViewportStateCreateInfo viewportState{};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.viewportCount = 1;
+    viewportState.scissorCount = 1;
+
+    // Configures settings for how primitives are transformed into fragments/pixels.
+    VkPipelineRasterizationStateCreateInfo rasterizer = {};
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.rasterizerDiscardEnable = VK_FALSE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode = VK_CULL_MODE_NONE; // VK_CULL_MODE_BACK_BIT
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.depthBiasEnable = VK_FALSE;
+
+    // Configure settings for how multisampling performs, reducing aliasing and jagged edges in the rendered image.
+    VkPipelineMultisampleStateCreateInfo multisampling = {};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = VK_FALSE;
+    multisampling.rasterizationSamples = msaaSamples;
+    multisampling.minSampleShading = 0;
+
+    // Enables blending settings for colour attachments, allowing transparency and masking effects.
+    VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_FALSE;
+
+    // Configure how blending is applied for individual attachments and logic-based colour operations.
+    VkPipelineColorBlendStateCreateInfo colorBlending = {};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = &colorBlendAttachment;
+
+    // Configure how Vulkan understands to bind resources to shaders, ensuring they can efficiently access required resources.
+    // Note that if you have more descriptor set layouts (currently only using uniform buffer objects) you would need to reference that here.
+    VkPipelineLayoutCreateInfo modelPipelineLayoutInfo = {};
+    modelPipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    modelPipelineLayoutInfo.setLayoutCount = 1;
+    modelPipelineLayoutInfo.pSetLayouts = &modelDescriptorSetLayout;
+
+    // Create the layout/blueprint for how the graphics pipeline will be created.
+    if (vkCreatePipelineLayout(m_LogicalDevice, &modelPipelineLayoutInfo, nullptr, &modelPipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create pipeline layout!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Encapsulate all aspects of the pipeline layout, enabling a pipeline creation optimised for specific rendering tasks (in this case, regular graphics).
+    VkGraphicsPipelineCreateInfo modelPipelineCreateInfo = {}; 
+    modelPipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO; 
+    modelPipelineCreateInfo.stageCount = sizeof(shaderStages) / sizeof(shaderStages[0]); // Get the size of shader stages array. 
+    modelPipelineCreateInfo.pStages = shaderStages; 
+    modelPipelineCreateInfo.pVertexInputState = &vertexInputInfo; 
+    modelPipelineCreateInfo.pInputAssemblyState = &inputAssembly;
+    modelPipelineCreateInfo.pViewportState = &viewportState; 
+    modelPipelineCreateInfo.pRasterizationState = &rasterizer; 
+    modelPipelineCreateInfo.pMultisampleState = &multisampling; 
+    modelPipelineCreateInfo.pColorBlendState = &colorBlending; 
+    modelPipelineCreateInfo.pDynamicState = &dynamicState;
+    modelPipelineCreateInfo.layout = modelPipelineLayout;
+    modelPipelineCreateInfo.renderPass = renderPass; 
+    modelPipelineCreateInfo.subpass = 0; 
+    modelPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE; 
+
+    if (vkCreateGraphicsPipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &modelPipelineCreateInfo, nullptr, &modelPipeline) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create graphics pipeline!"); 
+        return VK_ERROR_INITIALIZATION_FAILED; 
+    }
+
+    // The pipeline retains a reference to previously created shader modules, so we no longer need local references.
+    vkDestroyShaderModule(m_LogicalDevice, fragmentShaderModule, nullptr);
+    vkDestroyShaderModule(m_LogicalDevice, meshVertexShaderModule, nullptr);
+
+    return VK_SUCCESS;
+}
+
+VkResult VulkanApplication::createGrassPipeline()
+{
+    // Read SPIR-V files.
+    auto grassVertexShaderCode = readFile("../shaders/grass.vert.spv");
+    auto fragmentShaderCode = readFile("../shaders/basicShader.frag.spv");
+
+    // Load shader modules.
+    VkShaderModule grassVertexShaderModule = createShaderModule(grassVertexShaderCode);
+    VkShaderModule fragmentShaderModule = createShaderModule(fragmentShaderCode);
+
+    // Configure how the vertex shader will execute within the pipeline.
+    VkPipelineShaderStageCreateInfo grassVertexShaderStageInfo = {};
+    grassVertexShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    grassVertexShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    grassVertexShaderStageInfo.module = grassVertexShaderModule;
+    grassVertexShaderStageInfo.pName = "main";
+
+    // Configure the same for the fragment shader.
+    VkPipelineShaderStageCreateInfo fragmentShaderStageInfo = {};
+    fragmentShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragmentShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragmentShaderStageInfo.module = fragmentShaderModule;
+    fragmentShaderStageInfo.pName = "main";
+
+    // Connect all shader stages for this pipeline.
+    VkPipelineShaderStageCreateInfo shaderStages[] = { grassVertexShaderStageInfo, fragmentShaderStageInfo };
+
+    // Configure how vertex data is structured and passed from a vertex buffer into a pipeline stage.
+    VkVertexInputBindingDescription bladeBindingDescription = Blade::getBindingDescription();
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputInfo.vertexBindingDescriptionCount = 1; 
+    vertexInputInfo.pVertexBindingDescriptions = &bladeBindingDescription; 
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(Blade::getAttributeDescription().size());
+    vertexInputInfo.pVertexAttributeDescriptions = Blade::getAttributeDescription().data();
+    
+    // Specify how the vertices that are provided by the vertex shader are then assembled into primitives for rendering.
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO; 
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST; // WARNING :: PROBABLY NOT HTIS 
+    inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+    // Specify the structures that may change at runtime.
+    std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    VkPipelineDynamicStateCreateInfo dynamicState = {};
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    dynamicState.pDynamicStates = dynamicStates.data();
+    
+    // Configures the viewports and scissors to determine the regions of the framebuffer to render to.
+    VkPipelineViewportStateCreateInfo viewportState{};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.viewportCount = 1;
+    viewportState.scissorCount = 1;
+    
+    // Configures settings for how primitives are transformed into fragments/pixels.
+    VkPipelineRasterizationStateCreateInfo rasterizer = {};
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.rasterizerDiscardEnable = VK_FALSE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_POINT; // WARNING :: Points for grass !!!
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode = VK_CULL_MODE_NONE; 
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.depthBiasEnable = VK_FALSE;
+    
+    // Configure settings for how multisampling performs, reducing aliasing and jagged edges in the rendered image.
+    VkPipelineMultisampleStateCreateInfo multisampling = {};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = VK_FALSE;
+    multisampling.rasterizationSamples = msaaSamples;
+    multisampling.minSampleShading = 0;
+    
+    // Enables blending settings for colour attachments, allowing transparency and masking effects.
+    VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_FALSE;
+    
+    // Configure how blending is applied for individual attachments and logic-based colour operations.
+    VkPipelineColorBlendStateCreateInfo colorBlending = {};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = &colorBlendAttachment;
+
+    // Configure how Vulkan understands to bind resources to shaders, ensuring they can efficiently access required resources.
+    // Note that if you have more descriptor set layouts (currently only using uniform buffer objects) you would need to reference that here.
+    VkPipelineLayoutCreateInfo grassPipelineLayoutInfo = {};
+    grassPipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    grassPipelineLayoutInfo.setLayoutCount = 1;
+    grassPipelineLayoutInfo.pSetLayouts = &grassDescriptorSetLayout;
+
+    // Create the layout/blueprint for how the graphics pipeline will be created.
+    if (vkCreatePipelineLayout(m_LogicalDevice, &grassPipelineLayoutInfo, nullptr, &grassPipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create pipeline layout!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Encapsulate all aspects of the pipeline layout, enabling a pipeline creation optimised for specific rendering tasks (in this case, regular graphics).
+    VkGraphicsPipelineCreateInfo grassPipelineCreateInfo = {};
+    grassPipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    grassPipelineCreateInfo.stageCount = sizeof(shaderStages) / sizeof(shaderStages[0]); // Get the size of shader stages array. 
+    grassPipelineCreateInfo.pStages = shaderStages;
+    grassPipelineCreateInfo.pVertexInputState = &vertexInputInfo;
+    grassPipelineCreateInfo.pInputAssemblyState = &inputAssembly;
+    grassPipelineCreateInfo.pViewportState = &viewportState;
+    grassPipelineCreateInfo.pRasterizationState = &rasterizer;
+    grassPipelineCreateInfo.pMultisampleState = &multisampling;
+    grassPipelineCreateInfo.pColorBlendState = &colorBlending;
+    grassPipelineCreateInfo.pDynamicState = &dynamicState;
+    grassPipelineCreateInfo.layout = grassPipelineLayout;
+    grassPipelineCreateInfo.renderPass = renderPass;
+    grassPipelineCreateInfo.subpass = 0;
+    grassPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+    
+    if (vkCreateGraphicsPipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &grassPipelineCreateInfo, nullptr, &grassPipeline) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create graphics pipeline!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // The pipeline retains a reference to previously created shader modules, so we no longer need local references.
+    vkDestroyShaderModule(m_LogicalDevice, fragmentShaderModule, nullptr);
+    vkDestroyShaderModule(m_LogicalDevice, grassVertexShaderModule, nullptr);
 
     return VK_SUCCESS;
 }
@@ -1146,57 +1415,73 @@ VkResult VulkanApplication::createDescriptorPool()
 
 VkResult VulkanApplication::createDescriptorSets()
 {
-    VkDescriptorSetLayout layout(descriptorSetLayout);
+    //
+    // Create descriptor sets for the model pipeline.
+    //
 
-    VkDescriptorSetAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = descriptorPool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &layout;
+    VkDescriptorSetLayout modelLayout(modelDescriptorSetLayout);
+
+    VkDescriptorSetAllocateInfo modelAllocInfo = {};
+    modelAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    modelAllocInfo.descriptorPool = descriptorPool;
+    modelAllocInfo.descriptorSetCount = 1;
+    modelAllocInfo.pSetLayouts = &modelLayout;
 
     // Allocate uniform buffer descriptor set memory.
-    if (vkAllocateDescriptorSets(m_LogicalDevice, &allocInfo, &uniformBufferDescriptorSet) != VK_SUCCESS) {
+    if (vkAllocateDescriptorSets(m_LogicalDevice, &modelAllocInfo, &uniformBufferDescriptorSet) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");
         return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-    // Allocate shader storage buffer descriptor set memory.
-    if (vkAllocateDescriptorSets(m_LogicalDevice, &allocInfo, &bladeInstanceSSBODescriptorSet) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor sets!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
+    }    
 
     VkDescriptorBufferInfo uboBufferInfo = {};
     uboBufferInfo.buffer = uniformBuffer;
     uboBufferInfo.offset = 0;
-    uboBufferInfo.range = sizeof(CameraUniformBufferObject); // Assumes only one CameraUniformBufferObject will be sent.
+    uboBufferInfo.range = sizeof(CameraUniformBufferObject); // Assumes only one CameraUniformBufferObject will be sent.    
+
+    VkWriteDescriptorSet modelDescriptorWrite = {};
+    modelDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    modelDescriptorWrite.dstSet = uniformBufferDescriptorSet;
+    modelDescriptorWrite.dstBinding = 0;
+    modelDescriptorWrite.dstArrayElement = 0;
+    modelDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    modelDescriptorWrite.descriptorCount = 1;
+    modelDescriptorWrite.pBufferInfo = &uboBufferInfo;
+
+    vkUpdateDescriptorSets(m_LogicalDevice, 1, &modelDescriptorWrite, 0, nullptr);
+
+    //
+    // Create descriptor sets for the model pipeline.
+    //
+
+    VkDescriptorSetLayout grassLayout(grassDescriptorSetLayout);
+
+    VkDescriptorSetAllocateInfo grassAllocInfo = {};
+    grassAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    grassAllocInfo.descriptorPool = descriptorPool;
+    grassAllocInfo.descriptorSetCount = 1;
+    grassAllocInfo.pSetLayouts = &grassLayout;
+
+    // Allocate shader storage buffer descriptor set memory.
+    if (vkAllocateDescriptorSets(m_LogicalDevice, &grassAllocInfo, &bladeInstanceSSBODescriptorSet) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
 
     VkDescriptorBufferInfo ssboBufferInfo = {};
     ssboBufferInfo.buffer = bladeInstanceDataBuffer;
     ssboBufferInfo.offset = 0;
     ssboBufferInfo.range = sizeof(BladeInstanceData) * MAX_BLADES;
+    
+    VkWriteDescriptorSet grassDescriptorWrite = {};
+    grassDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    grassDescriptorWrite.dstSet = bladeInstanceSSBODescriptorSet;
+    grassDescriptorWrite.dstBinding = 0;
+    grassDescriptorWrite.dstArrayElement = 0;
+    grassDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    grassDescriptorWrite.descriptorCount = 1;
+    grassDescriptorWrite.pBufferInfo = &ssboBufferInfo;
 
-    std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
-
-    descriptorWrites[0] = {};
-    descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[0].dstSet = uniformBufferDescriptorSet;
-    descriptorWrites[0].dstBinding = 0;
-    descriptorWrites[0].dstArrayElement = 0;
-    descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrites[0].descriptorCount = 1;
-    descriptorWrites[0].pBufferInfo = &uboBufferInfo;
-
-    descriptorWrites[1] = {};
-    descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[1].dstSet = bladeInstanceSSBODescriptorSet;
-    descriptorWrites[1].dstBinding = 1; 
-    descriptorWrites[1].dstArrayElement = 0; 
-    descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; 
-    descriptorWrites[1].descriptorCount = 1; 
-    descriptorWrites[1].pBufferInfo = &ssboBufferInfo; 
-
-    vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+    vkUpdateDescriptorSets(m_LogicalDevice, 1, &grassDescriptorWrite, 0, nullptr);
 
     return VK_SUCCESS;
 }
@@ -1333,11 +1618,12 @@ void VulkanApplication::populateBladeInstanceBuffer()
         glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, glm::vec2(1.0f, 1.0f), planeBoundsZ, false);
 
         // Populate this instance of blade data.
-        bladeInstanceData.worldPosition = glm::vec4(randomPositionOnPlaneBounds, 1.0f);
+        bladeInstanceData.worldPosition = randomPositionOnPlaneBounds; 
         bladeInstanceData.width = GRASS_WIDTH;
         bladeInstanceData.height = GRASS_HEIGHT;
         bladeInstanceData.directionAngle = GRASS_NO_ANGLE;
-        bladeInstanceData.stiffness = GRASS_STIFFNESS;
+        bladeInstanceData.stiffness = GRASS_STIFFNESS; 
+        bladeInstanceData.lean = GRASS_LEAN;
 
         // Add this blade to the instance buffer.
         localBladeInstanceBuffer.push_back(bladeInstanceData);
@@ -1443,7 +1729,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
-    VkRenderPassBeginInfo renderPassInfo{};
+    VkRenderPassBeginInfo renderPassInfo = {};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = renderPass;
     renderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];
@@ -1456,8 +1742,6 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -1465,20 +1749,38 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     viewport.height = static_cast<float>(swapChainExtent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);  
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = { 0, 0 };
     scissor.extent = swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+    //
+    // Start model pipeline.
+    //
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipeline);    
+
     // Ground plane rendering.
     VkBuffer quadVertexBuffers[] = { quadVertexBuffer };                                        
     VkDeviceSize quadOffsets[] = { 0 };                                                         
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffers, quadOffsets);                
     vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);              
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &uniformBufferDescriptorSet, 0, nullptr); 
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipelineLayout, 0, 1, &uniformBufferDescriptorSet, 0, nullptr); 
     vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0); 
+
+    //
+    // End model pipeline.
+    //
+
+    //
+    // Start grass pipeline.
+    //
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipeline);
+
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &bladeInstanceSSBODescriptorSet, 0, nullptr);
 
     // Define a region of data to copy the blade instance staging buffer to the shader storage buffer (blade instance data buffer).
     VkBufferCopy copyRegion = {};
@@ -1489,8 +1791,19 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     // Copy from the staging buffer into the shader storage buffer, where the data will reside on the GPU for its use in shaders.
     vkCmdCopyBuffer(commandBuffer, bladeInstanceStagingBuffer, bladeInstanceDataBuffer, 1, &copyRegion);
 
-    // ImGui
+    //
+    // End grass pipeline.
+    //
+
+    //
+    // Start ImGui rendering.
+    // 
+
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer); 
+
+    //
+    // End ImGui rendering.
+    //
 
     vkCmdEndRenderPass(commandBuffer); 
      
@@ -1519,15 +1832,15 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     vkFreeMemory(m_LogicalDevice, uniformBufferMemory, nullptr);
 
     vkDestroyDescriptorPool(m_LogicalDevice, descriptorPool, nullptr);
-    vkDestroyDescriptorSetLayout(m_LogicalDevice, descriptorSetLayout, nullptr);
+    //vkDestroyDescriptorSetLayout(m_LogicalDevice, descriptorSetLayout, nullptr);
 
     vkDestroyBuffer(m_LogicalDevice, indexBuffer, nullptr);
     vkFreeMemory(m_LogicalDevice, indexBufferMemory, nullptr);
     vkDestroyBuffer(m_LogicalDevice, vertexBuffer, nullptr);
     vkFreeMemory(m_LogicalDevice, vertexBufferMemory, nullptr);
 
-    vkDestroyPipeline(m_LogicalDevice, graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(m_LogicalDevice, pipelineLayout, nullptr);
+    //vkDestroyPipeline(m_LogicalDevice, graphicsPipeline, nullptr);
+    //vkDestroyPipelineLayout(m_LogicalDevice, pipelineLayout, nullptr);
 
     vkDestroyRenderPass(m_LogicalDevice, renderPass, nullptr);
 

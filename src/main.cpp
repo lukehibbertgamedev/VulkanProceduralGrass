@@ -116,8 +116,14 @@ int main() {
     ret = vkApp.createDescriptorSetLayout();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor layout.");
 
-    ret = vkApp.createGraphicsPipeline();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create graphics pipeline.");
+    //ret = vkApp.createGraphicsPipeline();
+    //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create graphics pipeline.");
+
+    ret = vkApp.createMeshPipeline();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create mesh/model pipeline.");
+
+    ret = vkApp.createGrassPipeline();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create grass pipeline.");
 
     //ret = vkApp.createComputePipeline();
     //if (ret != VK_SUCCESS) throw std::runtime_error("Could not create compute pipeline.");

@@ -282,11 +282,12 @@ namespace bezier {
 // 32 bytes large, 4 byte alignment.
 struct BladeInstanceData {
 
-	glm::vec4 worldPosition = glm::vec4(0.0f);
+	glm::vec3 worldPosition = glm::vec3(0.0f);
 	float width = GRASS_WIDTH;
 	float height = GRASS_HEIGHT;
 	float directionAngle = GRASS_NO_ANGLE;
 	float stiffness = GRASS_STIFFNESS;
+	float lean = GRASS_LEAN;
 };
 
 class Blade {

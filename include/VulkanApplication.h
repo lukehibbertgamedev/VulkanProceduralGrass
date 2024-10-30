@@ -125,8 +125,14 @@ public:
 	VkResult createRenderPass();
 	VkResult createComputeDescriptorSetLayout(); // Compute relevant
 	VkResult createDescriptorSetLayout();
+	
+	
 	VkResult createGraphicsPipeline();
 	VkResult createComputePipeline(); // Compute relevant
+
+	VkResult createMeshPipeline(); // For regular rendering of meshes.
+	VkResult createGrassPipeline(); // Exclusively for grass rendering.
+
 	VkResult createFrameBuffers();
 	VkResult createCommandPool();
 	VkResult createShaderStorageBuffers(); // For blade <3
@@ -220,8 +226,8 @@ public:
 
 	// Render passes and pipelines.
 	VkRenderPass renderPass = VK_NULL_HANDLE;							// Defines how rendering operations are performed and how framebuffers are used during rendering.
-	VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;					// A description of how the graphics pipeline will be configured.
-	VkPipeline graphicsPipeline = VK_NULL_HANDLE;						// Describes the entire state of the graphics rendering process (input assembly, rasterization, blending states, including shaders, etc...)
+	//VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;					// A description of how the graphics pipeline will be configured.
+	//VkPipeline graphicsPipeline = VK_NULL_HANDLE;						// Describes the entire state of the graphics rendering process (input assembly, rasterization, blending states, including shaders, etc...)
 	VkPipelineLayout computePipelineLayout = VK_NULL_HANDLE;			// A description of how the compute pipeline will be configured, organises descriptor sets and push constants used to pass data to compute shaders.
 	VkPipeline computePipeline = VK_NULL_HANDLE;						// Describes the entire state of how compute shaders will be executed allowing for general-purpose computing on the GPU, independent of the graphics pipeline.
 
@@ -240,7 +246,7 @@ public:
 	// Descriptors.
 	VkDescriptorPool descriptorPool = VK_NULL_HANDLE;					// A handle to the manager that allocates descriptor sets to increase correct resource allocation.
 	VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;				// A handle to the manager that allocates descriptor sets specifically for ImGui resources necessary for rendering its interface.
-	VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;			// A description of how descriptor sets (ie., resources/buffers) are accessed by shaders.
+	//VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;			// A description of how descriptor sets (ie., resources/buffers) are accessed by shaders.
 	VkDescriptorSetLayout computeDescriptorSetLayout = VK_NULL_HANDLE;	// A description of how descriptor sets (ie., resources/buffers) are accessed specifically by compute shaders.
 	//std::vector<VkDescriptorSet> descriptorSets = {};					// A collection of resources/buffers/images that can be bound to shaders during rendering operations.
 	std::vector<VkDescriptorSet> computeDescriptorSets = {};			// A collection of resources/buffers/images that can be bound to compute shaders during compute operations.
@@ -311,5 +317,15 @@ public:
 	VkDeviceMemory bladeInstanceStagingBufferMemory;
 
 	Blade test;
+
+
+	VkDescriptorSetLayout modelDescriptorSetLayout; // Contains UBO for models (ie plane)
+	VkDescriptorSetLayout grassDescriptorSetLayout; // Contains SSBO for grass buffer
+
+	VkPipelineLayout modelPipelineLayout;
+	VkPipelineLayout grassPipelineLayout;
+
+	VkPipeline modelPipeline; // Pipeline structure for a model/object render pass.
+	VkPipeline grassPipeline; // Pipeline structure for the grass render pass.
 
 };
