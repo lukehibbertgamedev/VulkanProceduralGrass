@@ -148,12 +148,16 @@ public:
 
 	void createMeshObjects();
 	void populateBladeInstanceBuffer();
+	void uploadGrassBladeInstanceBufferToGpu();
 
 	void prepareImGuiDrawData();
 
 	VkResult createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 
+	// Creates a buffer, creates its memory requirements, and allocates and binds the buffer memory. Returns a VkResult.
 	VkResult createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+
+	// Copy from srcBuffer to dstBuffer passing the size of srcBuffer so the command knows how much data to copy. Performs vkCmdCopyBuffer.
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 	void recordComputeCommandBuffer(VkCommandBuffer commandBuffer); // Compute relevant
@@ -247,12 +251,6 @@ public:
 	VkBuffer quadIndexBuffer = VK_NULL_HANDLE;							// ... 
 	VkDeviceMemory quadIndexBufferMemory = VK_NULL_HANDLE;				// ... 
 
-	// Uniform buffer objects (UBO).
-	VkBuffer uniformBuffer;
-	VkDeviceMemory uniformBufferMemory;
-	void* uniformBufferMapped;
-	VkDescriptorSet uniformBufferDescriptorSet;
-
 	// Vertex and index buffer with associated memory.
 	VkBuffer vertexBuffer = VK_NULL_HANDLE;								// ...
 	VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;					// ...
@@ -292,11 +290,14 @@ public:
 
 	int frameCount = 0;
 
+	// Uniform buffer objects (UBO).
+	VkBuffer uniformBuffer;
+	VkDeviceMemory uniformBufferMemory;
+	void* uniformBufferMapped;
+	VkDescriptorSet uniformBufferDescriptorSet;
+
 	std::vector<MeshInstance> meshes;
-
 	MeshInstance groundPlane;
-
-	// Populate
 	std::vector<BladeInstanceData> localBladeInstanceBuffer; // A holding buffer of instance data per-blade.
 
 	// Allocate and upload to this.
@@ -304,6 +305,11 @@ public:
 	VkBuffer bladeInstanceDataBuffer;
 	VkDeviceMemory bladeInstanceDataBufferMemory;
 	void* bladeInstanceDataBufferMapped;
+	VkDescriptorSet bladeInstanceSSBODescriptorSet;
+
+	// Prepare staging buffer and its associated memory for holding the instance data temporarily before it gets transferred to the GPU.
+	VkBuffer bladeInstanceStagingBuffer;
+	VkDeviceMemory bladeInstanceStagingBufferMemory;
 
 	Blade test;
 

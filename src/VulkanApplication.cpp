@@ -182,6 +182,7 @@ void VulkanApplication::render()
     }
 
     updateUniformBuffer(currentFrame);
+    // updateBladeInstanceBuffer ???
 
     vkResetFences(m_LogicalDevice, 1, &inFlightFences[currentFrame]);
 
@@ -684,6 +685,7 @@ VkResult VulkanApplication::createDescriptorSetLayout()
     std::array<VkDescriptorSetLayoutBinding, 2> layoutBindings = {};
 
     // Set up for the uniform buffer object used for camera matrix data.
+    layoutBindings[0] = {};
     layoutBindings[0].binding = 0;
     layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layoutBindings[0].descriptorCount = 1;
@@ -691,12 +693,13 @@ VkResult VulkanApplication::createDescriptorSetLayout()
     layoutBindings[0].pImmutableSamplers = nullptr;
 
     // Set up for the shader storage buffer object used for the grass blades to be put on the GPU.
+    layoutBindings[1] = {};
     layoutBindings[1].binding = 1;
     layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // Warning: This may need to be dynamic SSBO down the line.
     layoutBindings[1].descriptorCount = 1;
     // Warning: This is setting the availability for this descriptor type to be used in all shaders that we currently have in use.
     layoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    layoutBindings[0].pImmutableSamplers = nullptr;
+    layoutBindings[1].pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -974,7 +977,7 @@ VkResult VulkanApplication::createCommandPool()
 
 VkResult VulkanApplication::createShaderStorageBuffers()
 {
-    VkDeviceSize bufferSize = sizeof(localBladeInstanceBuffer);
+    VkDeviceSize bufferSize = sizeof(BladeInstanceData) * MAX_BLADES;
 
     VkResult ret = createBuffer(
         bufferSize, 
@@ -1117,17 +1120,15 @@ VkResult VulkanApplication::createDescriptorPool()
     // Pool sizes containing uniform buffer objects (UBO) and shader storage buffer objects (SSBO).
     // Also include one here for the dynamic storage buffer to be used for an arbitrary number of grass blade objects.
 
-    // Type, Descriptor Count.
     std::array< VkDescriptorPoolSize, 2> poolSizes = {};
 
+    poolSizes[0] = {};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = 1;
 
+    poolSizes[1] = {};
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[0].descriptorCount = 1;
-
-    //poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    //poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolSizes[1].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1146,6 +1147,7 @@ VkResult VulkanApplication::createDescriptorPool()
 VkResult VulkanApplication::createDescriptorSets()
 {
     VkDescriptorSetLayout layout(descriptorSetLayout);
+
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptorPool;
@@ -1157,21 +1159,37 @@ VkResult VulkanApplication::createDescriptorSets()
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    VkDescriptorBufferInfo bufferInfo = {};
-    bufferInfo.buffer = uniformBuffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = sizeof(CameraUniformBufferObject);
+    VkDescriptorBufferInfo uboBufferInfo = {};
+    uboBufferInfo.buffer = uniformBuffer;
+    uboBufferInfo.offset = 0;
+    uboBufferInfo.range = sizeof(CameraUniformBufferObject); // Assumes only one CameraUniformBufferObject will be sent.
 
-    VkWriteDescriptorSet descriptorWrite = {};
-    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = uniformBufferDescriptorSet;
-    descriptorWrite.dstBinding = 0;
-    descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrite.descriptorCount = 1;
-    descriptorWrite.pBufferInfo = &bufferInfo;
+    VkDescriptorBufferInfo ssboBufferInfo = {};
+    ssboBufferInfo.buffer = bladeInstanceDataBuffer;
+    ssboBufferInfo.offset = 0;
+    ssboBufferInfo.range = sizeof(BladeInstanceData) * MAX_BLADES;
 
-    vkUpdateDescriptorSets(m_LogicalDevice, 1, &descriptorWrite, 0, nullptr); 
+    std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+
+    descriptorWrites[0] = {};
+    descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[0].dstSet = uniformBufferDescriptorSet;
+    descriptorWrites[0].dstBinding = 0;
+    descriptorWrites[0].dstArrayElement = 0;
+    descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorWrites[0].descriptorCount = 1;
+    descriptorWrites[0].pBufferInfo = &uboBufferInfo;
+
+    descriptorWrites[1] = {};
+    descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[1].dstSet = bladeInstanceSSBODescriptorSet;
+    descriptorWrites[1].dstBinding = 1; 
+    descriptorWrites[1].dstArrayElement = 0; 
+    descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; 
+    descriptorWrites[1].descriptorCount = 1; 
+    descriptorWrites[1].pBufferInfo = &ssboBufferInfo; 
+
+    vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
     return VK_SUCCESS;
 }
@@ -1319,6 +1337,32 @@ void VulkanApplication::populateBladeInstanceBuffer()
     }
 }
 
+void VulkanApplication::uploadGrassBladeInstanceBufferToGpu()
+{
+    // Calculate the required size for the staging buffer.
+    VkDeviceSize bladeInstanceBufferRequiredSize = sizeof(BladeInstanceData) * MAX_BLADES;
+
+    // Create the staging buffer used as a source to send/transfer buffer data. Note: writes from the CPU are visible to the GPU without explicit flushing.
+    VkResult ret = createBuffer(
+        bladeInstanceBufferRequiredSize, 
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+        bladeInstanceStagingBuffer,  
+        bladeInstanceStagingBufferMemory 
+    );
+
+    // Convert the staging buffer to a pointer to be accessed easier.
+    void* data;
+    vkMapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory, 0, bladeInstanceBufferRequiredSize, 0, &data);
+
+    // Copy the instance data from the local instance buffer into the staging buffer.
+    memcpy(data, localBladeInstanceBuffer.data(), bladeInstanceBufferRequiredSize);
+
+    // Releases the mapped memory so the GPU can safely access the written data.
+    vkUnmapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory); 
+
+}
+
 void VulkanApplication::prepareImGuiDrawData()
 {
     ImGui::Begin("Driver Details", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar);
@@ -1374,7 +1418,9 @@ void VulkanApplication::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDev
 {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
     
-    VkBufferCopy copyRegion{};
+    VkBufferCopy copyRegion = {};
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
     copyRegion.size = size;
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
     
@@ -1419,12 +1465,22 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     scissor.extent = swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+    // Ground plane rendering.
     VkBuffer quadVertexBuffers[] = { quadVertexBuffer };                                        
     VkDeviceSize quadOffsets[] = { 0 };                                                         
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffers, quadOffsets);                
     vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);              
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &uniformBufferDescriptorSet, 0, nullptr); 
     vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0); 
+
+    // Copy the blade instance staging buffer to the shader storage buffer.
+    VkBufferCopy copyRegion = {};
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    copyRegion.size = sizeof(BladeInstanceData) * MAX_BLADES;
+    
+    // Copy from the staging buffer into the shader storage buffer, where the data will reside on the GPU for its use in shaders.
+    vkCmdCopyBuffer(commandBuffer, bladeInstanceStagingBuffer, bladeInstanceDataBuffer, 1, &copyRegion);
 
     // ImGui
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer); 
