@@ -10,17 +10,17 @@ struct BladeInstanceData {
     float lean;             
 };
 
-// The shader storage buffer binding for the data buffer, populated by VulkanApplication::populateBladeInstanceBuffer().
-layout(std140, binding = 1) buffer BladeInstanceDataBuffer {
-    BladeInstanceData blades[]; 
-};
-
 // Binding is 0 here because it's a uniform buffer object with binding 0 within the descriptor set layout.
 layout(binding = 0) uniform CameraUniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
 } ubo;
+
+// The shader storage buffer binding for the data buffer, populated by VulkanApplication::populateBladeInstanceBuffer().
+layout(std140, binding = 1) buffer BladeInstanceDataBuffer {
+    BladeInstanceData blades[]; 
+};
 
 // The w component of these vector4s represent the float value on the end (i.e., p0_Width -> xyz = p0, w = width).
 layout(location = 0) in vec4 p0_Width;

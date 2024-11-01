@@ -1250,6 +1250,7 @@ VkResult VulkanApplication::createShaderStorageBuffers()
         bufferSize, 
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, // warning
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // warning
+        /*VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,*/
         bladeInstanceDataBuffer,
         bladeInstanceDataBufferMemory
     );
@@ -1552,7 +1553,7 @@ void VulkanApplication::populateBladeInstanceBuffer()
     for (size_t i = 0; i < MAX_BLADES; ++i) {
 
         // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
-        glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, glm::vec2(1.0f, 1.0f), planeBoundsZ, false);
+        glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX * 10.0f, glm::vec2(1.0f, 1.0f), planeBoundsZ * 10.0f, false);
 
         // Populate this instance of blade data.
         bladeInstanceData.worldPosition = randomPositionOnPlaneBounds; 
@@ -1579,7 +1580,7 @@ void VulkanApplication::createBladeInstanceStagingBuffer()
         bladeInstanceBufferRequiredSize, 
         /*VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,*/
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        /*VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, */
+        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         bladeInstanceStagingBuffer,  
         bladeInstanceStagingBufferMemory 
@@ -1683,10 +1684,6 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
-    
-    // Copy from the staging buffer into the shader storage buffer, where the data will reside on the GPU for its use in shaders.
-    // Copy buffer outside of a render pass (WHY????? just got told to, figure this out)
-    copyBuffer(bladeInstanceStagingBuffer, bladeInstanceDataBuffer, sizeof(BladeInstanceData) * MAX_BLADES);
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);    
 
@@ -1734,15 +1731,6 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &bladeInstanceSSBODescriptorSet, 0, nullptr);
 
     vkCmdDraw(commandBuffer, 1, MAX_BLADES, 0, 0);
-
-    // Define a region of data to copy the blade instance staging buffer to the shader storage buffer (blade instance data buffer).
-    //VkBufferCopy copyRegion = {};
-    //copyRegion.srcOffset = 0;
-    //copyRegion.dstOffset = 0;
-    //copyRegion.size = sizeof(BladeInstanceData) * MAX_BLADES;
-    
-    // Copy from the staging buffer into the shader storage buffer, where the data will reside on the GPU for its use in shaders.
-    //vkCmdCopyBuffer(commandBuffer, bladeInstanceStagingBuffer, bladeInstanceDataBuffer, 1, &copyRegion);
 
     //
     // End grass pipeline.
