@@ -282,12 +282,17 @@ namespace bezier {
 // 32 bytes large, 4 byte alignment.
 struct BladeInstanceData {
 
-	glm::vec3 worldPosition = glm::vec3(0.0f);
-	float width = GRASS_WIDTH;
-	float height = GRASS_HEIGHT;
-	float directionAngle = GRASS_NO_ANGLE;
-	float stiffness = GRASS_STIFFNESS;
-	float lean = GRASS_LEAN;
+	glm::vec4 p0_width		= glm::vec4(0.0f);
+	glm::vec4 p1_height		= glm::vec4(0.0f);
+	glm::vec4 p2_direction	= glm::vec4(0.0f);
+	glm::vec4 up_stiffness	= glm::vec4(0.0f);
+
+	//glm::vec3 worldPosition = glm::vec3(0.0f);
+	//float width = GRASS_WIDTH;
+	//float height = GRASS_HEIGHT;
+	//float directionAngle = GRASS_NO_ANGLE;
+	//float stiffness = GRASS_STIFFNESS;
+	//float lean = GRASS_LEAN;
 };
 
 // Note: Whatever variables are here, must match the IN parameters for the vertex shader.
@@ -296,6 +301,7 @@ class Blade {
 public:
 
 	void initialise(); // Sets up packed 4 v4 values.
+	void updatePackedVec4s(); // Call this when changing the values of any packed vec4s, this will recalculate the defaults.
 
 	glm::vec3 calculatePositionAlongBezierCurve(float interpolationValue); // Quadratic bezier curve.
 
@@ -304,7 +310,4 @@ public:
 	glm::vec4 p1AndHeight = glm::vec4(0.0f);	// P1 and grass height.						   
 	glm::vec4 p2AndDirection = glm::vec4(0.0f);	// P2 and blade direction angle.			   
 	glm::vec4 upAndStiffness = glm::vec4(0.0f);	// Grass up vector and stiffness coefficient.  
-
-	static VkVertexInputBindingDescription getBindingDescription();
- 	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescription();
 };

@@ -1101,13 +1101,20 @@ VkResult VulkanApplication::createGrassPipeline()
     VkPipelineShaderStageCreateInfo shaderStages[] = { grassVertexShaderStageInfo, fragmentShaderStageInfo };
 
     // Configure how vertex data is structured and passed from a vertex buffer into a pipeline stage.
-    VkVertexInputBindingDescription bladeBindingDescription = Blade::getBindingDescription();
+     
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // Note that there are no vertex binding descriptions or attribute descriptions here, this is because
+    // the blade instance data is sent via a shader storage buffer object and does not require this data to be 
+    // bound. This may change down the line and you may run into an error here, so this is an informative message
+    // for you to read, if you don't read this then you're stupid.
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 1; 
-    vertexInputInfo.pVertexBindingDescriptions = &bladeBindingDescription; 
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(Blade::getAttributeDescription().size());
-    vertexInputInfo.pVertexAttributeDescriptions = Blade::getAttributeDescription().data();
+    vertexInputInfo.vertexBindingDescriptionCount = 0; 
+    vertexInputInfo.pVertexBindingDescriptions = nullptr; 
+    vertexInputInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputInfo.pVertexAttributeDescriptions = nullptr;
     
     // Specify how the vertices that are provided by the vertex shader are then assembled into primitives for rendering.
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
@@ -1570,13 +1577,16 @@ void VulkanApplication::populateBladeInstanceBuffer()
         // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
         glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
 
+        // Create an instance of a grass blade, and define its' natural world position.
+        Blade bladeInstance = Blade();
+        bladeInstance.p0AndWidth = glm::vec4(randomPositionOnPlaneBounds, GRASS_WIDTH);
+        bladeInstance.updatePackedVec4s();
+
         // Populate this instance of blade data.
-        bladeInstanceData.worldPosition = randomPositionOnPlaneBounds; 
-        bladeInstanceData.width = GRASS_WIDTH;
-        bladeInstanceData.height = GRASS_HEIGHT;
-        bladeInstanceData.directionAngle = GRASS_NO_ANGLE;
-        bladeInstanceData.stiffness = GRASS_STIFFNESS; 
-        bladeInstanceData.lean = GRASS_LEAN;
+        bladeInstanceData.p0_width      = bladeInstance.p0AndWidth;
+        bladeInstanceData.p1_height     = bladeInstance.p1AndHeight;
+        bladeInstanceData.p2_direction  = bladeInstance.p2AndDirection;
+        bladeInstanceData.up_stiffness  = bladeInstance.upAndStiffness;
 
         // Add this blade to the instance buffer.
         localBladeInstanceBuffer.push_back(bladeInstanceData);
