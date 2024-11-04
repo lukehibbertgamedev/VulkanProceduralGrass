@@ -286,13 +286,6 @@ struct BladeInstanceData {
 	glm::vec4 p1_height		= glm::vec4(0.0f);
 	glm::vec4 p2_direction	= glm::vec4(0.0f);
 	glm::vec4 up_stiffness	= glm::vec4(0.0f);
-
-	//glm::vec3 worldPosition = glm::vec3(0.0f);
-	//float width = GRASS_WIDTH;
-	//float height = GRASS_HEIGHT;
-	//float directionAngle = GRASS_NO_ANGLE;
-	//float stiffness = GRASS_STIFFNESS;
-	//float lean = GRASS_LEAN;
 };
 
 // Note: Whatever variables are here, must match the IN parameters for the vertex shader.

@@ -56,37 +56,6 @@ public:
 	int vertexCount = 0;
 };
 
-struct Particle {
-	glm::vec2 position;
-	glm::vec2 velocity;
-	glm::vec4 color;
-
-	static VkVertexInputBindingDescription getBindingDescription() {
-		VkVertexInputBindingDescription bindingDescription{};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(Particle);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		return bindingDescription;
-	}
-
-	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
-
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(Particle, position);
-
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(Particle, color);
-
-		return attributeDescriptions;
-	}
-};
-
 struct CameraUniformBufferObject {
 	alignas(16) glm::mat4 model;
 	alignas(16) glm::mat4 view;
@@ -127,34 +96,16 @@ public:
 	VkResult recreateSwapchain();
 	VkResult createSwapchainImageViews();
 	VkResult createRenderPass();
-	VkResult createComputeDescriptorSetLayout(); // Compute relevant
-
-	VkResult createDescriptorSetLayouts();	
-	
+	VkResult createDescriptorSetLayouts();		
 	VkResult createPipelines();
-
-	VkResult createGraphicsPipeline();
-	VkResult createComputePipeline(); // Compute relevant	
-
 	VkResult createFrameBuffers();
 	VkResult createCommandPool();
 	VkResult createShaderStorageBuffers(); // For blade <3
-	VkResult createColourResources();
-	VkResult createDepthResources();
-	VkResult createTextureImage();
-	VkResult createTextureImageView();
-	VkResult createTextureSampler();
 	VkResult createVertexBuffer();
 	VkResult createIndexBuffer();
 	VkResult createUniformBuffers();
-
 	VkResult createDescriptorPool();
-
-	VkResult createComputeDescriptorSets(); // Compute relevant
-
 	VkResult createDescriptorSets();
-
-	VkResult createComputeCommandBuffer(); // Compute relevant
 	VkResult createCommandBuffer();
 	VkResult createSynchronizationObjects();
 	VkResult createImGuiImplementation();
@@ -165,15 +116,12 @@ public:
 
 	void prepareImGuiDrawData();
 
-	VkResult createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
-
 	// Creates a buffer, creates its memory requirements, and allocates and binds the buffer memory. Returns a VkResult.
 	VkResult createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
 	// Copy from srcBuffer to dstBuffer passing the size of srcBuffer so the command knows how much data to copy. Performs vkCmdCopyBuffer.
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-	void recordComputeCommandBuffer(VkCommandBuffer commandBuffer); // Compute relevant
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex); 
 
 	void cleanupApplication(GLFWwindow* window);
@@ -197,8 +145,6 @@ private:
 	VkResult createGrassPipeline(); // Exclusively for grass rendering.
 
 	VkSampleCountFlagBits getMaxUsableMSAASampleCount();
-	bool depthFormatHasStencilComponent(VkFormat format);
-	VkFormat findDepthFormat();
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);

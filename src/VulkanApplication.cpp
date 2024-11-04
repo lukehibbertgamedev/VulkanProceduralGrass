@@ -645,40 +645,6 @@ VkResult VulkanApplication::createRenderPass()
     return VK_SUCCESS;
 }
 
-VkResult VulkanApplication::createComputeDescriptorSetLayout()
-{
-    std::array<VkDescriptorSetLayoutBinding, 3> layoutBindings{};
-    layoutBindings[0].binding = 0;
-    layoutBindings[0].descriptorCount = 1;
-    layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layoutBindings[0].pImmutableSamplers = nullptr;
-    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-
-    layoutBindings[1].binding = 1;
-    layoutBindings[1].descriptorCount = 1;
-    layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    layoutBindings[1].pImmutableSamplers = nullptr;
-    layoutBindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-    layoutBindings[2].binding = 2;
-    layoutBindings[2].descriptorCount = 1;
-    layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    layoutBindings[2].pImmutableSamplers = nullptr;
-    layoutBindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 3;
-    layoutInfo.pBindings = layoutBindings.data();
-
-    if (vkCreateDescriptorSetLayout(m_LogicalDevice, &layoutInfo, nullptr, &computeDescriptorSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute descriptor set layout!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-    return VK_SUCCESS;
-}
-
 VkResult VulkanApplication::createDescriptorSetLayouts()
 {
     // Define the type of descriptor/shader resources you will want.
@@ -726,226 +692,7 @@ VkResult VulkanApplication::createPipelines()
 
     return ret;
 }
-
-VkResult VulkanApplication::createGraphicsPipeline()
-{
-    //// Standard vertex and fragment shader modules.
-    //auto vertexShaderCode = readFile("../shaders/basicShader.vert.spv");
-    //auto pixelShaderCode = readFile("../shaders/basicShader.frag.spv");
-    //VkShaderModule vertShaderModule = createShaderModule(vertexShaderCode);
-    //VkShaderModule fragShaderModule = createShaderModule(pixelShaderCode);
-
-    //// Configure how the vertex shader stage executes within the pipeline.
-    //VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
-    //vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    //vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    //vertShaderStageInfo.module = vertShaderModule;
-    //vertShaderStageInfo.pName = "main";
-
-    //// Configure how the pixel/fragment shader stage executes within the pipeline.
-    //VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
-    //fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    //fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    //fragShaderStageInfo.module = fragShaderModule;
-    //fragShaderStageInfo.pName = "main";
-
-    //// See more for tessellation: https://docs.vulkan.org/spec/latest/chapters/tessellation.html
-
-    //// It may be worthwhile to create a new pipeline specifically for the grass itself, since it used compute and tessellation but other geometry does not.
-
-    //// Tessellation Shader set up. Tessellation consists of 3 pipeline stages:
-    //// 1. tessellation control shader (transforms control points of a patch and produces per-patch data).
-    //// 2. fixed-function tessellator (generates multiple primitives corresponding to a tessellation of the patch in parameter space).
-    //// 3. tessellation evaluation shader (transforms the vertices of a tessellated patch).
-    //
-    //// Tessellator is enabled when the pipeline contains both a control and evaluation shader.
-
-    ////// Tessellation shader modules.
-    ////auto tessellationControlShaderCode = readFile("../shaders/basicShader.tesc.spv");
-    ////auto tessellationEvaluationShaderCode = readFile("../shaders/basicShader.tese.spv");
-    ////VkShaderModule tessellationControlShaderModule = createShaderModule(tessellationControlShaderCode);
-    ////VkShaderModule tessellationEvaluationShaderModule = createShaderModule(tessellationEvaluationShaderCode);     
-
-    //// Configure how the tessellation control shader stage executes within the pipeline.
-    ////VkPipelineShaderStageCreateInfo tessellationControlShaderStageInfo = {}; 
-    ////tessellationControlShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    ////tessellationControlShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-    ////tessellationControlShaderStageInfo.module = tessellationControlShaderModule;
-    ////tessellationControlShaderStageInfo.pName = "main";
-
-    //// Configure how the tessellation evaluation shader stage executes within the pipeline.
-    ////VkPipelineShaderStageCreateInfo tessellationEvaluationShaderStageInfo = {};
-    ////tessellationEvaluationShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    ////tessellationEvaluationShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-    ////tessellationEvaluationShaderStageInfo.module = tessellationEvaluationShaderModule;
-    ////tessellationEvaluationShaderStageInfo.pName = "main";
-
-    //// Configure how the tessellation process performs its subdivisions.
-    ////VkPipelineTessellationStateCreateInfo tessellationStateInfo = {};
-    ////tessellationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-    ////tessellationStateInfo.pNext = nullptr;
-    ////tessellationStateInfo.flags = 0; // Must be 0, this is reserved by Vulkan for future use.
-    ////tessellationStateInfo.patchControlPoints = 3; // I would imagine this matches the layout(vertices = 3) out; in the control shader.
-
-    //// Link all configured shader stages into one variable, so the pipeline can connect to all of them.
-    //VkPipelineShaderStageCreateInfo shaderStages[] = { 
-    //    vertShaderStageInfo, 
-    //    /*tessellationControlShaderStageInfo, 
-    //    tessellationEvaluationShaderStageInfo, */
-    //    fragShaderStageInfo
-    //};
-
-    //VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
-
-    //// Configure how vertex data is structured and passed from a vertex buffer into a graphics pipeline stage.
-    //VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-    //vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    //vertexInputInfo.vertexBindingDescriptionCount = 1;
-    //vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    //vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(Vertex::getAttributeDescriptions().size()); 
-    //vertexInputInfo.pVertexAttributeDescriptions = Vertex::getAttributeDescriptions().data();
-
-    //// Specify how the vertices that are provided by the vertex shader are then assembled into primitives for rendering.
-    //VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-    //inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    //inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    //inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-    //// Specify the structures that may change at runtime.
-    //std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    //VkPipelineDynamicStateCreateInfo dynamicState = {};
-    //dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    //dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-    //dynamicState.pDynamicStates = dynamicStates.data();
-
-    //// Configures the viewports and scissors to determine the regions of the framebuffer to render to.
-    //VkPipelineViewportStateCreateInfo viewportState{};
-    //viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    //viewportState.viewportCount = 1;
-    //viewportState.scissorCount = 1;
-
-    //// Configures settings for how primitives are transformed into fragments/pixels.
-    //VkPipelineRasterizationStateCreateInfo rasterizer = {};
-    //rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    //rasterizer.depthClampEnable = VK_FALSE;
-    //rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    //rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    //rasterizer.lineWidth = 1.0f;
-    //rasterizer.cullMode = VK_CULL_MODE_NONE; // VK_CULL_MODE_BACK_BIT
-    //rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    //rasterizer.depthBiasEnable = VK_FALSE;
-
-    //// Configure settings for how multisampling performs, reducing aliasing and jagged edges in the rendered image.
-    //VkPipelineMultisampleStateCreateInfo multisampling = {};
-    //multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    //multisampling.sampleShadingEnable = VK_FALSE; 
-    //multisampling.rasterizationSamples = msaaSamples;
-    //multisampling.minSampleShading = 0; // Min fraction for sample shading where closer to 1 is smooth. // 0.2f
-
-    //// Configure depth and stencil testing where depth refers to whether a fragment should be discarded and stencil refers to complex masking.
-    //VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-    //depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    //depthStencil.depthTestEnable = VK_TRUE;
-    //depthStencil.depthWriteEnable = VK_TRUE;
-    //depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-    //depthStencil.depthBoundsTestEnable = VK_FALSE;
-    //depthStencil.stencilTestEnable = VK_FALSE;
-
-    //// Enables blending settings for colour attachments, allowing transparency and masking effects.
-    //VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-    //colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    //colorBlendAttachment.blendEnable = VK_FALSE;
-
-    //// Configure how blending is applied for individual attachments and logic-based colour operations.
-    //VkPipelineColorBlendStateCreateInfo colorBlending = {};
-    //colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    //colorBlending.logicOpEnable = VK_FALSE;
-    //colorBlending.attachmentCount = 1;
-    //colorBlending.pAttachments = &colorBlendAttachment;
-
-    //// Configure how Vulkan understands to bind resources to shaders, ensuring they can efficiently access required resources.
-    //// Note that if you have more descriptor set layouts (currently only using uniform buffer objects) you would need to reference that here.
-    //VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    //pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    //pipelineLayoutInfo.setLayoutCount = 1;
-    //pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-
-    //// Create the layout/blueprint for how the graphics pipeline will be created.
-    //if (vkCreatePipelineLayout(m_LogicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-    //    throw std::runtime_error("failed to create pipeline layout!");
-    //    return VK_ERROR_INITIALIZATION_FAILED;
-    //}
-
-    //// Encapsulate all aspects of the pipeline layout, enabling a pipeline creation optimised for specific rendering tasks (in this case, regular graphics).
-    //VkGraphicsPipelineCreateInfo pipelineInfo{};
-    //pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    //pipelineInfo.stageCount = sizeof(shaderStages) / sizeof(shaderStages[0]); // Get the size of shader stages array.
-    //pipelineInfo.pStages = shaderStages;
-    //pipelineInfo.pVertexInputState = &vertexInputInfo;
-    //pipelineInfo.pInputAssemblyState = &inputAssembly;
-    //pipelineInfo.pViewportState = &viewportState;
-    //pipelineInfo.pRasterizationState = &rasterizer;
-    //pipelineInfo.pMultisampleState = &multisampling;
-    //pipelineInfo.pColorBlendState = &colorBlending;
-    //pipelineInfo.pDynamicState = &dynamicState;
-    ////pipelineInfo.pTessellationState = &tessellationStateInfo;
-    //pipelineInfo.layout = pipelineLayout;
-    //pipelineInfo.renderPass = renderPass;
-    //pipelineInfo.subpass = 0;
-    //pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-    //if (vkCreateGraphicsPipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
-    //    throw std::runtime_error("failed to create graphics pipeline!");
-    //    return VK_ERROR_INITIALIZATION_FAILED;
-    //}
-
-    //// The pipeline retains a reference to previously created shader modules, so we no longer need local references.
-
-    ///*vkDestroyShaderModule(m_LogicalDevice, tessellationEvaluationShaderModule, nullptr);
-    //vkDestroyShaderModule(m_LogicalDevice, tessellationControlShaderModule, nullptr);*/
-    //vkDestroyShaderModule(m_LogicalDevice, fragShaderModule, nullptr);
-    //vkDestroyShaderModule(m_LogicalDevice, vertShaderModule, nullptr);
-
-    return VK_SUCCESS;
-}
-
-VkResult VulkanApplication::createComputePipeline() 
-{
-    auto computeShaderCode = readFile("../shaders/basicCompute.comp.spv");
-
-    VkShaderModule computeShaderModule = createShaderModule(computeShaderCode);
-
-    VkPipelineShaderStageCreateInfo computeShaderStageInfo{};
-    computeShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    computeShaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    computeShaderStageInfo.module = computeShaderModule;
-    computeShaderStageInfo.pName = "main";
-
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &computeDescriptorSetLayout;
-
-    if (vkCreatePipelineLayout(m_LogicalDevice, &pipelineLayoutInfo, nullptr, &computePipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute pipeline layout!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-    VkComputePipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    pipelineInfo.layout = computePipelineLayout;
-    pipelineInfo.stage = computeShaderStageInfo;
-
-    if (vkCreateComputePipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &computePipeline) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute pipeline!");
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-    vkDestroyShaderModule(m_LogicalDevice, computeShaderModule, nullptr);
-
-    return VK_SUCCESS;
-}
-
+ 
 VkResult VulkanApplication::createMeshPipeline()
 {
     // Read SPIR-V files.
@@ -1078,27 +825,45 @@ VkResult VulkanApplication::createGrassPipeline()
     // Read SPIR-V files.
     auto grassVertexShaderCode = readFile("../shaders/grass.vert.spv");
     auto fragmentShaderCode = readFile("../shaders/basicShader.frag.spv");
+    auto tessellationControlShaderCode = readFile("../shaders/grassTessControl.tesc.spv"); 
+    auto tessellationEvalShaderCode = readFile("../shaders/grassTessEval.tese.spv");
 
     // Load shader modules.
     VkShaderModule grassVertexShaderModule = createShaderModule(grassVertexShaderCode);
     VkShaderModule fragmentShaderModule = createShaderModule(fragmentShaderCode);
+    VkShaderModule tessControlShaderModule = createShaderModule(tessellationControlShaderCode);
+    VkShaderModule tessEvalShaderModule = createShaderModule(tessellationEvalShaderCode);
 
-    // Configure how the vertex shader will execute within the pipeline.
+    // Configure how the vertex shader will execute within the pipeline...
     VkPipelineShaderStageCreateInfo grassVertexShaderStageInfo = {};
     grassVertexShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     grassVertexShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
     grassVertexShaderStageInfo.module = grassVertexShaderModule;
     grassVertexShaderStageInfo.pName = "main";
 
-    // Configure the same for the fragment shader.
+    // Configure the same for the fragment shader...
     VkPipelineShaderStageCreateInfo fragmentShaderStageInfo = {};
     fragmentShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragmentShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     fragmentShaderStageInfo.module = fragmentShaderModule;
     fragmentShaderStageInfo.pName = "main";
 
-    // Connect all shader stages for this pipeline.
-    VkPipelineShaderStageCreateInfo shaderStages[] = { grassVertexShaderStageInfo, fragmentShaderStageInfo };
+    // And so on for the tessellation control shader...
+    VkPipelineShaderStageCreateInfo tessControlShaderStageInfo = {};
+    tessControlShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    tessControlShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    tessControlShaderStageInfo.module = tessControlShaderModule;
+    tessControlShaderStageInfo.pName = "main";
+
+    // And once more for the tessellation evaluation shader...
+    VkPipelineShaderStageCreateInfo tessEvalShaderStageInfo = {};
+    tessEvalShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    tessEvalShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    tessEvalShaderStageInfo.module = tessEvalShaderModule;
+    tessEvalShaderStageInfo.pName = "main";
+
+    // Connect all shader stages for this pipeline, in order of execution (ie., vertex first, then control...).
+    VkPipelineShaderStageCreateInfo shaderStages[] = { grassVertexShaderStageInfo, tessControlShaderStageInfo, tessEvalShaderStageInfo, fragmentShaderStageInfo }; 
 
     // Configure how vertex data is structured and passed from a vertex buffer into a pipeline stage.
      
@@ -1119,8 +884,15 @@ VkResult VulkanApplication::createGrassPipeline()
     // Specify how the vertices that are provided by the vertex shader are then assembled into primitives for rendering.
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO; 
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST; // WARNING :: PROBABLY NOT HTIS 
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;                              // WARNING HERE.
     inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+    // Configure how the tessellation connects to the pipeline, most importantly defining the patch control points.
+    VkPipelineTessellationStateCreateInfo tessellationState = {};
+    tessellationState.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+    tessellationState.pNext = nullptr;
+    tessellationState.flags = 0;                // Reserved by Vulkan for future use, this must be 0.
+    tessellationState.patchControlPoints = 1;   // The number of control points per-patch, as defined in the control shader.
 
     // Specify the structures that may change at runtime.
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -1185,6 +957,7 @@ VkResult VulkanApplication::createGrassPipeline()
     grassPipelineCreateInfo.pStages = shaderStages;
     grassPipelineCreateInfo.pVertexInputState = &vertexInputInfo;
     grassPipelineCreateInfo.pInputAssemblyState = &inputAssembly;
+    grassPipelineCreateInfo.pTessellationState = &tessellationState;
     grassPipelineCreateInfo.pViewportState = &viewportState;
     grassPipelineCreateInfo.pRasterizationState = &rasterizer;
     grassPipelineCreateInfo.pMultisampleState = &multisampling;
@@ -1201,6 +974,8 @@ VkResult VulkanApplication::createGrassPipeline()
     }
 
     // The pipeline retains a reference to previously created shader modules, so we no longer need local references.
+    vkDestroyShaderModule(m_LogicalDevice, tessEvalShaderModule, nullptr);
+    vkDestroyShaderModule(m_LogicalDevice, tessControlShaderModule, nullptr);
     vkDestroyShaderModule(m_LogicalDevice, fragmentShaderModule, nullptr);
     vkDestroyShaderModule(m_LogicalDevice, grassVertexShaderModule, nullptr);
 
