@@ -29,12 +29,12 @@ void main() {
     // Invocation ID of 0 controls tessellation levels for the entire patch, and this shader is ran once per-patch for each control point in the patch (patch_size).
     //if (gl_InvocationID == 0) {
         
-        gl_TessLevelOuter[0] = 1.0f;
-        gl_TessLevelOuter[1] = 1.0f;
+        gl_TessLevelOuter[0] = 3.0f;
+        gl_TessLevelOuter[1] = 3.0f;
         //gl_TessLevelOuter[2] = 2.0f;
         //gl_TessLevelOuter[3] = 2.0f;
 
-        gl_TessLevelInner[0] = 1.0f;
+        gl_TessLevelInner[0] = 3.0f;
         //gl_TessLevelInner[1] = 1.0f;
     //}
 
