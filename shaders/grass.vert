@@ -23,6 +23,7 @@ layout(std140, binding = 1) buffer BladeInstanceDataBuffer {
 };
 
 layout(location = 0) out vec4 outColor; 
+layout(location = 1) out int outInstanceIndex;
 
 void main() {   
 
@@ -40,7 +41,8 @@ void main() {
     gl_Position = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0f);
 
     // Set the point size for a visual on-screen.
-    gl_PointSize = 2.0;
+    gl_PointSize = 3.0;
 
-    outColor = vec4(0.0f, 1.0f, 0.0f, 1.0f); 
+    outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f); 
+    outInstanceIndex = gl_InstanceIndex;
 }

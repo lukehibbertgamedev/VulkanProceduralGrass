@@ -17,18 +17,18 @@ layout(location = 0) out vec4 outColor;
 
 void main() 
 {    
-    //outColor = inColor[0] * gl_TessCoord.x + inColor[1] * gl_TessCoord.y + inColor[2] * gl_TessCoord.z + inColor[3] * (1.0 - gl_TessCoord.x - gl_TessCoord.y - gl_TessCoord.z);
-
     outColor = inColor[0];
 
-    // 
+    // the location within the tessellated abstract patch for this particular vertex. 
+    // every input parameter other than this one will be identical for all TES invocations within a patch.
     float v = gl_TessCoord.x;
 
+    // modify a part of the isoline (i think this is the righthand side of the tessellated isoline) to be above the world position point (p0).
     vec4 pos = gl_in[0].gl_Position;
-    //pos.x += (u + 0.5) * 0.2;
     pos.y += (v * 0.2f) - v * 0.5f;
 
     gl_Position = pos;
 
-    // Ran once per-generated vertex.
+    // Output color
+    outColor = inColor[0]; // Pass through color from TCS
 }

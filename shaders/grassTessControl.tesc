@@ -11,6 +11,18 @@
 #define PATCH_SIZE 1
 layout(vertices = PATCH_SIZE) out; 
 
+struct BladeInstanceData {
+    
+    vec4 p0_and_width;
+    vec4 p1_and_height;
+    vec4 p2_and_direction;
+    vec4 upVec_and_stiffness;             
+};
+
+layout(std140, binding = 1) buffer BladeInstanceDataBuffer {
+    BladeInstanceData blades[]; 
+};
+
 // Built-in:
 // - int gl_PatchVerticesIn: number of vertices per-patch.
 // - int gl_PrimitiveID: the index of the current patch.
@@ -18,25 +30,36 @@ layout(vertices = PATCH_SIZE) out;
 // Control shader also takes in all built-in variables output by the vertex shader.
 
 layout(location = 0) in vec4 inColor[];
+layout(location = 1) in int inInstanceIndex[];
 
 layout(location = 0) out vec4 outColor[]; // The length of this array will always be the size of the output patch.
 
 void main() {
 
-    // Set control points and pass data to the next stage
-    gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+    int instanceIndex = inInstanceIndex[gl_InvocationID];
+    BladeInstanceData blade = blades[instanceIndex];
 
-    // Invocation ID of 0 controls tessellation levels for the entire patch, and this shader is ran once per-patch for each control point in the patch (patch_size).
-    //if (gl_InvocationID == 0) {
-        
-        gl_TessLevelOuter[0] = 3.0f;
-        gl_TessLevelOuter[1] = 3.0f;
-        //gl_TessLevelOuter[2] = 2.0f;
-        //gl_TessLevelOuter[3] = 2.0f;
+    // Set control points using the instance data
+    //gl_out[gl_InvocationID].gl_Position = vec4(blade.p0_and_width.xyz, 1.0f); // Control point 0
+    //gl_out[gl_InvocationID].gl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f); // Control point 0
+    //gl_out[gl_InvocationID].gl_Position = vec4(blade.p1_and_height.xyz, 1.0f); // Control point 1
+    //gl_out[gl_InvocationID].gl_Position = vec4(blade.p2_and_direction.xyz, 1.0f); // Control point 2
 
-        gl_TessLevelInner[0] = 3.0f;
-        //gl_TessLevelInner[1] = 1.0f;
-    //}
+    if (gl_InvocationID == 0) {
+        gl_out[gl_InvocationID].gl_Position = vec4(0.0, 0.0, 0.0, 1.0); // Example control point
+    } else if (gl_InvocationID == 1) {
+        gl_out[gl_InvocationID].gl_Position = vec4(1.0, 0.0, 0.0, 1.0); // Example control point
+    } else if (gl_InvocationID == 2) {
+        gl_out[gl_InvocationID].gl_Position = vec4(0.0, 1.0, 0.0, 1.0); // Example control point
+    }
+
+    // Set tessellation levels if necessary
+    if (gl_InvocationID == 0) {
+        gl_TessLevelInner[0] = 1.0f; // Set inner tessellation level
+        gl_TessLevelOuter[0] = 1.0f; // Set outer level for edge 0
+        gl_TessLevelOuter[1] = 1.0f; // Set outer level for edge 1
+        gl_TessLevelOuter[2] = 1.0f; // Set outer level for edge 2
+    }
 
     // This passes the control points within the patch (the generated vertices) to the evaluation shader.
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;

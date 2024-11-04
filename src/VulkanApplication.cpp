@@ -874,6 +874,9 @@ VkResult VulkanApplication::createGrassPipeline()
     // for you to read, if you don't read this then you're stupid.
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    //VkVertexInputAttributeDescription attributes = Vertex::getAttributeDescriptions();
+    //VkVertexInputBindingDescription bindingDesc = Vertex::getBindingDescription();
+
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexBindingDescriptionCount = 0; 
@@ -892,7 +895,7 @@ VkResult VulkanApplication::createGrassPipeline()
     tessellationState.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
     tessellationState.pNext = nullptr;
     tessellationState.flags = 0;                // Reserved by Vulkan for future use, this must be 0.
-    tessellationState.patchControlPoints = 1;   // The number of control points per-patch, as defined in the control shader.
+    tessellationState.patchControlPoints = 1;   // The number of control points per-patch, as defined in the control shader. This will represent the control points for a quadratic bezier curve.
 
     // Specify the structures that may change at runtime.
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -1760,7 +1763,7 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     layoutBindings[1].binding = 1;
     layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // Warning: This may need to be dynamic SSBO down the line.
     layoutBindings[1].descriptorCount = 1;
-    layoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT; // For use within the vertex and tessellation control shader.
     layoutBindings[1].pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
