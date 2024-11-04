@@ -25,7 +25,11 @@
 // Ground plane bounds definitions
 #define MEADOW_SCALE_X 2
 #define MEADOW_SCALE_Y 1
-#define MEADOW_SCALE_Z 2
+#define MEADOW_SCALE_Z 3
+
+#define PLANE_SCALE_X MEADOW_SCALE_X // X is right.
+#define PLANE_SCALE_Y MEADOW_SCALE_Z // Y is forward.
+#define PLANE_SCALE_Z MEADOW_SCALE_Y // Z is up.
 
 static constexpr bool kEnableValidationLayers = true;
 const std::vector<const char*> kValidationLayers = {

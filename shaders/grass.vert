@@ -40,7 +40,7 @@ void main() {
     gl_Position = ubo.proj * ubo.view * vec4(blade.worldPosition, 1.0f);
     //gl_Position = vec4(0.f, 0.f, 0.f, 1.0f);
     // Set the point size for a visual on-screen.
-    gl_PointSize = 5.0;
+    gl_PointSize = 2.0;
 
-    outColor = vec4(0.0f, 1.0f, 0.0f, 1.0f); 
+    outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f); 
 }

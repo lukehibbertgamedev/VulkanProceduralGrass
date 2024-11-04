@@ -254,7 +254,7 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     glm::vec3 worldUpVector = glm::vec3(0.0f, 0.0f, 1.0f); // Z is the natural UP vector.
     glm::mat4 view = glm::lookAtRH(cameraPosition, lookTowardsPoint, worldUpVector); 
 
-    glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+    glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
     proj[1][1] *= -1; // Invert the y-axis due to differing coordinate systems.
 
     // Calculate correct rotation matrix for the plane to be flat ground.
@@ -1246,11 +1246,16 @@ VkResult VulkanApplication::createShaderStorageBuffers()
 {
     VkDeviceSize bufferSize = sizeof(BladeInstanceData) * MAX_BLADES;
 
+    // Usage bits: 
+    // - vertex buffer to be used within the vertex shader
+    // - storage buffer to be defined and processed as an ssbo
+    // - transfer dst to be allowed to receive data from a staging buffer
+
     VkResult ret = createBuffer(
         bufferSize, 
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, // warning
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // warning
-        /*VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,*/
+        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // warning
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         bladeInstanceDataBuffer,
         bladeInstanceDataBufferMemory
     );
@@ -1260,8 +1265,18 @@ VkResult VulkanApplication::createShaderStorageBuffers()
         return ret;
     }
 
+    // Convert the instance buffer to a pointer to be accessed easier.
+    //void* data;
+    //vkMapMemory(m_LogicalDevice, bladeInstanceDataBufferMemory, 0, bufferSize, 0, &data);
+    
+    // Copy the instance data from the local instance buffer into the staging buffer.
+    //memcpy(data, localBladeInstanceBuffer.data(), (size_t)bufferSize);
+    
+    // Releases the mapped memory so the GPU can safely access the written data.
+    //vkUnmapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory);  
+
     // if u get a map memory validation error from here, you can remove this i think.
-    vkMapMemory(m_LogicalDevice, bladeInstanceDataBufferMemory, 0, bufferSize, 0, &bladeInstanceDataBufferMapped);
+    //vkMapMemory(m_LogicalDevice, bladeInstanceDataBufferMemory, 0, bufferSize, 0, &bladeInstanceDataBufferMapped);
 
     return ret;
 }
@@ -1523,9 +1538,9 @@ void VulkanApplication::createMeshObjects()
 {
     // Construct a plane mesh, for the ground.
     MeshInstance _groundPlane = quadMesh.generateQuad(glm::vec3(0.0f, 0.0f, 0.0f));
-    _groundPlane.position = glm::vec3(0.0f, -0.5f, 0.0f);
+    _groundPlane.position = glm::vec3(0.0f, 0.5f, 0.0f); // X is right. Y is forward. Z is up.
     _groundPlane.rotation = glm::vec3(0.0f, 90.0f, 0.0f);
-    _groundPlane.scale = glm::vec3(MEADOW_SCALE_X, MEADOW_SCALE_Y, MEADOW_SCALE_Z); 
+    _groundPlane.scale = glm::vec3(PLANE_SCALE_Z, PLANE_SCALE_Y, PLANE_SCALE_X); // Z = X, Y = Z, X = Y. 
     groundPlane = _groundPlane;
 
     driverData.vertexCount += quadMesh.vertexCount;
@@ -1544,8 +1559,8 @@ void VulkanApplication::populateBladeInstanceBuffer()
     // Calculate the bounds of the flat plane (Y is not needed yet as there is no terrain height).
     // [0, 0, 0] is the origin of the plane, the bounds extend half the scale in each direction.
     // Warning: This does not take into account the position of the ground plane.
-    glm::vec2 planeBoundsX = glm::vec2(-(MEADOW_SCALE_X / 2), MEADOW_SCALE_X / 2);
-    glm::vec2 planeBoundsZ = glm::vec2(-(MEADOW_SCALE_Z / 2), MEADOW_SCALE_Z / 2);
+    glm::vec2 planeBoundsX = glm::vec2(-(MEADOW_SCALE_X * 0.5f) + groundPlane.position.x, (MEADOW_SCALE_X * 0.5f) + groundPlane.position.x);
+    glm::vec2 planeBoundsZ = glm::vec2(-(MEADOW_SCALE_Z * 0.5f) + groundPlane.position.y, (MEADOW_SCALE_Z * 0.5f) + groundPlane.position.y);    
     
     // Do this outside the loop to avoid continuously creating struct instances, just change the data inside it.
     BladeInstanceData bladeInstanceData = {};
@@ -1553,9 +1568,14 @@ void VulkanApplication::populateBladeInstanceBuffer()
     for (size_t i = 0; i < MAX_BLADES; ++i) {
 
         // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
-        glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX * 10.0f, glm::vec2(1.0f, 1.0f), planeBoundsZ * 10.0f, false);
+        glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
 
         // Populate this instance of blade data.
+        //bladeInstanceData.worldPosition = glm::vec3(
+        //    Utils::getRandomFloat(-MEADOW_SCALE_X * 0.5f, MEADOW_SCALE_X * 0.5f), 
+        //    Utils::getRandomFloat(-MEADOW_SCALE_Z * 0.5f, MEADOW_SCALE_Z),
+        //    0.0f
+        //);
         bladeInstanceData.worldPosition = randomPositionOnPlaneBounds; 
         bladeInstanceData.width = GRASS_WIDTH;
         bladeInstanceData.height = GRASS_HEIGHT;
@@ -1566,6 +1586,8 @@ void VulkanApplication::populateBladeInstanceBuffer()
         // Add this blade to the instance buffer.
         localBladeInstanceBuffer.push_back(bladeInstanceData);
     }
+
+    driverData.vertexCount += localBladeInstanceBuffer.size();
 }
 
 void VulkanApplication::createBladeInstanceStagingBuffer()
@@ -1575,30 +1597,30 @@ void VulkanApplication::createBladeInstanceStagingBuffer()
     // Calculate the required size for the staging buffer.
     VkDeviceSize bladeInstanceBufferRequiredSize = sizeof(BladeInstanceData) * MAX_BLADES;
 
-    // Create the staging buffer used as a source to send/transfer buffer data. Note: writes from the CPU are visible to the GPU without explicit flushing.
+    // Create the staging buffer used as a source to send/transfer buffer data. 
+    // Usage bit: Used as a source buffer to send data from this buffer to the GPU.
+    // Memory properties: 
+    // - Host visible: Allows mapping and writing data to the buffer directly from the CPU.
+    // - Host coherent: Removes the need for manually flushing mapped memory so that the GPU sees the changes. Less error-prone.
     VkResult ret = createBuffer(
         bladeInstanceBufferRequiredSize, 
-        /*VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,*/
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,                                               
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,     
         bladeInstanceStagingBuffer,  
         bladeInstanceStagingBufferMemory 
     );
 
-    // Copy data from the staging buffer (host) to the shader storage buffer (GPU)
+    // To upload data to the GPU, you first need to map and copy the CPU local data to a staging buffer,
+    // then make sure to copy the staging buffer data over to the shader resource buffer using a single time command.
+
+    // Map the memory and copy the data from the local vector into the staging buffer.
+    void* data;
+    vkMapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory, 0, bladeInstanceBufferRequiredSize, 0, &data);
+    memcpy(data, localBladeInstanceBuffer.data(), (size_t)bladeInstanceBufferRequiredSize);
+    vkUnmapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory);
+
+    // Copy data from the staging buffer (host) to the shader storage buffer (GPU).
     copyBuffer(bladeInstanceStagingBuffer, bladeInstanceDataBuffer, bladeInstanceBufferRequiredSize);
-
-    // Convert the staging buffer to a pointer to be accessed easier.
-    //void* data;
-    //vkMapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory, 0, bladeInstanceBufferRequiredSize, 0, &data);
-    //
-    //// Copy the instance data from the local instance buffer into the staging buffer.
-    //memcpy(data, localBladeInstanceBuffer.data(), (size_t)bladeInstanceBufferRequiredSize);
-    //
-    //// Releases the mapped memory so the GPU can safely access the written data.
-    //vkUnmapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory); 
-
 }
 
 void VulkanApplication::prepareImGuiDrawData()
