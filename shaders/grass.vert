@@ -30,6 +30,12 @@ void main() {
     // gl_InstanceIndex provides the index of the current instance being processed.
     BladeInstanceData blade = blades[gl_InstanceIndex];
 
+    // Note: The up vector for a grass blade can be calculated from the normalised vector pointing from p0 to p1.
+
+    // Note: The vector along the width can be calculated by combining the angle of direction with its up vector.
+    // vec3 tmp = [sin(direction), sin(direction) + cos(direction), cos(direction)] / ||[sin(direction), sin(direction) + cos(direction), cos(direction)]||
+    // vec3 widthV = (up cross tmp) / ||(up cross tmp)||
+
     // Transform world position to clip space.
     gl_Position = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0f);
 
