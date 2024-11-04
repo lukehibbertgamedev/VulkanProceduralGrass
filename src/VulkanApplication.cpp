@@ -1571,11 +1571,6 @@ void VulkanApplication::populateBladeInstanceBuffer()
         glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
 
         // Populate this instance of blade data.
-        //bladeInstanceData.worldPosition = glm::vec3(
-        //    Utils::getRandomFloat(-MEADOW_SCALE_X * 0.5f, MEADOW_SCALE_X * 0.5f), 
-        //    Utils::getRandomFloat(-MEADOW_SCALE_Z * 0.5f, MEADOW_SCALE_Z),
-        //    0.0f
-        //);
         bladeInstanceData.worldPosition = randomPositionOnPlaneBounds; 
         bladeInstanceData.width = GRASS_WIDTH;
         bladeInstanceData.height = GRASS_HEIGHT;

@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <random>
+#include <chrono>
 
 #include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
 
@@ -16,11 +17,6 @@ namespace Utils {
 		return distribution(generator);
 	}
 
-	// Returns a vector3 containing 3 random floats in the range [-1, 1].
-	static glm::vec3 getRandomVec3() {
-		return glm::vec3(getRandomFloat(-1.0f, 1.0f), getRandomFloat(-1.0f, 1.0f), getRandomFloat(-1.0f, 1.0f));
-	}
-
 	// Returns a vector3 containing 3 random floats within the range +/-xBounds, +/-yBounds, +/-zBounds.
 	// By default, this function will negate the x component of vec2 parameters for you. Set negate to false if you wish to pass in your own negative bounds.
 	static glm::vec3 getRandomVec3(glm::vec2 xBounds, glm::vec2 yBounds, glm::vec2 zBounds, bool negate = true) {
@@ -28,7 +24,7 @@ namespace Utils {
 			return glm::vec3(getRandomFloat(-xBounds.x, xBounds.y), getRandomFloat(-yBounds.x, yBounds.y), getRandomFloat(-zBounds.x, zBounds.y));
 		}
 		else {
-			return glm::vec3(getRandomFloat(xBounds.x, xBounds.y), getRandomFloat(yBounds.x, yBounds.y), getRandomFloat(zBounds.x, zBounds.y));
+			return glm::vec3(getRandomFloat(xBounds.x, xBounds.y), getRandomFloat(yBounds.x, yBounds.y), getRandomFloat(zBounds.x , zBounds.y));
 		}
 	}
 }
