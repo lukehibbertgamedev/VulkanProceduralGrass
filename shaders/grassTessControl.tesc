@@ -38,13 +38,7 @@ void main() {
 
     int instanceIndex = inInstanceIndex[gl_InvocationID];
     BladeInstanceData blade = blades[instanceIndex];
-
-    // Set control points using the instance data
-    //gl_out[gl_InvocationID].gl_Position = vec4(blade.p0_and_width.xyz, 1.0f); // Control point 0
-    //gl_out[gl_InvocationID].gl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f); // Control point 0
-    //gl_out[gl_InvocationID].gl_Position = vec4(blade.p1_and_height.xyz, 1.0f); // Control point 1
-    //gl_out[gl_InvocationID].gl_Position = vec4(blade.p2_and_direction.xyz, 1.0f); // Control point 2
-
+    
     if (gl_InvocationID == 0) {
         gl_out[gl_InvocationID].gl_Position = vec4(0.0, 0.0, 0.0, 1.0); // Example control point
     } else if (gl_InvocationID == 1) {
