@@ -42,5 +42,5 @@ void main() {
     // Set the point size for a visual on-screen.
     gl_PointSize = 2.0;
 
-    outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f); 
+    outColor = vec4(0.0f, 1.0f, 0.0f, 1.0f); 
 }

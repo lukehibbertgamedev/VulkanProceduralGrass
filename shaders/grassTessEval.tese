@@ -21,12 +21,12 @@ void main()
 
     outColor = inColor[0];
 
-    float u = gl_TessCoord.x;
-    float v = gl_TessCoord.y;
+    //float u = gl_TessCoord.x;
+    float v = gl_TessCoord.x;
 
     vec4 pos = gl_in[0].gl_Position;
-    pos.x += (u - 0.5) * 0.2;
-    pos.y += (v - 0.5) * 0.2;
+    //pos.x += (u + 0.5) * 0.2;
+    pos.y += v * 0.2;
 
     gl_Position = pos;
 
