@@ -27,6 +27,7 @@ layout(location = 1) in vec4 inColor;
 
 layout(location = 0) out vec4 outColor; 
 layout(location = 1) out int outInstanceIndex;
+layout(location = 2) out vec4 outPosition;
 
 void main() {   
 
@@ -45,7 +46,7 @@ void main() {
 
     // Set the point size for a visual on-screen.
     gl_PointSize = 5.0;
-
     outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f); 
     outInstanceIndex = gl_InstanceIndex;
-}
+    outPosition = gl_Position;
+} 

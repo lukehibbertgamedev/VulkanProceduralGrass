@@ -12,6 +12,7 @@ layout(triangles, equal_spacing, ccw) in;
 // Will later require view and projection matrix here to convert the new vertices to clip space.
 
 layout(location = 0) in vec4 inColor[];
+layout(location = 1) in vec4 inPosition[];
 
 layout(location = 0) out vec4 outColor;
 
@@ -24,29 +25,19 @@ void main()
 
     // the location within the tessellated abstract patch for this particular vertex. 
     // every input parameter other than this one will be identical for all TES invocations within a patch.
-    //float u = gl_TessCoord.x;
-    //float v = gl_TessCoord.y;
-
-    // modify a part of the isoline (i think this is the righthand side of the tessellated isoline) to be above the world position point (p0).
-    //vec4 pos = gl_in[0].gl_Position;
-    //pos.y += (u * 0.2f) - u * 0.5f;
-
-    //gl_Position = pos;
-
-    //gl_out[gl_InvocationID].gl_PointSize = 5.0f;
-
-    // Barycentric coordinates
+    
+    // Interpolate the position using barycentric coordinates
     vec3 baryCoord = gl_TessCoord;
+    
+    vec4 p0 = inPosition[0];
+    vec4 p1 = inPosition[1];
+    vec4 p2 = inPosition[2];
 
-    // Interpolate the positions
-    vec4 p0 = gl_in[0].gl_Position;
-    vec4 p1 = gl_in[1].gl_Position;
-    vec4 p2 = gl_in[2].gl_Position;
+    // Calculate the final position based on the control points
     gl_Position = p0 * baryCoord.x + p1 * baryCoord.y + p2 * baryCoord.z;
+    //gl_Position = p2;
+    //gl_Position = vec4(0,0,0,1);
 
-    // Optionally set the point size (requires TessellationPointSize capability)
-    //gl_PointSize = 5.0;
-
-    // Output color
+    // Output color (you can modify this based on your requirements)
     outColor = inColor[0]; // Pass through color from TCS
 }

@@ -265,7 +265,7 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
 
     // Calculate the model, view, and projection matrix used by the vertex shader.
     CameraUniformBufferObject ubo = {};
-    ubo.model = glm::translate(glm::mat4(1.0f), groundPlane.position) *  rotationMatrix * glm::scale(glm::mat4(1.0f), groundPlane.scale);
+    ubo.model = glm::translate(glm::mat4(1.0f), groundPlane.position) * rotationMatrix * glm::scale(glm::mat4(1.0f), groundPlane.scale);    
     ubo.view = view;
     ubo.proj = proj;
 
@@ -754,7 +754,7 @@ VkResult VulkanApplication::createMeshPipeline()
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_NONE; // VK_CULL_MODE_BACK_BIT
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -1353,8 +1353,11 @@ void VulkanApplication::populateBladeInstanceBuffer()
     for (size_t i = 0; i < MAX_BLADES; ++i) {
 
         // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
-        glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
-          
+        //glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
+        
+        glm::vec3 randomPositionOnPlaneBounds = glm::vec3(1.0f, 1.0f, 0.0f);
+
+
         // Create an instance of a grass blade, and define its' natural world position.
         Blade bladeInstance = Blade();
         bladeInstance.p0AndWidth = glm::vec4(randomPositionOnPlaneBounds, GRASS_WIDTH);
@@ -1373,7 +1376,7 @@ void VulkanApplication::populateBladeInstanceBuffer()
         MeshInstance baseBladeGeometry = quadMesh.generateQuad(glm::vec3(0.0f));
         baseBladeGeometry.position = glm::vec3(bladeInstance.p0AndWidth.x, bladeInstance.p0AndWidth.y, bladeInstance.p0AndWidth.z); 
         //baseBladeGeometry.rotation = glm::vec3(0.0f, bladeInstance.p2AndDirection.w, 0.0f); // Rotate by direction around the Y-axis.
-        baseBladeGeometry.scale = glm::vec3(1.0f, bladeInstance.p1AndHeight.w, 1.0f); // Scale by the height of the blade.
+        baseBladeGeometry.scale = glm::vec3(0.2f, 0.2f, 0.2f); // Scale by the height of the blade.
     }
 
     driverData.vertexCount += quadMesh.vertexCount * localBladeInstanceBuffer.size();
@@ -1551,10 +1554,8 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     //VkDeviceSize offsets[] = { 0 };
     //vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer, offsets);
 
-
-
     auto start = std::chrono::high_resolution_clock::now();
-    //vkCmdDraw(commandBuffer, 1, MAX_BLADES, 0, 0);
+    //vkCmdDraw(commandBuffer, 3, MAX_BLADES, 0, 0);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     driverData.grassDrawCallTime = duration.count() * 1000000; // Convert from seconds to microseconds.

@@ -251,6 +251,10 @@ public:
 	VkDescriptorSet bladeInstanceSSBODescriptorSet; // Rename to not include ssbo if this has ubo too
 
 	MeshInstance groundPlane;
+	MeshInstance quad;
+
+	// Define a VkBuffer for the baseBladeQuadShape.
+	// Use that for binding this vertex buffer instead of the one that you currently are.
 
 	VkDescriptorSetLayout modelDescriptorSetLayout; // Contains UBO for models (ie plane)
 	VkDescriptorSetLayout grassDescriptorSetLayout; // Contains SSBO for grass buffer
