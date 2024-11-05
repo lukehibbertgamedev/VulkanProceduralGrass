@@ -54,6 +54,8 @@ public:
 	VkQueueFlags queueFlags;
 
 	int vertexCount = 0;
+
+	float grassDrawCallTime = 0.0f;
 };
 
 struct CameraUniformBufferObject {

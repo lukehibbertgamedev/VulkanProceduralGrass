@@ -7,7 +7,7 @@
 
 // Define the input patch as triangles, with equal distances between vertices within the patch, and with a winding order of counter-clockwise.
 // Note that the winding order is important for face culling.
-layout(isolines, equal_spacing, ccw) in;
+layout(triangles, equal_spacing, ccw) in;
 
 // Will later require view and projection matrix here to convert the new vertices to clip space.
 
@@ -17,17 +17,35 @@ layout(location = 0) out vec4 outColor;
 
 void main() 
 {    
-    outColor = inColor[0];
+    // The abstract patch space spans its dimensions within the range [0, 1]. 
+    // Each intermediate point is represented by a fractional coordinate (u, v) 
+    // that corresponds to its location within the patch. The tessellation 
+    // evaluation shader will then be run on every generated intermediate point.
 
     // the location within the tessellated abstract patch for this particular vertex. 
     // every input parameter other than this one will be identical for all TES invocations within a patch.
-    float v = gl_TessCoord.x;
+    //float u = gl_TessCoord.x;
+    //float v = gl_TessCoord.y;
 
     // modify a part of the isoline (i think this is the righthand side of the tessellated isoline) to be above the world position point (p0).
-    vec4 pos = gl_in[0].gl_Position;
-    pos.y += (v * 0.2f) - v * 0.5f;
+    //vec4 pos = gl_in[0].gl_Position;
+    //pos.y += (u * 0.2f) - u * 0.5f;
 
-    gl_Position = pos;
+    //gl_Position = pos;
+
+    //gl_out[gl_InvocationID].gl_PointSize = 5.0f;
+
+    // Barycentric coordinates
+    vec3 baryCoord = gl_TessCoord;
+
+    // Interpolate the positions
+    vec4 p0 = gl_in[0].gl_Position;
+    vec4 p1 = gl_in[1].gl_Position;
+    vec4 p2 = gl_in[2].gl_Position;
+    gl_Position = p0 * baryCoord.x + p1 * baryCoord.y + p2 * baryCoord.z;
+
+    // Optionally set the point size (requires TessellationPointSize capability)
+    //gl_PointSize = 5.0;
 
     // Output color
     outColor = inColor[0]; // Pass through color from TCS

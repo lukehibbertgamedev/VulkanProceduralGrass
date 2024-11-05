@@ -8,7 +8,7 @@
 // Tessellation will be proportional to the distance from the camera.
 
 // Patches as a triangle representation to be sent to the evaluation shader with tessellation information from this control shader. 
-#define PATCH_SIZE 1
+#define PATCH_SIZE 3
 layout(vertices = PATCH_SIZE) out; 
 
 struct BladeInstanceData {
@@ -40,23 +40,34 @@ void main() {
     BladeInstanceData blade = blades[instanceIndex];
     
     if (gl_InvocationID == 0) {
-        gl_out[gl_InvocationID].gl_Position = vec4(0.0, 0.0, 0.0, 1.0); // Example control point
+        //gl_out[gl_InvocationID].gl_Position = vec4(0.0, 0.0, 0.0, 1.0); // Example control point
     } else if (gl_InvocationID == 1) {
-        gl_out[gl_InvocationID].gl_Position = vec4(1.0, 0.0, 0.0, 1.0); // Example control point
+        //gl_out[gl_InvocationID].gl_Position = vec4(1.0, 0.0, 0.0, 1.0); // Example control point
     } else if (gl_InvocationID == 2) {
-        gl_out[gl_InvocationID].gl_Position = vec4(0.0, 1.0, 0.0, 1.0); // Example control point
+        //gl_out[gl_InvocationID].gl_Position = vec4(0.0, 1.0, 0.0, 1.0); // Example control point
     }
 
     // Set tessellation levels if necessary
     if (gl_InvocationID == 0) {
-        gl_TessLevelInner[0] = 1.0f; // Set inner tessellation level
-        gl_TessLevelOuter[0] = 1.0f; // Set outer level for edge 0
-        gl_TessLevelOuter[1] = 1.0f; // Set outer level for edge 1
-        gl_TessLevelOuter[2] = 1.0f; // Set outer level for edge 2
+
+        gl_TessLevelInner[0] = 3.0f;
+        //gl_TessLevelInner[1] = 3.0f;
+
+        gl_TessLevelOuter[0] = 3.0f;
+        gl_TessLevelOuter[1] = 3.0f;
+        gl_TessLevelOuter[2] = 3.0f;
+        //gl_TessLevelOuter[3] = 1.0f;
+
+
+        //gl_TessLevelInner[0] = 1.0f; // Set inner tessellation level
+        //gl_TessLevelOuter[0] = 1.0f; // Set outer level for edge 0
+        //gl_TessLevelOuter[1] = 1.0f; // Set outer level for edge 1
+        //gl_TessLevelOuter[2] = 1.0f; // Set outer level for edge 2
     }
 
     // This passes the control points within the patch (the generated vertices) to the evaluation shader.
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+    //gl_out[gl_InvocationID].gl_PointSize = 5.0f;
 
     outColor[gl_InvocationID] = inColor[gl_InvocationID];
 }

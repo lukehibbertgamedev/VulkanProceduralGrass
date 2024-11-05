@@ -22,6 +22,9 @@ layout(std140, binding = 1) buffer BladeInstanceDataBuffer {
     BladeInstanceData blades[]; 
 };
 
+layout(location = 0) in vec3 inPosition; // For the quad mesh data.
+layout(location = 1) in vec4 inColor;
+
 layout(location = 0) out vec4 outColor; 
 layout(location = 1) out int outInstanceIndex;
 
@@ -41,7 +44,7 @@ void main() {
     gl_Position = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0f);
 
     // Set the point size for a visual on-screen.
-    gl_PointSize = 3.0;
+    gl_PointSize = 5.0;
 
     outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f); 
     outInstanceIndex = gl_InstanceIndex;

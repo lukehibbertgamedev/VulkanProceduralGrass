@@ -440,6 +440,7 @@ VkResult VulkanApplication::createLogicalDevice()
     VkPhysicalDeviceFeatures deviceFeatures = {};
     //deviceFeatures.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
     deviceFeatures.tessellationShader = VK_TRUE; // Enable Vulkan to be able to link and execute tessellation shaders.
+    deviceFeatures.shaderTessellationAndGeometryPointSize = VK_TRUE; // Enable Vulkan to allow the use of gl_PointSize within tessellation shaders.
     deviceFeatures.fillModeNonSolid = VK_TRUE; // Enable Vulkan to use VK_POLYGON_MODE_POINT or LINE.
 
     //deviceFeatures.samplerAnisotropy = VK_TRUE;
@@ -874,15 +875,15 @@ VkResult VulkanApplication::createGrassPipeline()
     // for you to read, if you don't read this then you're stupid.
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    //VkVertexInputAttributeDescription attributes = Vertex::getAttributeDescriptions();
-    //VkVertexInputBindingDescription bindingDesc = Vertex::getBindingDescription();
+    std::array<VkVertexInputAttributeDescription, 2> attributes = Vertex::getAttributeDescriptions();
+    VkVertexInputBindingDescription bindingDesc = Vertex::getBindingDescription();
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 0; 
-    vertexInputInfo.pVertexBindingDescriptions = nullptr; 
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
-    vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+    vertexInputInfo.vertexBindingDescriptionCount = 1; 
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDesc; 
+    vertexInputInfo.vertexAttributeDescriptionCount = 2;
+    vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
     
     // Specify how the vertices that are provided by the vertex shader are then assembled into primitives for rendering.
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
@@ -915,7 +916,7 @@ VkResult VulkanApplication::createGrassPipeline()
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_POINT; // WARNING :: Points for grass !!!
+    rasterizer.polygonMode = VK_POLYGON_MODE_LINE; // WARNING :: Points for grass !!!
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_NONE; 
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -1327,8 +1328,7 @@ void VulkanApplication::createMeshObjects()
     _groundPlane.rotation = glm::vec3(0.0f, 90.0f, 0.0f);
     _groundPlane.scale = glm::vec3(PLANE_SCALE_Z, PLANE_SCALE_Y, PLANE_SCALE_X); // Z = X, Y = Z, X = Y. 
     groundPlane = _groundPlane;
-
-    driverData.vertexCount += quadMesh.vertexCount;
+    driverData.vertexCount += quadMesh.vertexCount;    
 }
 
 void VulkanApplication::populateBladeInstanceBuffer()
@@ -1354,7 +1354,7 @@ void VulkanApplication::populateBladeInstanceBuffer()
 
         // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
         glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
-
+          
         // Create an instance of a grass blade, and define its' natural world position.
         Blade bladeInstance = Blade();
         bladeInstance.p0AndWidth = glm::vec4(randomPositionOnPlaneBounds, GRASS_WIDTH);
@@ -1368,9 +1368,17 @@ void VulkanApplication::populateBladeInstanceBuffer()
 
         // Add this blade to the instance buffer.
         localBladeInstanceBuffer.push_back(bladeInstanceData);
+
+        // Create a base mesh instance for a grass blade, to later be tessellated and aligned to its' bezier curve.
+        MeshInstance baseBladeGeometry = quadMesh.generateQuad(glm::vec3(0.0f));
+        baseBladeGeometry.position = glm::vec3(bladeInstance.p0AndWidth.x, bladeInstance.p0AndWidth.y, bladeInstance.p0AndWidth.z); 
+        //baseBladeGeometry.rotation = glm::vec3(0.0f, bladeInstance.p2AndDirection.w, 0.0f); // Rotate by direction around the Y-axis.
+        baseBladeGeometry.scale = glm::vec3(1.0f, bladeInstance.p1AndHeight.w, 1.0f); // Scale by the height of the blade.
     }
 
-    driverData.vertexCount += localBladeInstanceBuffer.size();
+    driverData.vertexCount += quadMesh.vertexCount * localBladeInstanceBuffer.size();
+
+    //driverData.vertexCount += localBladeInstanceBuffer.size();
 }
 
 void VulkanApplication::createBladeInstanceStagingBuffer()
@@ -1422,6 +1430,8 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::Text("Delta time: %f", deltaTime);
 
     ImGui::Text("Frame number: %i", frameCount);
+
+    ImGui::Text("Grass pipeline draw call time: %fus", driverData.grassDrawCallTime);
 
     ImGui::End();
 }
@@ -1530,12 +1540,24 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipeline);
 
-    VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer, offsets);
+    VkBuffer quadVertexBuffersGRASS[] = { quadVertexBuffer };
+    VkDeviceSize quadOffsetsGRASS[] = { 0 };
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffersGRASS, quadOffsetsGRASS);
+    vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &bladeInstanceSSBODescriptorSet, 0, nullptr);
+    vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, MAX_BLADES, 0, 0, 0);
 
-    vkCmdDraw(commandBuffer, 1, MAX_BLADES, 0, 0);
+    //VkDeviceSize offsets[] = { 0 };
+    //vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer, offsets);
+
+
+
+    auto start = std::chrono::high_resolution_clock::now();
+    //vkCmdDraw(commandBuffer, 1, MAX_BLADES, 0, 0);
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    driverData.grassDrawCallTime = duration.count() * 1000000; // Convert from seconds to microseconds.
 
     //
     // End grass pipeline.
@@ -2047,6 +2069,7 @@ bool VulkanApplication::checkPhysicalDeviceSuitability(VkPhysicalDevice device)
 
     return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU 
         && deviceFeatures.tessellationShader
+        && deviceFeatures.shaderTessellationAndGeometryPointSize
         && indices.isComplete()
         && checkPhysicalDeviceExtensionSupport(device)
         && isSwapchainAdequate;
