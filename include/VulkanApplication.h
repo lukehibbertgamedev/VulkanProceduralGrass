@@ -190,8 +190,6 @@ public:
 
 	// Render passes and pipelines.
 	VkRenderPass renderPass = VK_NULL_HANDLE;							// Defines how rendering operations are performed and how framebuffers are used during rendering.
-	//VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;					// A description of how the graphics pipeline will be configured.
-	//VkPipeline graphicsPipeline = VK_NULL_HANDLE;						// Describes the entire state of the graphics rendering process (input assembly, rasterization, blending states, including shaders, etc...)
 	VkPipelineLayout computePipelineLayout = VK_NULL_HANDLE;			// A description of how the compute pipeline will be configured, organises descriptor sets and push constants used to pass data to compute shaders.
 	VkPipeline computePipeline = VK_NULL_HANDLE;						// Describes the entire state of how compute shaders will be executed allowing for general-purpose computing on the GPU, independent of the graphics pipeline.
 
@@ -257,9 +255,6 @@ public:
 	VkDeviceMemory bladeShapeVertexBufferMemory = VK_NULL_HANDLE;		// The memory corresponding to the vertex buffer.
 	VkBuffer bladeShapeIndexBuffer = VK_NULL_HANDLE;					// The index buffer for this mesh.
 	VkDeviceMemory bladeShapeIndexBufferMemory = VK_NULL_HANDLE;		// The memory corresponding to the index buffer.
-
-	// Define a VkBuffer for the baseBladeQuadShape.
-	// Use that for binding this vertex buffer instead of the one that you currently are.
 
 	VkDescriptorSetLayout modelDescriptorSetLayout; // Contains UBO for models (ie plane)
 	VkDescriptorSetLayout grassDescriptorSetLayout; // Contains SSBO for grass buffer

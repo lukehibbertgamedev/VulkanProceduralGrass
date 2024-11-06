@@ -271,10 +271,10 @@ namespace bezier {
 	}
 }
 
-#define MAX_BLADES 1
+#define MAX_BLADES 10
 
-#define GRASS_WIDTH 0.2f
-#define GRASS_HEIGHT 1.5f
+#define GRASS_WIDTH 0.1f		// Will modify the shader values.
+#define GRASS_HEIGHT 0.75f		// Will modify the shader values.
 #define GRASS_LEAN 0.7f
 #define GRASS_STIFFNESS 0.5f
 #define GRASS_NO_ANGLE 0.0f

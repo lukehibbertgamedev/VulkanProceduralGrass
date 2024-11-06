@@ -918,7 +918,7 @@ VkResult VulkanApplication::createGrassPipeline()
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_LINE; // WARNING :: Points for grass !!!
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL; // Rasterisation mode: POINT / LINE / FILL for POINT MODE / WIREFRAME / STANDARD rendering.
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_NONE; 
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -1440,11 +1440,11 @@ void VulkanApplication::populateBladeInstanceBuffer()
         // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
         glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
 
-        glm::vec3 temporaryCentralPosition = glm::vec3(1.0f);
+        //glm::vec3 temporaryCentralPosition = glm::vec3(1.0f);
 
         // Create an instance of a grass blade, and define its' natural world position.
         Blade bladeInstance = Blade();
-        bladeInstance.p0AndWidth = glm::vec4(temporaryCentralPosition, GRASS_WIDTH);
+        bladeInstance.p0AndWidth = glm::vec4(randomPositionOnPlaneBounds, GRASS_WIDTH);
         bladeInstance.updatePackedVec4s();
 
         // Populate this instance of blade data.
