@@ -12,6 +12,16 @@ public:
 	uint32_t vertexCount = 0, indexCount = 0;
 };
 
+// Mesh represenation for the base shape of a grass blade before tessellation.
+class BaseBladeShape {
+public:
+	MeshInstance generateShape();
+
+	std::vector<Vertex> vertices;
+	std::vector<uint16_t> indices;
+	uint32_t vertexCount = 0, indexCount = 0;
+};
+
 // Mesh representation for a UV sphere.
 class Sphere {
 public:

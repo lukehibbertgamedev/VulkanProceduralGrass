@@ -1,4 +1,4 @@
-#version 450
+#version 460 core
 
 // The uniform buffer binding for the model, view, and projection matrices to be used by objects with a model.
 layout(binding = 0) uniform CameraUniformBufferObject {

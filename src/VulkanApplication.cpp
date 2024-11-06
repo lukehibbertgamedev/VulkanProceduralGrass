@@ -896,7 +896,7 @@ VkResult VulkanApplication::createGrassPipeline()
     tessellationState.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
     tessellationState.pNext = nullptr;
     tessellationState.flags = 0;                // Reserved by Vulkan for future use, this must be 0.
-    tessellationState.patchControlPoints = 1;   // The number of control points per-patch, as defined in the control shader. This will represent the control points for a quadratic bezier curve.
+    tessellationState.patchControlPoints = 4;   // The number of control points per-patch, as defined in the control shader. This will represent the control points for a quadratic bezier curve.
 
     // Specify the structures that may change at runtime.
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -1037,10 +1037,12 @@ VkResult VulkanApplication::createShaderStorageBuffers()
     // - storage buffer to be defined and processed as an ssbo
     // - transfer dst to be allowed to receive data from a staging buffer
 
+    // Memory property bits:
+    // - device local is the most efficient for device access
+
     VkResult ret = createBuffer(
         bufferSize, 
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, // warning
-        //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // warning
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         bladeInstanceDataBuffer,
         bladeInstanceDataBufferMemory
@@ -1051,19 +1053,6 @@ VkResult VulkanApplication::createShaderStorageBuffers()
         return ret;
     }
 
-    // Convert the instance buffer to a pointer to be accessed easier.
-    //void* data;
-    //vkMapMemory(m_LogicalDevice, bladeInstanceDataBufferMemory, 0, bufferSize, 0, &data);
-    
-    // Copy the instance data from the local instance buffer into the staging buffer.
-    //memcpy(data, localBladeInstanceBuffer.data(), (size_t)bufferSize);
-    
-    // Releases the mapped memory so the GPU can safely access the written data.
-    //vkUnmapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory);  
-
-    // if u get a map memory validation error from here, you can remove this i think.
-    //vkMapMemory(m_LogicalDevice, bladeInstanceDataBufferMemory, 0, bufferSize, 0, &bladeInstanceDataBufferMapped);
-
     return ret;
 }
 
@@ -1071,6 +1060,49 @@ VkResult VulkanApplication::createVertexBuffer()
 {
     // Define a return code for potentially dangerous function calls to ensure they ran correctly.
     VkResult ret = VK_ERROR_INITIALIZATION_FAILED; 
+
+    // for the grass blade base shape.
+    {
+        // Calculate the total size of the vertex buffers that we will need.
+        VkDeviceSize bufferSize = sizeof(Vertex) * bladeShapeMesh.vertexCount;
+
+        // Prepare staging buffer and its associated memory for holding the vertex data temporarily before it gets transferred to the GPU.
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+
+        // Create the staging buffer used as a source to send/transfer buffer data.
+        // Note: writes from the CPU are visible to the GPU without explicit flushing.
+        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Convert the staging buffer to a pointer to be accessed easier.
+        void* data;
+        vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+
+        // Copy the vertex data from the shape mesh into the staging buffer.
+        memcpy(data, bladeShapeMesh.vertices.data(), (size_t)bufferSize);
+
+        // Releases the mapped memory so the GPU can safely access the written data.
+        vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+
+        // Creates the vertex buffer on the GPU used as a destination to receive transfers from a source, and as a vertex buffer for drawing. 
+        // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
+        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, bladeShapeVertexBuffer, bladeShapeVertexBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Transfers the vertex data from the staging buffer to the vertex buffer.
+        copyBuffer(stagingBuffer, bladeShapeVertexBuffer, bufferSize);
+
+        // Clean up the staging buffer and its associated allocated memory.
+        vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
+    }
 
     // for the quad.
     {
@@ -1123,6 +1155,49 @@ VkResult VulkanApplication::createIndexBuffer()
     // Define a return code for potentially dangerous function calls to ensure they ran correctly.
     VkResult ret = VK_ERROR_INITIALIZATION_FAILED;
 
+    // for the grass blade base shape.
+    {
+        // Calculate the total size of the index buffers that we will need.
+        VkDeviceSize bufferSize = sizeof(uint16_t) * bladeShapeMesh.indexCount;
+
+        // Prepare staging buffer and its associated memory for holding the index data temporarily before it gets transferred to the GPU.
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+
+        // Create the staging buffer used as a source to send/transfer buffer data.
+        // Note: writes from the CPU are visible to the GPU without explicit flushing.
+        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Convert the staging buffer to a pointer to be accessed easier.
+        void* data;
+        vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+
+        // Copy the index data from the mesh into the staging buffer.
+        memcpy(data, bladeShapeMesh.indices.data(), (size_t)bufferSize);
+
+        // Releases the mapped memory so the GPU can safely access the written data.
+        vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+
+        // Creates the index buffer on the GPU used as a destination to receive transfers from a source, and as a index buffer for drawing. 
+        // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
+        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, bladeShapeIndexBuffer, bladeShapeIndexBufferMemory);
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation");
+            return ret;
+        }
+
+        // Transfers the vertex data from the staging buffer to the vertex buffer.
+        copyBuffer(stagingBuffer, bladeShapeIndexBuffer, bufferSize);
+
+        // Clean up the staging buffer and its associated allocated memory.
+        vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
+    }
+
     // for the quad.
     {
         // Calculate the total size of the index buffers that we will need.
@@ -1144,7 +1219,7 @@ VkResult VulkanApplication::createIndexBuffer()
         void* data; 
         vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data); 
 
-        // Copy the index data from the sphere mesh into the staging buffer.
+        // Copy the index data from the mesh into the staging buffer.
         memcpy(data, quadMesh.indices.data(), (size_t)bufferSize);
 
         // Releases the mapped memory so the GPU can safely access the written data.
@@ -1173,7 +1248,14 @@ VkResult VulkanApplication::createUniformBuffers()
 {
     VkDeviceSize bufferSize = sizeof(CameraUniformBufferObject);
 
-    VkResult ret = createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffer, uniformBufferMemory);
+    VkResult ret = createBuffer(
+        bufferSize, 
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+        uniformBuffer, 
+        uniformBufferMemory
+    );
+
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("bad buffer creation.");
         return ret;
@@ -1350,13 +1432,13 @@ void VulkanApplication::populateBladeInstanceBuffer()
     // Do this outside the loop to avoid continuously creating struct instances, just change the data inside it.
     BladeInstanceData bladeInstanceData = {};
 
+
     for (size_t i = 0; i < MAX_BLADES; ++i) {
 
         // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
         //glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
         
         glm::vec3 randomPositionOnPlaneBounds = glm::vec3(1.0f, 1.0f, 0.0f);
-
 
         // Create an instance of a grass blade, and define its' natural world position.
         Blade bladeInstance = Blade();
@@ -1373,10 +1455,9 @@ void VulkanApplication::populateBladeInstanceBuffer()
         localBladeInstanceBuffer.push_back(bladeInstanceData);
 
         // Create a base mesh instance for a grass blade, to later be tessellated and aligned to its' bezier curve.
-        MeshInstance baseBladeGeometry = quadMesh.generateQuad(glm::vec3(0.0f));
+        MeshInstance baseBladeGeometry = bladeShapeMesh.generateShape();
         baseBladeGeometry.position = glm::vec3(bladeInstance.p0AndWidth.x, bladeInstance.p0AndWidth.y, bladeInstance.p0AndWidth.z); 
-        //baseBladeGeometry.rotation = glm::vec3(0.0f, bladeInstance.p2AndDirection.w, 0.0f); // Rotate by direction around the Y-axis.
-        baseBladeGeometry.scale = glm::vec3(0.2f, 0.2f, 0.2f); // Scale by the height of the blade.
+        baseBladeGeometry.scale = glm::vec3(1.0f); 
     }
 
     driverData.vertexCount += quadMesh.vertexCount * localBladeInstanceBuffer.size();
@@ -1543,19 +1624,16 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipeline);
 
-    VkBuffer quadVertexBuffersGRASS[] = { quadVertexBuffer };
+    VkBuffer quadVertexBuffersGRASS[] = { bladeShapeVertexBuffer };
     VkDeviceSize quadOffsetsGRASS[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffersGRASS, quadOffsetsGRASS);
-    vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
+    //vkCmdBindIndexBuffer(commandBuffer, bladeShapeIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &bladeInstanceSSBODescriptorSet, 0, nullptr);
-    vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, MAX_BLADES, 0, 0, 0);
-
-    //VkDeviceSize offsets[] = { 0 };
-    //vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer, offsets);
 
     auto start = std::chrono::high_resolution_clock::now();
-    //vkCmdDraw(commandBuffer, 3, MAX_BLADES, 0, 0);
+    vkCmdDraw(commandBuffer, 4, MAX_BLADES, 0, 0);
+    //vkCmdDrawIndexed(commandBuffer, bladeShapeMesh.indexCount, MAX_BLADES, 0, 0, 0);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     driverData.grassDrawCallTime = duration.count() * 1000000; // Convert from seconds to microseconds.
@@ -1778,7 +1856,7 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     layoutBindings[0].binding = 0;
     layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; 
     layoutBindings[0].descriptorCount = 1;
-    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
     layoutBindings[0].pImmutableSamplers = nullptr;
     
     // Shader storage buffer objects.
@@ -1849,8 +1927,6 @@ VkResult VulkanApplication::createGrassDescriptorSets()
 
     VkDescriptorSetLayout grassLayout(grassDescriptorSetLayout);
 
-    //std::array<VkDescriptorSet, 2> grassDescriptorSets = { bladeInstanceSSBODescriptorSet, bladeInstanceCameraDataUBODescriptorSet };
-
     VkDescriptorSetAllocateInfo grassAllocInfo = {};
     grassAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     grassAllocInfo.descriptorPool = descriptorPool;
@@ -1858,9 +1934,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     grassAllocInfo.pSetLayouts = &grassLayout;
 
     // Allocate shader storage buffer descriptor set memory.
-
     VkResult ret = vkAllocateDescriptorSets(m_LogicalDevice, &grassAllocInfo, &bladeInstanceSSBODescriptorSet);
-
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");
         return ret;

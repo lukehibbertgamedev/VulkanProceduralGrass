@@ -1,4 +1,4 @@
-#version 450
+#version 460 core
 
 // Tessellation Evaluation Shader
 
@@ -7,9 +7,15 @@
 
 // Define the input patch as triangles, with equal distances between vertices within the patch, and with a winding order of counter-clockwise.
 // Note that the winding order is important for face culling.
-layout(triangles, equal_spacing, ccw) in;
+layout(quads, equal_spacing, ccw) in;
 
 // Will later require view and projection matrix here to convert the new vertices to clip space.
+
+layout(binding = 0) uniform CameraUniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+} ubo;
 
 layout(location = 0) in vec4 inColor[];
 layout(location = 1) in vec4 inPosition[];
@@ -18,26 +24,12 @@ layout(location = 0) out vec4 outColor;
 
 void main() 
 {    
-    // The abstract patch space spans its dimensions within the range [0, 1]. 
-    // Each intermediate point is represented by a fractional coordinate (u, v) 
-    // that corresponds to its location within the patch. The tessellation 
-    // evaluation shader will then be run on every generated intermediate point.
+    // gl_TessCoord - Barycentric coordinates : The location of a point corresponding to the tessellation patch.
+    float u = gl_TessCoord.x;
+    float v = gl_TessCoord.y;
 
-    // the location within the tessellated abstract patch for this particular vertex. 
-    // every input parameter other than this one will be identical for all TES invocations within a patch.
-    
-    // Interpolate the position using barycentric coordinates
-    vec3 baryCoord = gl_TessCoord;
-    
-    vec4 p0 = inPosition[0];
-    vec4 p1 = inPosition[1];
-    vec4 p2 = inPosition[2];
+    gl_Position = (gl_TessCoord.x * gl_in[0].gl_Position) + (gl_TessCoord.y * gl_in[1].gl_Position) + (gl_TessCoord.z * gl_in[2].gl_Position);
+    gl_Position = ubo.proj * ubo.view * gl_Position; // Matrix transformations go here if necessary.
 
-    // Calculate the final position based on the control points
-    gl_Position = p0 * baryCoord.x + p1 * baryCoord.y + p2 * baryCoord.z;
-    //gl_Position = p2;
-    //gl_Position = vec4(0,0,0,1);
-
-    // Output color (you can modify this based on your requirements)
-    outColor = inColor[0]; // Pass through color from TCS
+    outColor = inColor[0]; 
 }

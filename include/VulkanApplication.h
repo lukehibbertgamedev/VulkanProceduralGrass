@@ -213,11 +213,6 @@ public:
 	VkDescriptorSetLayout computeDescriptorSetLayout = VK_NULL_HANDLE;	// A description of how descriptor sets (ie., resources/buffers) are accessed specifically by compute shaders.
 	std::vector<VkDescriptorSet> computeDescriptorSets = {};			// A collection of resources/buffers/images that can be bound to compute shaders during compute operations.
 
-	VkBuffer quadVertexBuffer = VK_NULL_HANDLE;							// ... 
-	VkDeviceMemory quadVertexBufferMemory = VK_NULL_HANDLE;				// ... 
-	VkBuffer quadIndexBuffer = VK_NULL_HANDLE;							// ... 
-	VkDeviceMemory quadIndexBufferMemory = VK_NULL_HANDLE;				// ... 
-
 	// Multi-sampling.
 	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;			// ...
 
@@ -230,8 +225,6 @@ public:
 	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
 	int frameCount = 0;
 
-	Sphere sphereMesh;
-	Quad quadMesh;
 
 	// Uniform buffer objects (UBO).
 	VkBuffer uniformBuffer;
@@ -252,6 +245,18 @@ public:
 
 	MeshInstance groundPlane;
 	MeshInstance quad;
+
+	Quad quadMesh;														// One-time data structure containing vertex and index data for this mesh.
+	VkBuffer quadVertexBuffer = VK_NULL_HANDLE;							// The vertex buffer for this mesh.
+	VkDeviceMemory quadVertexBufferMemory = VK_NULL_HANDLE;				// The memory corresponding to the vertex buffer.
+	VkBuffer quadIndexBuffer = VK_NULL_HANDLE;							// The index buffer for this mesh.
+	VkDeviceMemory quadIndexBufferMemory = VK_NULL_HANDLE;				// The memory corresponding to the index buffer.
+
+	BaseBladeShape bladeShapeMesh;										// One-time data structure containing vertex and index data for this mesh.
+	VkBuffer bladeShapeVertexBuffer = VK_NULL_HANDLE;					// The vertex buffer for this mesh.
+	VkDeviceMemory bladeShapeVertexBufferMemory = VK_NULL_HANDLE;		// The memory corresponding to the vertex buffer.
+	VkBuffer bladeShapeIndexBuffer = VK_NULL_HANDLE;					// The index buffer for this mesh.
+	VkDeviceMemory bladeShapeIndexBufferMemory = VK_NULL_HANDLE;		// The memory corresponding to the index buffer.
 
 	// Define a VkBuffer for the baseBladeQuadShape.
 	// Use that for binding this vertex buffer instead of the one that you currently are.

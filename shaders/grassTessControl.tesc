@@ -1,4 +1,4 @@
-#version 450
+#version 460 core
 
 // Tessellation Control Shader
 
@@ -7,9 +7,8 @@
 // The number of segments represents the level of smoothness of the final blade.
 // Tessellation will be proportional to the distance from the camera.
 
-// Patches as a triangle representation to be sent to the evaluation shader with tessellation information from this control shader. 
-#define PATCH_SIZE 3
-layout(vertices = PATCH_SIZE) out; 
+// Patches as a quad representation to be sent to the evaluation shader with tessellation information from this control shader. 
+layout(vertices = 4) out; 
 
 struct BladeInstanceData {
     
@@ -19,12 +18,13 @@ struct BladeInstanceData {
     vec4 upVec_and_stiffness;             
 };
 
-// Built-in:
-// - int gl_PatchVerticesIn: number of vertices per-patch.
-// - int gl_PrimitiveID: the index of the current patch.
-// - int gl_InvocationID: the index of the control shader invocation, use this to index per-vertex.
-// Control shader also takes in all built-in variables output by the vertex shader.
+// Use the vertex shaders input of the instance index to get the same blade index.
+//BladeInstanceData blade = blades[inInstanceIndex[gl_InvocationID]];
+layout(std140, binding = 1) buffer BladeInstanceDataBuffer {
+    BladeInstanceData blades[]; 
+};
 
+// Inputs from the vertex shader, as arrays since this data will be controlled in patches.
 layout(location = 0) in vec4 inColor[];
 layout(location = 1) in int inInstanceIndex[];
 layout(location = 2) in vec4 inPosition[];
@@ -32,31 +32,31 @@ layout(location = 2) in vec4 inPosition[];
 layout(location = 0) out vec4 outColor[]; // The length of this array will always be the size of the output patch.
 layout(location = 1) out vec4 outPosition[];
 
-layout(std140, binding = 1) buffer BladeInstanceDataBuffer {
-    BladeInstanceData blades[]; 
-};
-
 void main() {
 
-    int instanceIndex = inInstanceIndex[gl_InvocationID];
-    BladeInstanceData blade = blades[instanceIndex];
+    // Controls how much tessellation to do, that's it. This will be more complex during dynamic tessellation.
 
-    // Assign control points based on BladeInstanceData
+    //              OL-3
+    //      .-------------------. 
+    //      |       IL-0        | 
+    //      |        ___        |
+    // OL-0 |  IL-1 |   | IL-1  | OL-2
+    //      |       '---'       |
+    //      |        IL-0       |
+    //      '-------------------'
+    //               OL-1
+
     if (gl_InvocationID == 0) {
-        gl_out[gl_InvocationID].gl_Position = blade.p0_and_width; // Base position
-    } else if (gl_InvocationID == 1) {
-        gl_out[gl_InvocationID].gl_Position = blade.p1_and_height; // Mid position
-    } else if (gl_InvocationID == 2) {
-        gl_out[gl_InvocationID].gl_Position = blade.p2_and_direction; // Tip position
+        gl_TessLevelOuter[0] = 1.0f; // Left edge.
+        gl_TessLevelOuter[1] = 1.0f; // Bottom edge.
+        gl_TessLevelOuter[2] = 1.0f; // Right edge.
+        gl_TessLevelOuter[3] = 1.0f; // Top edge.
+
+        gl_TessLevelInner[0] = 1.0f; // Top and bottom internal edges.
+        gl_TessLevelInner[1] = 1.0f; // Left and right internal edges.
     }
-
-    // Set tessellation levels if necessary
-        gl_TessLevelInner[0] = 2.0; // Adjust for inner tessellation
-
-        gl_TessLevelOuter[0] = 2.0; // Outer level for edge 0
-        gl_TessLevelOuter[1] = 2.0; // Outer level for edge 1
-        gl_TessLevelOuter[2] = 2.0; // Outer level for edge 2
-
-    outColor[gl_InvocationID] = inColor[gl_InvocationID]; // Pass color to the TES
-    outPosition[gl_InvocationID] = gl_out[gl_InvocationID].gl_Position;
+    
+    // Send the output values to the tessellation evaluation shader.
+    gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+    outColor[gl_InvocationID] = inColor[gl_InvocationID]; 
 }
