@@ -1436,9 +1436,9 @@ void VulkanApplication::populateBladeInstanceBuffer()
     for (size_t i = 0; i < MAX_BLADES; ++i) {
 
         // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
-        //glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
+        glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
         
-        glm::vec3 randomPositionOnPlaneBounds = glm::vec3(1.0f, 1.0f, 0.0f);
+        //glm::vec3 randomPositionOnPlaneBounds = glm::vec3(1.0f, 1.0f, 0.0f);
 
         // Create an instance of a grass blade, and define its' natural world position.
         Blade bladeInstance = Blade();
@@ -1460,7 +1460,7 @@ void VulkanApplication::populateBladeInstanceBuffer()
         baseBladeGeometry.scale = glm::vec3(1.0f); 
     }
 
-    driverData.vertexCount += quadMesh.vertexCount * localBladeInstanceBuffer.size();
+    driverData.vertexCount += bladeShapeMesh.vertexCount * localBladeInstanceBuffer.size();
 
     //driverData.vertexCount += localBladeInstanceBuffer.size();
 }
@@ -1610,7 +1610,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     VkBuffer quadVertexBuffers[] = { quadVertexBuffer };                                        
     VkDeviceSize quadOffsets[] = { 0 };                                                         
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffers, quadOffsets);                
-    vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);              
+    vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);    
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipelineLayout, 0, 1, &uniformBufferDescriptorSet, 0, nullptr);
     vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0); 
 
@@ -1624,16 +1624,13 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipeline);
 
-    VkBuffer quadVertexBuffersGRASS[] = { bladeShapeVertexBuffer };
     VkDeviceSize quadOffsetsGRASS[] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffersGRASS, quadOffsetsGRASS);
-    //vkCmdBindIndexBuffer(commandBuffer, bladeShapeIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer, quadOffsetsGRASS);
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &bladeInstanceSSBODescriptorSet, 0, nullptr);
 
     auto start = std::chrono::high_resolution_clock::now();
     vkCmdDraw(commandBuffer, 4, MAX_BLADES, 0, 0);
-    //vkCmdDrawIndexed(commandBuffer, bladeShapeMesh.indexCount, MAX_BLADES, 0, 0, 0);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     driverData.grassDrawCallTime = duration.count() * 1000000; // Convert from seconds to microseconds.

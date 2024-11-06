@@ -18,18 +18,42 @@ layout(binding = 0) uniform CameraUniformBufferObject {
 } ubo;
 
 layout(location = 0) in vec4 inColor[];
-layout(location = 1) in vec4 inPosition[];
+layout(location = 1) in vec4 inP0[];
+layout(location = 2) in vec4 inP1[];
+layout(location = 3) in vec4 inP2[];
+layout(location = 4) in vec4 inP3[];
+
+layout(location = 5) in vec4 inPosition[];
 
 layout(location = 0) out vec4 outColor;
 
 void main() 
 {    
+    // One call per generated UVW vertex.
+
+    gl_PointSize = 2.0f; // Necessary when point_mode is enabled.
+
     // gl_TessCoord - Barycentric coordinates : The location of a point corresponding to the tessellation patch.
     float u = gl_TessCoord.x;
     float v = gl_TessCoord.y;
 
-    gl_Position = (gl_TessCoord.x * gl_in[0].gl_Position) + (gl_TessCoord.y * gl_in[1].gl_Position) + (gl_TessCoord.z * gl_in[2].gl_Position);
-    gl_Position = ubo.proj * ubo.view * gl_Position; // Matrix transformations go here if necessary.
+    // For isolines
+    vec4 pos = gl_in[0].gl_Position;
+    //pos.y += (v * 0.2) - v * 0.5;
 
-    outColor = inColor[0]; 
+    // Isolines: U specifies parameter along the isoline. V specifies which isoline.
+    vec4 p0 = inPosition[0] + vec4(-0.5, -0.5, 0.0, 0.0); // Top left vertex.
+    vec4 p1 = inPosition[0] + vec4(0.5, -0.5, 0.0, 0.0); // Top right vertex.
+    vec4 p2 = inPosition[0] + vec4(0.5, 0.5, 0.0, 0.0); // Bottom left vertex.
+    vec4 p3 = inPosition[0] + vec4(-0.5, 0.5, 0.0, 0.0); // Bottom right vertex.
+
+    vec4 a = mix(p0, p1, u);
+    vec4 b = mix(p3, p2, u);
+    gl_Position = mix(a, b, v);
+    
+    //gl_Position = (gl_TessCoord.x * gl_in[0].gl_Position) +
+                  //(gl_TessCoord.y * gl_in[1].gl_Position) +
+                  //(//gl_TessCoord.z * gl_in[2].gl_Position);
+
+    outColor = gl_Position; 
 }

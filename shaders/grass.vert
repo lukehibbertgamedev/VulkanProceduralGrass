@@ -30,23 +30,32 @@ layout(location = 0) in vec3 inPosition; // For the quad mesh data.
 layout(location = 1) in vec4 inColor;
 
 layout(location = 0) out vec4 outColor; 
-layout(location = 1) out int outInstanceIndex;
-layout(location = 2) out vec4 outPosition;
+layout(location = 1) out vec4 outP0;
+layout(location = 2) out vec4 outP1;
+layout(location = 3) out vec4 outP2;
+layout(location = 4) out vec4 outP3;
+
+layout(location = 5) out vec4 outPosition;
 
 void main() {   
-
-    // Get access to the instance data using the instance index.
-    // gl_InstanceIndex provides the index of the current instance being processed when doing some form of instanced rendering.
-    BladeInstanceData blade = blades[gl_InstanceIndex];    
-
-    // Transform world position to clip space.
-    //gl_Position = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0f);
-    gl_Position = vec4(blade.p0_and_width.xyz, 1.0f);
 
     // Set the point size for a visual on-screen.
     gl_PointSize = 12.0;
 
-    // Send the output values to the tessellation control shader.
+    // Get access to the instance data using the instance index.
+    // gl_InstanceIndex provides the index of the current instance being processed when doing some form of instanced rendering.
+    BladeInstanceData blade = blades[gl_InstanceIndex];       
+    
+    // Transform world position to clip space.
+    gl_Position = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0f);
+
     outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f); 
-    outInstanceIndex = gl_InstanceIndex;
+
+    // Pass through control points.
+    outP0 = blade.p0_and_width;
+    outP1 = blade.p1_and_height;
+    outP2 = blade.p2_and_direction;
+    outP3 = blade.upVec_and_stiffness;
+
+    outPosition = gl_Position;
 } 
