@@ -271,10 +271,10 @@ namespace bezier {
 	}
 }
 
-#define MAX_BLADES 2
+#define MAX_BLADES 1
 
-#define GRASS_WIDTH 1.0f
-#define GRASS_HEIGHT 1.0f
+#define GRASS_WIDTH 0.2f
+#define GRASS_HEIGHT 1.5f
 #define GRASS_LEAN 0.7f
 #define GRASS_STIFFNESS 0.5f
 #define GRASS_NO_ANGLE 0.0f

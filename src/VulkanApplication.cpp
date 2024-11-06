@@ -754,7 +754,7 @@ VkResult VulkanApplication::createMeshPipeline()
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_NONE; // VK_CULL_MODE_BACK_BIT
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -896,7 +896,9 @@ VkResult VulkanApplication::createGrassPipeline()
     tessellationState.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
     tessellationState.pNext = nullptr;
     tessellationState.flags = 0;                // Reserved by Vulkan for future use, this must be 0.
-    tessellationState.patchControlPoints = 4;   // The number of control points per-patch, as defined in the control shader. This will represent the control points for a quadratic bezier curve.
+
+    // The number of per-patch vertices, the evaluation shader is working with quads, hence the value of 4.
+    tessellationState.patchControlPoints = 4;
 
     // Specify the structures that may change at runtime.
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -1250,7 +1252,7 @@ VkResult VulkanApplication::createUniformBuffers()
 
     VkResult ret = createBuffer(
         bufferSize, 
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
         uniformBuffer, 
         uniformBufferMemory
@@ -1437,12 +1439,12 @@ void VulkanApplication::populateBladeInstanceBuffer()
 
         // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
         glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
-        
-        //glm::vec3 randomPositionOnPlaneBounds = glm::vec3(1.0f, 1.0f, 0.0f);
+
+        glm::vec3 temporaryCentralPosition = glm::vec3(1.0f);
 
         // Create an instance of a grass blade, and define its' natural world position.
         Blade bladeInstance = Blade();
-        bladeInstance.p0AndWidth = glm::vec4(randomPositionOnPlaneBounds, GRASS_WIDTH);
+        bladeInstance.p0AndWidth = glm::vec4(temporaryCentralPosition, GRASS_WIDTH);
         bladeInstance.updatePackedVec4s();
 
         // Populate this instance of blade data.
@@ -1630,7 +1632,10 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &bladeInstanceSSBODescriptorSet, 0, nullptr);
 
     auto start = std::chrono::high_resolution_clock::now();
+
+    // The tessellation primitive generator expects to be generating quads, hence the value of 4.
     vkCmdDraw(commandBuffer, 4, MAX_BLADES, 0, 0);
+
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     driverData.grassDrawCallTime = duration.count() * 1000000; // Convert from seconds to microseconds.
@@ -1840,12 +1845,7 @@ VkResult VulkanApplication::createModelDescriptorSetLayout()
 
 VkResult VulkanApplication::createGrassDescriptorSetLayout()
 {
-    // Warning: This is setting the availability for this descriptor type to be used in all shaders that we currently have in use.
-    // Defines in which shaders the buffers can be used in.
-    VkShaderStageFlags usageStageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
     // This layout requires a UBO for the camera data to be used here too, so that the grass positions can be represented as points.
-
     std::array<VkDescriptorSetLayoutBinding, 2> layoutBindings = {};
 
     // Uniform buffer objects.
@@ -1853,7 +1853,7 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     layoutBindings[0].binding = 0;
     layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; 
     layoutBindings[0].descriptorCount = 1;
-    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     layoutBindings[0].pImmutableSamplers = nullptr;
     
     // Shader storage buffer objects.

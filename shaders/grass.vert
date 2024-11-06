@@ -30,12 +30,9 @@ layout(location = 0) in vec3 inPosition; // For the quad mesh data.
 layout(location = 1) in vec4 inColor;
 
 layout(location = 0) out vec4 outColor; 
-layout(location = 1) out vec4 outP0;
-layout(location = 2) out vec4 outP1;
-layout(location = 3) out vec4 outP2;
-layout(location = 4) out vec4 outP3;
-
-layout(location = 5) out vec4 outPosition;
+layout(location = 1) out vec4 outPosition;
+layout(location = 2) out float outBladeWidth;
+layout(location = 3) out float outBladeHeight;
 
 void main() {   
 
@@ -49,13 +46,8 @@ void main() {
     // Transform world position to clip space.
     gl_Position = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0f);
 
-    outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f); 
-
-    // Pass through control points.
-    outP0 = blade.p0_and_width;
-    outP1 = blade.p1_and_height;
-    outP2 = blade.p2_and_direction;
-    outP3 = blade.upVec_and_stiffness;
-
+    outColor = vec4(0.0f, 1.0f, 0.0f, 1.0f); 
     outPosition = gl_Position;
+    outBladeWidth = blade.p0_and_width.w;
+    outBladeHeight = blade.p1_and_height.w;
 } 

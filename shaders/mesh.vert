@@ -16,5 +16,7 @@ void main() {
     gl_PointSize = 7.0;
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
 
-    outColor = vec4(0.68f, 0.58f, 0.17f, 1.0f); // Colour of plane model.
+    const vec4 planeColour = vec4(0.239, 0.149, 0.035, 1.0);
+
+    outColor =  planeColour; // Colour of plane model.
 }
