@@ -49,6 +49,7 @@ void main()
     vec4 bottomRightWorldSpace = vec4(-inBladeWidth[0], 0.0, 0.0, 1.0);
 
     // Convert to clip space for each generated vertex: thanks Charlie.
+    // inPosition[0] = blade.p0_and_width.
     vec4 p0 = inPosition[0] + (ubo.proj * ubo.view * topLeftWorldSpace);          // Top left vertex.
     vec4 p1 = inPosition[0] + (ubo.proj * ubo.view * topRightWorldSpace);         // Top right vertex.
     vec4 p2 = inPosition[0] + (ubo.proj * ubo.view * bottomLeftWorldSpace);       // Bottom left vertex (the grass position is the centre bottom to the quad).

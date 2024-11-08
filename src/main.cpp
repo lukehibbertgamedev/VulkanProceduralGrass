@@ -178,6 +178,9 @@ int main() {
     ret = vkApp.createPipelines();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create model | grass pipeline.");
 
+    ret = vkApp.createDepthResources();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create depth resources.");
+
     ret = vkApp.createFrameBuffers();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create frame buffers.");
 

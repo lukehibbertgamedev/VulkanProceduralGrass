@@ -12,6 +12,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
 
 #include "Vertex.h"
@@ -96,6 +97,7 @@ public:
 	VkResult createSwapchainImageViews();
 	VkResult createRenderPass();
 	VkResult createDescriptorSetLayouts();		
+	VkResult createDepthResources();
 	VkResult createPipelines();
 	VkResult createFrameBuffers();
 	VkResult createCommandPool();
@@ -118,6 +120,9 @@ public:
 
 	// Creates a buffer, creates its memory requirements, and allocates and binds the buffer memory. Returns a VkResult.
 	VkResult createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+
+	// Creates an image ...
+	VkResult createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 
 	// Copy from srcBuffer to dstBuffer passing the size of srcBuffer so the command knows how much data to copy. Performs vkCmdCopyBuffer.
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
@@ -145,8 +150,11 @@ private:
 	VkResult createMeshPipeline(); // For regular rendering of meshes.
 	VkResult createGrassPipeline(); // Exclusively for grass rendering.
 
-	VkSampleCountFlagBits getMaxUsableMSAASampleCount();
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+	VkFormat findDepthFormat();
+	bool hasStencilComponent(VkFormat format);
+
+	VkSampleCountFlagBits getMaxUsableMSAASampleCount();
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
@@ -255,15 +263,19 @@ public:
 	VkBuffer bladeShapeIndexBuffer = VK_NULL_HANDLE;					// The index buffer for this mesh.
 	VkDeviceMemory bladeShapeIndexBufferMemory = VK_NULL_HANDLE;		// The memory corresponding to the index buffer.
 
-	VkDescriptorSetLayout modelDescriptorSetLayout; // Contains UBO for models (ie plane)
-	VkDescriptorSetLayout grassDescriptorSetLayout; // Contains SSBO for grass buffer
+	VkDescriptorSetLayout modelDescriptorSetLayout = VK_NULL_HANDLE; // Contains UBO for models (ie plane)
+	VkDescriptorSetLayout grassDescriptorSetLayout = VK_NULL_HANDLE; // Contains SSBO for grass buffer
 
-	VkPipelineLayout modelPipelineLayout;
-	VkPipelineLayout grassPipelineLayout;
+	VkPipelineLayout modelPipelineLayout = VK_NULL_HANDLE;
+	VkPipelineLayout grassPipelineLayout = VK_NULL_HANDLE;
 
-	VkPipeline modelPipeline; // Pipeline structure for a model/object render pass.
-	VkPipeline grassPipeline; // Pipeline structure for the grass render pass.
+	VkPipeline modelPipeline = VK_NULL_HANDLE; // Pipeline structure for a model/object render pass.
+	VkPipeline grassPipeline = VK_NULL_HANDLE; // Pipeline structure for the grass render pass.
 
 	Camera* camera;
+
+	VkImage depthImage = VK_NULL_HANDLE;
+	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
+	VkImageView depthImageView = VK_NULL_HANDLE;
 
 };
