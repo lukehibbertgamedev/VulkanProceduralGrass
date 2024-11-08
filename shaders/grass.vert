@@ -26,9 +26,6 @@ layout(std140, binding = 1) buffer BladeInstanceDataBuffer {
     BladeInstanceData blades[]; 
 };
 
-layout(location = 0) in vec3 inPosition; // For the quad mesh data.
-layout(location = 1) in vec4 inColor;
-
 layout(location = 0) out vec4 outColor; 
 layout(location = 1) out vec4 outPosition;
 layout(location = 2) out float outBladeWidth;

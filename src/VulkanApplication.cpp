@@ -875,29 +875,26 @@ VkResult VulkanApplication::createGrassPipeline()
     // for you to read, if you don't read this then you're stupid.
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    std::array<VkVertexInputAttributeDescription, 2> attributes = Vertex::getAttributeDescriptions();
-    VkVertexInputBindingDescription bindingDesc = Vertex::getBindingDescription();
-
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 1; 
-    vertexInputInfo.pVertexBindingDescriptions = &bindingDesc; 
-    vertexInputInfo.vertexAttributeDescriptionCount = 2;
-    vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
+    vertexInputInfo.vertexBindingDescriptionCount = 0; 
+    vertexInputInfo.pVertexBindingDescriptions = nullptr; 
+    vertexInputInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputInfo.pVertexAttributeDescriptions = nullptr;
     
     // Specify how the vertices that are provided by the vertex shader are then assembled into primitives for rendering.
+    // You want to specifically use a patch list here, so the tessellation primitive generator can generate patches of subdivided meshes.
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO; 
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;                              // WARNING HERE.
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;                             
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     // Configure how the tessellation connects to the pipeline, most importantly defining the patch control points.
+    // The most important is the number of patch control points (per-patch vertices), the evaluation shader is working with quads, hence the value of 4.
     VkPipelineTessellationStateCreateInfo tessellationState = {};
     tessellationState.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
     tessellationState.pNext = nullptr;
     tessellationState.flags = 0;                // Reserved by Vulkan for future use, this must be 0.
-
-    // The number of per-patch vertices, the evaluation shader is working with quads, hence the value of 4.
     tessellationState.patchControlPoints = 4;
 
     // Specify the structures that may change at runtime.
@@ -914,13 +911,14 @@ VkResult VulkanApplication::createGrassPipeline()
     viewportState.scissorCount = 1;
     
     // Configures settings for how primitives are transformed into fragments/pixels.
+    // Rasterisation mode: POINT / LINE / FILL for POINT MODE / WIREFRAME / STANDARD rendering.
     VkPipelineRasterizationStateCreateInfo rasterizer = {};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL; // Rasterisation mode: POINT / LINE / FILL for POINT MODE / WIREFRAME / STANDARD rendering.
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL; 
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_NONE; 
+    rasterizer.cullMode = VK_CULL_MODE_NONE;                    // This should be VK_CULL_MODE_BACK_BIT, but for testing purposes this is off. 
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
     
