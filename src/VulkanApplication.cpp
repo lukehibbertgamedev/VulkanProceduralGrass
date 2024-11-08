@@ -254,8 +254,8 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     glm::vec3 worldUpVector = glm::vec3(0.0f, 0.0f, 1.0f); // Z is the natural UP vector.
     glm::mat4 view = glm::lookAtRH(cameraPosition, lookTowardsPoint, worldUpVector); 
 
-    glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
-    proj[1][1] *= -1; // Invert the y-axis due to differing coordinate systems.
+    glm::mat4 projectionMatrix = glm::perspective(glm::radians(camera->getFOV()), swapChainExtent.width / (float)swapChainExtent.height, camera->nearPlane, camera->farPlane);
+    projectionMatrix[1][1] *= -1; // Invert the y-axis due to differing coordinate systems.
 
     // Calculate correct rotation matrix for the plane to be flat ground.
     glm::mat4 rotationMatrixX = glm::rotate(glm::mat4(1.0f), glm::radians(groundPlane.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -266,8 +266,8 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     // Calculate the model, view, and projection matrix used by the vertex shader.
     CameraUniformBufferObject ubo = {};
     ubo.model = glm::translate(glm::mat4(1.0f), groundPlane.position) * rotationMatrix * glm::scale(glm::mat4(1.0f), groundPlane.scale);    
-    ubo.view = view;
-    ubo.proj = proj;
+    ubo.view = camera->getViewMatrix();
+    ubo.proj = projectionMatrix;
 
     // Copy the contents of the ubo structure into a mapped memory location effectively updating the uniform buffer with the most recent data.
     void* data;
@@ -1351,6 +1351,17 @@ VkResult VulkanApplication::createSynchronizationObjects()
     return VK_SUCCESS;
 }
 
+VkResult VulkanApplication::createCamera(Camera* camera)
+{
+    VkResult ret = VK_SUCCESS;
+
+    camera->position = glm::vec3(0.0f, -3.0f, 1.5f);
+    camera->pitch = -30.0f;
+    camera->yaw = 0.0f;
+
+    return ret;
+}
+
 VkResult VulkanApplication::createImGuiImplementation()
 {
     VkDescriptorPoolSize pool_sizes[] = { 
@@ -1753,6 +1764,11 @@ void VulkanApplication::linkWindowToVulkan(GLFWwindow* window)
     if (this->window == nullptr) {
         throw std::runtime_error("bad window pointer.");
     }
+}
+
+void VulkanApplication::linkCameraToVulkan(Camera* camera)
+{
+    this->camera = camera;
 }
 
 uint32_t VulkanApplication::findGPUMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)

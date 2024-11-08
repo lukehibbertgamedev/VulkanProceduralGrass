@@ -7,28 +7,22 @@
 
 class Camera {
 public:
-	Camera(glm::vec3 position, glm::vec3 target, glm::vec3 up, float fov, float aspect, float nearPlane, float farPlane);
 
-	void initialise();
-	void processInput(int key, float elapsed);
+	glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
+	glm::vec3 position = { 0.0f, -3.0f, 1.5f };
 
-private:
-	glm::vec3 position;
-	glm::vec3 front;
-	glm::vec3 right;
-	glm::vec3 up;
-	glm::vec3 worldUp;
+	float pitch= -30.f;
+	float yaw = 0.f;
+	float fov = 45.0f; // Degrees.
+	float nearPlane = 0.1f;
+	float farPlane = 100.f;
 
-	float yaw = 0.0f;
-	float pitch = 0.0f;
+	glm::mat4 getViewMatrix();
+	glm::mat4 getRotationMatrix();
+	float getFOV();
 
-	float moveSpeed = 3.0f;
+	void processGlfwKeyEvent(int key, int action);
 
-	float fov;
-	float aspect;
-	float nearPlane;
-	float farPlane;
-
-	glm::mat4 viewMatrix;
-	glm::mat4 projectionMatrix;
+	void update();
+	void reset();
 };

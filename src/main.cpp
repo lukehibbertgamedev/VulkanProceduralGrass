@@ -7,6 +7,7 @@
 #include <glm/mat4x4.hpp>
 
 #include <VulkanApplication.h>
+#include <Camera.h>
 
 #include <iostream>
 #include <cstdio>
@@ -14,6 +15,8 @@
 #include <vector>
 #include <set>
 #include <chrono>
+
+static Camera globalCamera;
 
 // TODO: Move to its own header (callbacks.h).
 static void frameBufferResizeCallback(GLFWwindow* window, int width, int height) {
@@ -26,21 +29,19 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         switch (key) {
         default: break;
 
-        case GLFW_KEY_W:
+        case GLFW_KEY_W: globalCamera.velocity.z = -.01f; break;
+        case GLFW_KEY_S: globalCamera.velocity.z = .01f; break;
 
-            break;
+        case GLFW_KEY_A: globalCamera.velocity.x = -.01f; break;
+        case GLFW_KEY_D: globalCamera.velocity.x = .01f; break;
 
-        case GLFW_KEY_A:
+        case GLFW_KEY_E: globalCamera.velocity.y = -.01f; break;
+        case GLFW_KEY_Q: globalCamera.velocity.y = .01f; break;
 
-            break;
+        case GLFW_KEY_L: globalCamera.fov += 1.0f; break;
+        case GLFW_KEY_J: globalCamera.fov -= 1.0f; break;
 
-        case GLFW_KEY_S:
 
-            break;
-
-        case GLFW_KEY_D:
-
-            break;
         }
     }
 
@@ -48,21 +49,14 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         switch (key) {
         default: break;
 
-        case GLFW_KEY_W:
+        case GLFW_KEY_W: globalCamera.velocity.z = 0; break;
+        case GLFW_KEY_S: globalCamera.velocity.z = 0; break;
 
-            break;
+        case GLFW_KEY_A: globalCamera.velocity.x = 0; break;
+        case GLFW_KEY_D: globalCamera.velocity.x = 0; break;
 
-        case GLFW_KEY_A:
-
-            break;
-
-        case GLFW_KEY_S:
-
-            break;
-
-        case GLFW_KEY_D:
-
-            break;
+        case GLFW_KEY_E: globalCamera.velocity.y = 0; break;
+        case GLFW_KEY_Q: globalCamera.velocity.y = 0; break;
         }
     }
 }
@@ -135,7 +129,12 @@ int main() {
 
     vkApp.linkWindowToVulkan(window);
 
-    VkResult ret = vkApp.createInstance();
+    VkResult ret = vkApp.createCamera(&globalCamera); 
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create camera.");
+
+    vkApp.linkCameraToVulkan(&globalCamera);
+
+    ret = vkApp.createInstance();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create instance.");   
 
     ret = vkApp.createDebugMessenger();
@@ -209,7 +208,14 @@ int main() {
     // Main application loop:
     while (!glfwWindowShouldClose(window)) {
         
-        // Process any window events, calls any associated callbacks.
+        // TODO: Remove vkApp.time variables as timer should do this for you.
+        // We want to animate the particle system using the last frames time to get smooth, frame-rate independent animation
+        double currentTime = glfwGetTime();
+        vkApp.lastFrameTime = (currentTime - vkApp.lastTime) * 1000.0;
+        vkApp.lastTime = currentTime;
+        vkApp.deltaTime = timer.getDeltaTime();
+
+        // Process any window events, calls any associated callbacks (including camera.processKey).
         glfwPollEvents();
 
         // Create new ImGui frames via its backend and context.
@@ -220,18 +226,14 @@ int main() {
         // Prepare ImGui draw data, anything within the ImGui:: namspace this doesn't touch the GPU or graphics API at all.
         vkApp.prepareImGuiDrawData();
 
+        // Update camera data.
+        globalCamera.update();
+
         // Prepare the ImGui data for rendering so you can call GetDrawData().
         ImGui::Render();        
         
         // Record and execute commands through a compute and graphics pipeline.
         vkApp.render();
-
-        // TODO: Remove vkApp.time variables as timer should do this for you.
-        // We want to animate the particle system using the last frames time to get smooth, frame-rate independent animation
-        double currentTime = glfwGetTime();
-        vkApp.lastFrameTime = (currentTime - vkApp.lastTime) * 1000.0;
-        vkApp.lastTime = currentTime;
-        vkApp.deltaTime = timer.getDeltaTime();
     }
 
     // All operations in vkApp.render() are asynchronous, ensure all operations/commands have completed before termination.

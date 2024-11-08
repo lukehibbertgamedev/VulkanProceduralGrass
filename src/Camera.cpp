@@ -1,15 +1,43 @@
 #include "Camera.h"
+#include <GLFW/glfw3.h>
 
-Camera::Camera(glm::vec3 position, glm::vec3 target, glm::vec3 up, float fov, float aspect, float nearPlane, float farPlane)
-	: position(position), front(glm::normalize(target-position)), up(up), right(normalize(glm::cross(front, up))), fov(fov), aspect(aspect), nearPlane(nearPlane), farPlane(farPlane)
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
+
+glm::mat4 Camera::getViewMatrix()
 {
-	// update view update proj.
+	glm::mat4 cameraTranslation = glm::translate(glm::mat4(1.f), position);
+	glm::mat4 cameraRotation = getRotationMatrix();
+	return glm::inverse(cameraTranslation * cameraRotation);
 }
 
-void Camera::initialise()
+glm::mat4 Camera::getRotationMatrix()
 {
+	glm::quat pitchRotation = glm::angleAxis(pitch, glm::vec3{ 1.f, 0.f, 0.f });
+	glm::quat yawRotation = glm::angleAxis(yaw, glm::vec3{ 0.f, -1.f, 0.f });
+	return glm::toMat4(yawRotation) * glm::toMat4(pitchRotation);
 }
 
-void Camera::processInput(int key, float elapsed)
+float Camera::getFOV()
 {
+    return fov;
+}
+
+void Camera::processGlfwKeyEvent(int key, int action)
+{
+    
+}
+
+void Camera::update()
+{
+    glm::mat4 cameraRotation = getRotationMatrix();
+    position += glm::vec3(cameraRotation * glm::vec4(velocity * 0.5f, 0.f));
+}
+
+void Camera::reset()
+{
+    position = glm::vec3(0.0f);
+    velocity = glm::vec3(0.0f);
+    pitch = 0.0f;
+    yaw = 0.0f;
 }

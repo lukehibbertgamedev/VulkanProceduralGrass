@@ -40,8 +40,8 @@ void main()
     // pn = generated position from the GPU (below).
 
     // Position the generated vertices in a quad-like shape, raised by the blade height. 
-    vec4 p0 = inPosition[0] + vec4(-inBladeWidth[0], -inBladeHeight[0], -3.0, 1.0);      // Top left vertex.
-    vec4 p1 = inPosition[0] + vec4(inBladeWidth[0], -inBladeHeight[0], 3.0, 1.0);       // Top right vertex.
+    vec4 p0 = inPosition[0] + vec4(-inBladeWidth[0], -inBladeHeight[0], 0.0, 1.0);      // Top left vertex.
+    vec4 p1 = inPosition[0] + vec4(inBladeWidth[0], -inBladeHeight[0], 0.0, 1.0);       // Top right vertex.
     vec4 p2 = inPosition[0] + vec4(inBladeWidth[0], 0.0, 0.0, 1.0);                     // Bottom left vertex (the grass position is the centre bottom to the quad).
     vec4 p3 = inPosition[0] + vec4(-inBladeWidth[0], 0.0, 0.0, 1.0);                    // Bottom right vertex (the grass position is the centre bottom to the quad).
 

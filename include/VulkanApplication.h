@@ -21,6 +21,7 @@
 #include <optional>
 #include <vector>
 #include <string>
+#include <Camera.h>
 
 // Ground plane bounds definitions
 #define MEADOW_SCALE_X 2
@@ -110,6 +111,7 @@ public:
 	VkResult createDescriptorSets();
 	VkResult createCommandBuffer();
 	VkResult createSynchronizationObjects();
+	VkResult createCamera(Camera* camera);
 	VkResult createImGuiImplementation();
 
 	void createMeshObjects();
@@ -134,6 +136,7 @@ public:
 	VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
 
 	void linkWindowToVulkan(GLFWwindow* window);
+	void linkCameraToVulkan(Camera* camera);
 
 	void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 private:
@@ -264,5 +267,7 @@ public:
 
 	VkPipeline modelPipeline; // Pipeline structure for a model/object render pass.
 	VkPipeline grassPipeline; // Pipeline structure for the grass render pass.
+
+	Camera* camera;
 
 };
