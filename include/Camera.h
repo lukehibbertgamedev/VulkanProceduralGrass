@@ -21,6 +21,14 @@ struct SideCameraDataDefaults {
 	const float fov = 45.0f; // Degrees.
 };
 
+struct TopCameraDataDefaults {
+	const glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
+	const glm::vec3 position = { 0.0f, 0.18f, 5.1f };
+	const float pitch = 4.0f;
+	const float yaw = 0.0f;
+	const float fov = 45.0f; // Degrees.
+};
+
 class Camera {
 public:
 	glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
@@ -38,5 +46,6 @@ public:
 
 	void update();
 	void reset();
-	void sideSide();
+	void setSide();
+	void setTop(); 
 };

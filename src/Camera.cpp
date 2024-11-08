@@ -40,9 +40,20 @@ void Camera::reset()
     fov = defaults.fov;
 }
 
-void Camera::sideSide()
+void Camera::setSide()
 {
     SideCameraDataDefaults defaults;
+
+    position = defaults.position;
+    velocity = defaults.velocity;
+    pitch = defaults.pitch;
+    yaw = defaults.yaw;
+    fov = defaults.fov;
+}
+
+void Camera::setTop()
+{
+    TopCameraDataDefaults defaults;
 
     position = defaults.position;
     velocity = defaults.velocity;
