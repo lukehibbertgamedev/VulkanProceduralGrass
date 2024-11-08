@@ -19,19 +19,31 @@ void main()
     float u = gl_TessCoord.x;
     float v = gl_TessCoord.y;
 
-    // Position the generated vertices in a quad-like shape, raised by the blade height. TODO: RAISE BY BLADE HEIGHT.
-    vec4 p0 = inPosition[0] + vec4(-inBladeWidth[0], -inBladeHeight[0], 0.0, 0.0);     // Top left vertex.
-    vec4 p1 = inPosition[0] + vec4(inBladeWidth[0], -inBladeHeight[0], 0.0, 0.0);      // Top right vertex.
-    vec4 p2 = inPosition[0] + vec4(inBladeWidth[0], inBladeHeight[0], 0.0, 0.0);       // Bottom left vertex.
-    vec4 p3 = inPosition[0] + vec4(-inBladeWidth[0], inBladeHeight[0], 0.0, 0.0);      // Bottom right vertex.
+
+    //p0  //    //p1
+    //          //
+    //          //
+    //          //
+    //    //    //
+    //          //
+    //          //
+    //          //
+    //p2  wp    //p3
+    // wp = world position sent from the CPU.
+    // pn = generated position from the GPU (below).
+
+    // Position the generated vertices in a quad-like shape, raised by the blade height. 
+    vec4 p0 = inPosition[0] + vec4(-inBladeWidth[0], -inBladeHeight[0], 0.0, 0.0);      // Top left vertex.
+    vec4 p1 = inPosition[0] + vec4(inBladeWidth[0], -inBladeHeight[0], 0.0, 0.0);       // Top right vertex.
+    vec4 p2 = inPosition[0] + vec4(inBladeWidth[0], 0.0, 0.0, 0.0);                     // Bottom left vertex (the grass position is the centre bottom to the quad).
+    vec4 p3 = inPosition[0] + vec4(-inBladeWidth[0], 0.0, 0.0, 0.0);                    // Bottom right vertex (the grass position is the centre bottom to the quad).
 
     // Interpolate between the points to correctly position the generated vertices on a per-quad data basis.
     vec4 a = mix(p0, p1, u);
     vec4 b = mix(p3, p2, u);
     gl_Position = mix(a, b, v);
 
-    vec4 interpolatedPosition = (1.0 - gl_TessCoord.x - gl_TessCoord.y) * p0 + gl_TessCoord.x * p1 + gl_TessCoord.y * p2 + gl_TessCoord.x * gl_TessCoord.y * p3;
-    //gl_Position = interpolatedPosition;
+    // gl_Position using matrix transformations here. Potentially interpolatedPosition too.
 
     outColor = inColor[0]; 
 }
