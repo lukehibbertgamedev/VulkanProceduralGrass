@@ -55,16 +55,11 @@ void main()
     vec4 p2 = inPosition[0] + (ubo.proj * ubo.view * bottomLeftWorldSpace);       // Bottom left vertex (the grass position is the centre bottom to the quad).
     vec4 p3 = inPosition[0] + (ubo.proj * ubo.view * bottomRightWorldSpace);      // Bottom right vertex (the grass position is the centre bottom to the quad).
 
-    // gl_Position using matrix transformations here. 
-    // This may be useful when it comes to rotating the blades randomly.
-    //gl_Position = ubo.proj * ubo.view * gl_Position;
-
     // Interpolate between the points to correctly position the generated vertices on a per-quad data basis.
     vec4 a = mix(p0, p1, u);
     vec4 b = mix(p3, p2, u);
     gl_Position = mix(a, b, v);
-
     
-
-    outColor = inColor[0]; 
+    // Use gl_TessCoord.y to gradient the blade to be black at the bottom and green at the top, faking shadows.
+    outColor = inColor[0] * (1 - v); 
 }
