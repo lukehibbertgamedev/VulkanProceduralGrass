@@ -1589,9 +1589,7 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::Separator();
 
     ImGui::Text("Camera position: x: %i, y: %i, z: %i", (int)camera->position.x, (int)camera->position.y, (int)camera->position.z);
-    ImGui::Text("Pitch: %i", (int)camera->pitch);
-    ImGui::Text("Yaw: %i", (int)camera->yaw);
-    ImGui::Text("FOV: %i", (int)camera->fov);
+    ImGui::Text("Pitch: %i / Yaw: %i / FOV: %i", (int)camera->pitch, (int)camera->yaw, (int)camera->fov);
 
     ImGui::End();
 }

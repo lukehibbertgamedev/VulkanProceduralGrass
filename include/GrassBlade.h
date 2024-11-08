@@ -261,6 +261,9 @@
 //	glm::vec3 calculatePositionAlongQuadraticBezierCurve(float t);
 //};
 
+#include "Utility.h"
+
+
 namespace bezier {
 
 	static int pointCountToVisualise = 10;

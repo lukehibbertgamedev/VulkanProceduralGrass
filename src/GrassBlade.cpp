@@ -73,14 +73,16 @@ void Blade::initialise()
 
 void Blade::updatePackedVec4s()
 {
+	float randomHeight = Utils::getRandomFloat(.1f, GRASS_HEIGHT);
+
 	float direction = 0.0f;
 	glm::vec3 p0 = glm::vec3(p0AndWidth.x, p0AndWidth.y, p0AndWidth.z);
-	glm::vec3 p1 = p0 + glm::vec3(0.0f, 0.0f, GRASS_HEIGHT);
-	glm::vec3 p2 = p1 + direction * GRASS_HEIGHT * GRASS_LEAN; 
+	glm::vec3 p1 = p0 + glm::vec3(0.0f, 0.0f, randomHeight);
+	glm::vec3 p2 = p1 + direction * randomHeight * GRASS_LEAN;
 	glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f); // Z-axis is up when using Vulkan.
 
 	p0AndWidth = glm::vec4(p0, GRASS_WIDTH);
-	p1AndHeight = glm::vec4(p1, GRASS_HEIGHT);
+	p1AndHeight = glm::vec4(p1, randomHeight);
 	p2AndDirection = glm::vec4(p2, direction);
 	upAndStiffness = glm::vec4(up, GRASS_STIFFNESS);
 }
