@@ -144,31 +144,7 @@ VkShaderModule VulkanApplication::createShaderModule(const std::vector<char>& co
 
 void VulkanApplication::render()
 {
-    //VkSubmitInfo submitInfo{};
-    //submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    // Compute submission        
-    //vkWaitForFences(m_LogicalDevice, 1, &computeInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-    //
-    //
-    //vkResetFences(m_LogicalDevice, 1, &computeInFlightFences[currentFrame]);
-    //
-    //vkResetCommandBuffer(computeCommandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
-    //recordComputeCommandBuffer(computeCommandBuffers[currentFrame]);
-    //
-    //submitInfo.commandBufferCount = 1;
-    //submitInfo.pCommandBuffers = &computeCommandBuffers[currentFrame];
-    //submitInfo.signalSemaphoreCount = 1;
-    //submitInfo.pSignalSemaphores = &computeFinishedSemaphores[currentFrame];
-    //
-    //if (vkQueueSubmit(computeQueue, 1, &submitInfo, computeInFlightFences[currentFrame]) != VK_SUCCESS) {
-    //    throw std::runtime_error("failed to submit compute command buffer!");
-    //};
-
-    // Graphics submission
-    //vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); // Wait for compute to finish.
-
-    vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); // Wait for compute to finish.
+    vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); 
 
     uint32_t imageIndex;
     VkResult ret = vkAcquireNextImageKHR(m_LogicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
@@ -182,53 +158,44 @@ void VulkanApplication::render()
     }
 
     updateUniformBuffer(currentFrame);
-    // updateBladeInstanceBuffer ???
 
     vkResetFences(m_LogicalDevice, 1, &inFlightFences[currentFrame]);
 
     vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
     recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
-    //VkSemaphore waitSemaphores[] = { /*computeFinishedSemaphores[currentFrame],*/ imageAvailableSemaphores[currentFrame] };
-    //VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
     
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
-
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
-
-    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
     ret = vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]);
 
     if (ret != VK_SUCCESS) {
-        int a = 5;
         throw std::runtime_error("failed to submit draw command buffer!");
     }
 
+    VkSwapchainKHR swapChains[] = { swapChain };
+
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
-
-    VkSwapchainKHR swapChains[] = { swapChain };
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
-
     presentInfo.pImageIndices = &imageIndex;
-    //presentInfo.pResults = nullptr; // Optional
+    presentInfo.pResults = nullptr; // Optional
 
-    ret = vkQueuePresentKHR(presentQueue, &presentInfo); // Send all image data to the screen, this will render this frame.
+    ret = vkQueuePresentKHR(presentQueue, &presentInfo); // Send all image data to the screen, this will render this frame and begin the vertex shader.
 
     if (ret == VK_ERROR_OUT_OF_DATE_KHR || ret == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = false;
@@ -239,7 +206,7 @@ void VulkanApplication::render()
     }
 
     // Frame complete, increment frame and wrap if it goes beyond max frames in flight.
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    currentFrame = (currentFrame + 1) % kMaxFramesInFlight;
     frameCount++;
 }
 
@@ -1368,7 +1335,7 @@ VkResult VulkanApplication::createDescriptorSets()
 
 VkResult VulkanApplication::createCommandBuffer()
 {
-    commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+    commandBuffers.resize(kMaxFramesInFlight);
 
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1385,9 +1352,9 @@ VkResult VulkanApplication::createCommandBuffer()
 
 VkResult VulkanApplication::createSynchronizationObjects()
 {
-    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+    imageAvailableSemaphores.resize(kMaxFramesInFlight);
+    renderFinishedSemaphores.resize(kMaxFramesInFlight);
+    inFlightFences.resize(kMaxFramesInFlight);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1396,7 +1363,7 @@ VkResult VulkanApplication::createSynchronizationObjects()
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < kMaxFramesInFlight; i++) {
         if (vkCreateSemaphore(m_LogicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
             vkCreateSemaphore(m_LogicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
             vkCreateFence(m_LogicalDevice, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
@@ -1408,7 +1375,7 @@ VkResult VulkanApplication::createSynchronizationObjects()
     return VK_SUCCESS;
 }
 
-VkResult VulkanApplication::createCamera(Camera* camera)
+VkResult VulkanApplication::createDefaultCamera()
 {
     VkResult ret = VK_SUCCESS;
 
@@ -1477,7 +1444,7 @@ VkResult VulkanApplication::createImGuiImplementation()
 void VulkanApplication::createMeshObjects()
 {
     // Construct a plane mesh, for the ground.
-    MeshInstance _groundPlane = quadMesh.generateQuad(glm::vec3(0.0f, 0.0f, 0.0f));
+    MeshTransform _groundPlane = quadMesh.generateQuad(glm::vec3(0.0f, 0.0f, 0.0f));
     _groundPlane.position = glm::vec3(0.0f, 0.5f, 0.0f); // X is right. Y is forward. Z is up.
     _groundPlane.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
     _groundPlane.scale = glm::vec3(MEADOW_SCALE_X, MEADOW_SCALE_Y, MEADOW_SCALE_Z); // Z = X, Y = Z, X = Y. 
@@ -1527,7 +1494,7 @@ void VulkanApplication::populateBladeInstanceBuffer()
         localBladeInstanceBuffer.push_back(bladeInstanceData);
 
         // Create a base mesh instance for a grass blade, to later be tessellated and aligned to its' bezier curve.
-        MeshInstance baseBladeGeometry = bladeShapeMesh.generateShape();
+        MeshTransform baseBladeGeometry = bladeShapeMesh.generateShape();
         baseBladeGeometry.position = glm::vec3(bladeInstance.p0AndWidth.x, bladeInstance.p0AndWidth.y, bladeInstance.p0AndWidth.z); 
         baseBladeGeometry.scale = glm::vec3(1.0f); 
     }
@@ -1729,7 +1696,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     VkDeviceSize quadOffsets[] = { 0 };                                                         
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, quadVertexBuffers, quadOffsets);                
     vkCmdBindIndexBuffer(commandBuffer, quadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);    
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipelineLayout, 0, 1, &uniformBufferDescriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipelineLayout, 0, 1, &modelPipelineDescriptorSet, 0, nullptr);
     vkCmdDrawIndexed(commandBuffer, quadMesh.indexCount, 1, 0, 0, 0); 
 
     //
@@ -1745,7 +1712,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     VkDeviceSize quadOffsetsGRASS[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer, quadOffsetsGRASS);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &bladeInstanceSSBODescriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -1786,7 +1753,7 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
 
     vkDestroyRenderPass(m_LogicalDevice, renderPass, nullptr);
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < kMaxFramesInFlight; i++) {
         vkDestroySemaphore(m_LogicalDevice, renderFinishedSemaphores[i], nullptr);
         vkDestroySemaphore(m_LogicalDevice, imageAvailableSemaphores[i], nullptr);
         vkDestroyFence(m_LogicalDevice, inFlightFences[i], nullptr);
@@ -1890,7 +1857,7 @@ uint32_t VulkanApplication::findGPUMemoryType(uint32_t typeFilter, VkMemoryPrope
     throw std::runtime_error("failed to find suitable memory type!");
 }
 
-VulkanApplication::SwapChainSupportDetails VulkanApplication::checkSwapchainSupport(VkPhysicalDevice device)
+SwapChainSupportDetails VulkanApplication::checkSwapchainSupport(VkPhysicalDevice device)
 {
     SwapChainSupportDetails details;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_SurfaceKHR, &details.capabilities);
@@ -2013,7 +1980,7 @@ VkResult VulkanApplication::createModelDescriptorSets()
     modelAllocInfo.pSetLayouts = &modelLayout;
 
     // Allocate uniform buffer descriptor set memory.
-    if (vkAllocateDescriptorSets(m_LogicalDevice, &modelAllocInfo, &uniformBufferDescriptorSet) != VK_SUCCESS) {
+    if (vkAllocateDescriptorSets(m_LogicalDevice, &modelAllocInfo, &modelPipelineDescriptorSet) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -2025,7 +1992,7 @@ VkResult VulkanApplication::createModelDescriptorSets()
 
     VkWriteDescriptorSet modelDescriptorWrite = {};
     modelDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    modelDescriptorWrite.dstSet = uniformBufferDescriptorSet;
+    modelDescriptorWrite.dstSet = modelPipelineDescriptorSet;
     modelDescriptorWrite.dstBinding = 0;
     modelDescriptorWrite.dstArrayElement = 0;
     modelDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -2052,7 +2019,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     grassAllocInfo.pSetLayouts = &grassLayout;
 
     // Allocate shader storage buffer descriptor set memory.
-    VkResult ret = vkAllocateDescriptorSets(m_LogicalDevice, &grassAllocInfo, &bladeInstanceSSBODescriptorSet);
+    VkResult ret = vkAllocateDescriptorSets(m_LogicalDevice, &grassAllocInfo, &grassPipelineDescriptorSet);
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");
         return ret;
@@ -2067,7 +2034,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
 
     grassDescriptorWrites[0] = {};
     grassDescriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    grassDescriptorWrites[0].dstSet = bladeInstanceSSBODescriptorSet;
+    grassDescriptorWrites[0].dstSet = grassPipelineDescriptorSet;
     grassDescriptorWrites[0].dstBinding = 0;
     grassDescriptorWrites[0].dstArrayElement = 0;
     grassDescriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -2081,7 +2048,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
 
     grassDescriptorWrites[1] = {};
     grassDescriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    grassDescriptorWrites[1].dstSet = bladeInstanceSSBODescriptorSet;
+    grassDescriptorWrites[1].dstSet = grassPipelineDescriptorSet;
     grassDescriptorWrites[1].dstBinding = 1;
     grassDescriptorWrites[1].dstArrayElement = 0;
     grassDescriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -2291,7 +2258,7 @@ bool VulkanApplication::checkPhysicalDeviceExtensionSupport(VkPhysicalDevice dev
     return requiredExtensions.empty(); 
 }
 
-VulkanApplication::QueueFamilyIndices VulkanApplication::findQueueFamilies(VkPhysicalDevice device)
+QueueFamilyIndices VulkanApplication::findQueueFamilies(VkPhysicalDevice device)
 {
     QueueFamilyIndices indices;
     uint32_t queueFamilyCount = 0;

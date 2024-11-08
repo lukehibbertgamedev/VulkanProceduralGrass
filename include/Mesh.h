@@ -5,7 +5,7 @@
 // Mesh representation for a quad.
 class Quad {
 public:
-	MeshInstance generateQuad(glm::vec3 position);
+	MeshTransform generateQuad(glm::vec3 position);
 
 	std::vector<Vertex> vertices;
 	std::vector<uint16_t> indices;
@@ -15,7 +15,7 @@ public:
 // Mesh represenation for the base shape of a grass blade before tessellation.
 class BaseBladeShape {
 public:
-	MeshInstance generateShape();
+	MeshTransform generateShape();
 
 	std::vector<Vertex> vertices;
 	std::vector<uint16_t> indices;
@@ -25,7 +25,7 @@ public:
 // Mesh representation for a UV sphere.
 class Sphere {
 public:
-	MeshInstance generateFlatSphere(glm::vec3 position, float radius, int sectors, int stacks, int up);
+	MeshTransform generateFlatSphere(glm::vec3 position, float radius, int sectors, int stacks, int up);
 
 	std::vector<Vertex> vertices; 
 	std::vector<uint16_t> indices;

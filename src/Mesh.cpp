@@ -1,6 +1,6 @@
-#include "Sphere.h"
+#include "Mesh.h"
 
-MeshInstance Sphere::generateFlatSphere(glm::vec3 position, float radius, int sectorCount, int stackCount, int up)
+MeshTransform Sphere::generateFlatSphere(glm::vec3 position, float radius, int sectorCount, int stackCount, int up)
 {
 	// https://www.songho.ca/opengl/gl_sphere.html
 
@@ -65,7 +65,7 @@ MeshInstance Sphere::generateFlatSphere(glm::vec3 position, float radius, int se
 		changeUpAxis(3, this->up);
 	}
 
-	MeshInstance meshData = {};
+	MeshTransform meshData = {};
 	meshData.position = position;
 	meshData.scale = glm::vec3(radius);
 
@@ -142,7 +142,7 @@ void Sphere::changeUpAxis(int from, int to)
 	}
 }
 
-MeshInstance Quad::generateQuad(glm::vec3 position)
+MeshTransform Quad::generateQuad(glm::vec3 position)
 {
 	vertices = {
 		{{-0.5f, -0.5f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f }},
@@ -153,7 +153,7 @@ MeshInstance Quad::generateQuad(glm::vec3 position)
 	 
 	indices = {	0, 1, 2, 2, 3, 0 }; 
 
-	MeshInstance meshData = {}; 
+	MeshTransform meshData = {}; 
 	meshData.position = position; 
 	meshData.scale = glm::vec3(1.0f);
 
@@ -163,7 +163,7 @@ MeshInstance Quad::generateQuad(glm::vec3 position)
 	return meshData;
 }
 
-MeshInstance BaseBladeShape::generateShape()
+MeshTransform BaseBladeShape::generateShape()
 {
 	// Counter-clockwise.
 	//    <- 
@@ -187,7 +187,7 @@ MeshInstance BaseBladeShape::generateShape()
 		2, 3, 0
 	};
 
-	MeshInstance meshData = {};
+	MeshTransform meshData = {};
 	meshData.position = glm::vec3(0.0f);
 	meshData.scale = glm::vec3(1.0f);
 

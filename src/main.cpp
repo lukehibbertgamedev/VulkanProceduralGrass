@@ -143,10 +143,10 @@ int main() {
 
     vkApp.linkWindowToVulkan(window);
 
-    VkResult ret = vkApp.createCamera(&globalCamera); 
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create camera.");
-
     vkApp.linkCameraToVulkan(&globalCamera);
+
+    VkResult ret = vkApp.createDefaultCamera(); 
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create camera.");
 
     ret = vkApp.createInstance();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create instance.");   

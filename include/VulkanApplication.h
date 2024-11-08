@@ -16,27 +16,23 @@
 #include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
 
 #include "Vertex.h"
-#include "Sphere.h"
+#include "Mesh.h"
 #include "GrassBlade.h"
+#include "Camera.h"
 
 #include <optional>
 #include <vector>
 #include <string>
-#include <Camera.h>
 
-// Ground plane bounds definitions
+// Ground plane bounds definitions (Z is typically up).
 #define MEADOW_SCALE_X 3
 #define MEADOW_SCALE_Y 3
 #define MEADOW_SCALE_Z 1
 
 static constexpr bool kEnableValidationLayers = true;
-const std::vector<const char*> kValidationLayers = {
-	"VK_LAYER_KHRONOS_validation"
-};
-
+const std::vector<const char*> kValidationLayers = { "VK_LAYER_KHRONOS_validation" };
 static constexpr bool kEnableImGuiDemoWindow = true;
-static constexpr int MAX_FRAMES_IN_FLIGHT = 2; // kMaxFramesInFlight
-static constexpr unsigned int PARTICLE_COUNT = 1u << 23;
+static constexpr int kMaxFramesInFlight = 2; 
 
 struct DriverData {
 public:
@@ -62,83 +58,80 @@ struct CameraUniformBufferObject {
 	alignas(16) glm::mat4 proj;
 };
 
-class VulkanApplication {
-
+struct QueueFamilyIndices {
 public:
+	std::optional<uint32_t> graphicsAndComputeFamily;
+	std::optional<uint32_t> presentFamily;
 
-	struct QueueFamilyIndices {
-	public:
-		std::optional<uint32_t> graphicsAndComputeFamily;
-		std::optional<uint32_t> presentFamily;
+	bool isComplete() { return graphicsAndComputeFamily.has_value() && presentFamily.has_value(); }
+};
 
-		bool isComplete() { return graphicsAndComputeFamily.has_value() && presentFamily.has_value(); }
-	};
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+struct SwapChainSupportDetails {
+public:
+	VkSurfaceCapabilitiesKHR capabilities;
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> presentModes;
+};
 
-	struct SwapChainSupportDetails {
-	public:
-		VkSurfaceCapabilitiesKHR capabilities;
-		std::vector<VkSurfaceFormatKHR> formats;
-		std::vector<VkPresentModeKHR> presentModes;
-	};
+class VulkanApplication {
+public:		
 
-	VkShaderModule createShaderModule(const std::vector<char>& code);
-
+	// Handles the set-up, queue submission, and presentation of a frame to the screen surface.
 	void render();
+
+	// Updates the uniform buffer object that is bound to both the model and grass pipeline, so they receive the most recent data (re-maps the memory).
 	void updateUniformBuffer(uint32_t currentFrame);
 
-	VkResult createInstance();
-	VkResult createDebugMessenger();
-	VkResult createPhysicalDevice();
-	VkResult createLogicalDevice();
-	VkResult createGlfwSurface();
-	VkResult createSwapchain();
-	VkResult recreateSwapchain();
-	VkResult createSwapchainImageViews();
-	VkResult createRenderPass();
-	VkResult createDescriptorSetLayouts();		
-	VkResult createDepthResources();
-	VkResult createPipelines();
-	VkResult createFrameBuffers();
-	VkResult createCommandPool();
-	VkResult createShaderStorageBuffers(); // For blade <3
-	VkResult createVertexBuffer();
-	VkResult createIndexBuffer();
-	VkResult createUniformBuffers();
-	VkResult createDescriptorPool();
-	VkResult createDescriptorSets();
-	VkResult createCommandBuffer();
-	VkResult createSynchronizationObjects();
-	VkResult createCamera(Camera* camera);
-	VkResult createImGuiImplementation();
+	void linkWindowToVulkan(GLFWwindow* window);					// - - - - - .
+	void linkCameraToVulkan(Camera* camera);						//			 |
+	VkResult createInstance();										//			 |
+	VkResult createDebugMessenger();								//			 |
+	VkResult createPhysicalDevice();								//			 |
+	VkResult createLogicalDevice();									//			 |
+	VkResult createGlfwSurface();									//			 |
+	VkResult createSwapchain();										//			 |
+	VkResult recreateSwapchain();									//			 |
+	VkResult createSwapchainImageViews();							//			 |
+	VkResult createRenderPass();									//			 |
+	VkResult createDescriptorSetLayouts();							//			 |
+	VkResult createDepthResources();								//			 | - Vulkan application initialisation.
+	VkResult createPipelines();										//			 |
+	VkResult createFrameBuffers();									//			 |
+	VkResult createCommandPool();									//			 |
+	VkResult createShaderStorageBuffers(); 							//			 |
+	VkResult createVertexBuffer();									//			 |
+	VkResult createIndexBuffer();									//			 |
+	VkResult createUniformBuffers();								//			 |
+	VkResult createDescriptorPool();								//			 |
+	VkResult createDescriptorSets();								//			 |
+	VkResult createCommandBuffer();									//			 |
+	VkResult createSynchronizationObjects();						//			 |
+	VkResult createDefaultCamera();									//			 |
+	VkResult createImGuiImplementation();							// - - - - - '
 
-	void createMeshObjects();
-	void populateBladeInstanceBuffer();
-	void createBladeInstanceStagingBuffer();
+	void createMeshObjects();					// Creates the ground plane.
+	void populateBladeInstanceBuffer();			// Populates a vector of blade instance data.
+	void createBladeInstanceStagingBuffer();	// Copy the vector of instance data to the GPU.
 
 	void prepareImGuiDrawData();
 
 	// Creates a buffer, creates its memory requirements, and allocates and binds the buffer memory. Returns a VkResult.
 	VkResult createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
-	// Creates an image ...
+	// Creates an image, creates its memory requirements, and allocates and binds the image memory. Returls a VkResult.
 	VkResult createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 
 	// Copy from srcBuffer to dstBuffer passing the size of srcBuffer so the command knows how much data to copy. Performs vkCmdCopyBuffer.
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
+	// Bind pipelines and populate the command buffer with commands (i.e., vkCmdDraw) for that pipeline.
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex); 
 
+	// Reads a SPIR-V code file and turns it into a handle that can be bound to a VkPipeline.
+	VkShaderModule createShaderModule(const std::vector<char>& code);
+
 	void cleanupApplication(GLFWwindow* window);
-
 	void cleanupSwapchain();
-	VkSurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-	VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
-
-	void linkWindowToVulkan(GLFWwindow* window);
-	void linkCameraToVulkan(Camera* camera);
-
 	void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 private:
 	VkResult createModelDescriptorSetLayout(); // For camera ubo.
@@ -150,10 +143,13 @@ private:
 	VkResult createMeshPipeline(); // For regular rendering of meshes.
 	VkResult createGrassPipeline(); // Exclusively for grass rendering.
 
+	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat findDepthFormat();
 	bool hasStencilComponent(VkFormat format);
-
+	VkSurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+	VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
 	VkSampleCountFlagBits getMaxUsableMSAASampleCount();
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
@@ -168,7 +164,7 @@ private:
 	bool checkPhysicalDeviceExtensionSupport(VkPhysicalDevice device);
 public:
 
-	// Important Vulkan structures for HelloTriangle.
+	// Base concepts for Vulkan.
 	VkInstance m_VkInstance = VK_NULL_HANDLE;							// Vulkan library handle.
 	VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;			// Vulkan debug output handle.
 	VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;					// GPU chosen as the default device.
@@ -230,26 +226,23 @@ public:
 	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
 	int frameCount = 0;
 
-
 	// Uniform buffer objects (UBO).
-	VkBuffer uniformBuffer;
-	VkDeviceMemory uniformBufferMemory;
-	void* uniformBufferMapped;
-	VkDescriptorSet uniformBufferDescriptorSet;
+	VkBuffer uniformBuffer;												// The buffer object containing, most notably, the camera's view and projection matrices.
+	VkDeviceMemory uniformBufferMemory;									// Allocated memory for this buffer object.
+	void* uniformBufferMapped;											// A handle to map data to the buffer.
+	VkDescriptorSet modelPipelineDescriptorSet;							// Descriptor set (one shader resource) that is bound to shaders within the model pipeline.
 	 
-	// Prepare staging buffer and its associated memory for holding the instance data temporarily before it gets transferred to the GPU.
-	VkBuffer bladeInstanceStagingBuffer;
-	VkDeviceMemory bladeInstanceStagingBufferMemory;
-	std::vector<BladeInstanceData> localBladeInstanceBuffer; // A holding buffer of instance data per-blade. 
+	VkBuffer bladeInstanceStagingBuffer;								// A temporary holding buffer containing the blade data ready for CPU > GPU copy.
+	VkDeviceMemory bladeInstanceStagingBufferMemory;					// Allocated memory for the holding buffer used to copy blade data to the GPU.
+	std::vector<BladeInstanceData> localBladeInstanceBuffer;			// A CPU buffer of instance data per-blade, populates the staging buffer, which populates the SSBO. 
 
 	// Shader storage buffer objects (SSBO). 
-	VkBuffer bladeInstanceDataBuffer;
-	VkDeviceMemory bladeInstanceDataBufferMemory;
-	void* bladeInstanceDataBufferMapped;
-	VkDescriptorSet bladeInstanceSSBODescriptorSet; // Rename to not include ssbo if this has ubo too
+	VkBuffer bladeInstanceDataBuffer;									// The shader resource containing all grass blade data.
+	VkDeviceMemory bladeInstanceDataBufferMemory;						// Allocated memory for the shader resource.
+	void* bladeInstanceDataBufferMapped;								// A handle to map data to the buffer.
+	VkDescriptorSet grassPipelineDescriptorSet;							// Descriptor set (two shader resources) that is bound to shaders within the grass pipeline. 
 
-	MeshInstance groundPlane;
-	MeshInstance quad;
+	MeshTransform groundPlane;											// A handle to the ground plane transform.
 
 	Quad quadMesh;														// One-time data structure containing vertex and index data for this mesh.
 	VkBuffer quadVertexBuffer = VK_NULL_HANDLE;							// The vertex buffer for this mesh.
@@ -263,19 +256,19 @@ public:
 	VkBuffer bladeShapeIndexBuffer = VK_NULL_HANDLE;					// The index buffer for this mesh.
 	VkDeviceMemory bladeShapeIndexBufferMemory = VK_NULL_HANDLE;		// The memory corresponding to the index buffer.
 
-	VkDescriptorSetLayout modelDescriptorSetLayout = VK_NULL_HANDLE; // Contains UBO for models (ie plane)
-	VkDescriptorSetLayout grassDescriptorSetLayout = VK_NULL_HANDLE; // Contains SSBO for grass buffer
+	VkDescriptorSetLayout modelDescriptorSetLayout = VK_NULL_HANDLE;	// A layout that determines what shader resources can later be bound for this pipeline. Contains UBO for models (ie plane).
+	VkDescriptorSetLayout grassDescriptorSetLayout = VK_NULL_HANDLE;	// A layout that determines what shader resources can later be bound for this pipeline. Contains SSBO for grass instance buffer.
 
-	VkPipelineLayout modelPipelineLayout = VK_NULL_HANDLE;
-	VkPipelineLayout grassPipelineLayout = VK_NULL_HANDLE;
+	VkPipelineLayout modelPipelineLayout = VK_NULL_HANDLE;				// A pipeline configuration for the rendering of models/meshes.
+	VkPipelineLayout grassPipelineLayout = VK_NULL_HANDLE;				// A pipeline configuration for the rendering of grass blades.
 
-	VkPipeline modelPipeline = VK_NULL_HANDLE; // Pipeline structure for a model/object render pass.
-	VkPipeline grassPipeline = VK_NULL_HANDLE; // Pipeline structure for the grass render pass.
+	VkPipeline modelPipeline = VK_NULL_HANDLE;							// A pipeline structure for a model/mesh render pass.
+	VkPipeline grassPipeline = VK_NULL_HANDLE;							// A pipeline structure for the grass blade render pass.
 
-	Camera* camera;
+	Camera* camera;														// A handle to a dynamic camera that works with WASDEQ, arrow keys, LJ, and RTY. 
 
-	VkImage depthImage = VK_NULL_HANDLE;
-	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
-	VkImageView depthImageView = VK_NULL_HANDLE;
+	VkImage depthImage = VK_NULL_HANDLE;								// A handle to the image that represents a depth stencil.
+	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;					// Allocated memory for this image resource.
+	VkImageView depthImageView = VK_NULL_HANDLE;						// A handle to the actual image data for the depth stencil.
 
 };
