@@ -41,7 +41,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         case GLFW_KEY_L: globalCamera.fov += 1.0f; break;
         case GLFW_KEY_J: globalCamera.fov -= 1.0f; break;
 
-
+        case GLFW_KEY_R: globalCamera.reset(); break;
         }
     }
 
@@ -57,6 +57,18 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 
         case GLFW_KEY_E: globalCamera.velocity.y = 0; break;
         case GLFW_KEY_Q: globalCamera.velocity.y = 0; break;
+        }
+    }
+
+    else if (action == GLFW_REPEAT) {
+        switch (key) {
+        default: break;
+
+        case GLFW_KEY_UP: globalCamera.pitch += 0.01f; break;
+        case GLFW_KEY_DOWN: globalCamera.pitch -= 0.01f; break;
+
+        case GLFW_KEY_LEFT: globalCamera.yaw += 0.01f; break;
+        case GLFW_KEY_RIGHT: globalCamera.yaw -= 0.01f; break;
         }
     }
 }
