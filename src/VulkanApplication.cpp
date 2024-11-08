@@ -1355,9 +1355,11 @@ VkResult VulkanApplication::createCamera(Camera* camera)
 {
     VkResult ret = VK_SUCCESS;
 
-    camera->position = glm::vec3(0.0f, -3.0f, 1.5f);
-    camera->pitch = -30.0f;
-    camera->yaw = 0.0f;
+    CameraDataDefaults defaults;
+
+    camera->position = defaults.position;
+    camera->pitch = defaults.pitch;
+    camera->yaw = defaults.yaw;
 
     return ret;
 }
@@ -1420,8 +1422,8 @@ void VulkanApplication::createMeshObjects()
     // Construct a plane mesh, for the ground.
     MeshInstance _groundPlane = quadMesh.generateQuad(glm::vec3(0.0f, 0.0f, 0.0f));
     _groundPlane.position = glm::vec3(0.0f, 0.5f, 0.0f); // X is right. Y is forward. Z is up.
-    _groundPlane.rotation = glm::vec3(0.0f, 90.0f, 0.0f);
-    _groundPlane.scale = glm::vec3(PLANE_SCALE_Z, PLANE_SCALE_Y, PLANE_SCALE_X); // Z = X, Y = Z, X = Y. 
+    _groundPlane.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+    _groundPlane.scale = glm::vec3(MEADOW_SCALE_X, MEADOW_SCALE_Y, MEADOW_SCALE_Z); // Z = X, Y = Z, X = Y. 
     groundPlane = _groundPlane;
     driverData.vertexCount += quadMesh.vertexCount;    
 }
@@ -1440,18 +1442,15 @@ void VulkanApplication::populateBladeInstanceBuffer()
     // [0, 0, 0] is the origin of the plane, the bounds extend half the scale in each direction.
     // Warning: This does not take into account the position of the ground plane.
     glm::vec2 planeBoundsX = glm::vec2(-(MEADOW_SCALE_X * 0.5f) + groundPlane.position.x, (MEADOW_SCALE_X * 0.5f) + groundPlane.position.x);
-    glm::vec2 planeBoundsZ = glm::vec2(-(MEADOW_SCALE_Z * 0.5f) + groundPlane.position.y, (MEADOW_SCALE_Z * 0.5f) + groundPlane.position.y);    
+    glm::vec2 planeBoundsY = glm::vec2(-(MEADOW_SCALE_Y * 0.5f) + groundPlane.position.y, (MEADOW_SCALE_Y * 0.5f) + groundPlane.position.y);    
     
     // Do this outside the loop to avoid continuously creating struct instances, just change the data inside it.
     BladeInstanceData bladeInstanceData = {};
 
-
     for (size_t i = 0; i < MAX_BLADES; ++i) {
 
         // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
-        glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsZ, glm::vec2(0.0f, 0.0f), false);
-
-        //glm::vec3 temporaryCentralPosition = glm::vec3(1.0f);
+        glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsY, glm::vec2(0.0f), false);
 
         // Create an instance of a grass blade, and define its' natural world position.
         Blade bladeInstance = Blade();
@@ -1474,8 +1473,6 @@ void VulkanApplication::populateBladeInstanceBuffer()
     }
 
     driverData.vertexCount += bladeShapeMesh.vertexCount * localBladeInstanceBuffer.size();
-
-    //driverData.vertexCount += localBladeInstanceBuffer.size();
 }
 
 void VulkanApplication::createBladeInstanceStagingBuffer()
@@ -1520,15 +1517,21 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::SameLine(); ImGui::Text("ID: %i", driverData.deviceID);
     ImGui::Text("Driver Version: %i.%i.%i", driverData.versionMajor, driverData.versionMinor, driverData.versionPatch);
     ImGui::Text("Vulkan API Version supported: %i.%i.%i", driverData.apiMajor, driverData.apiMinor, driverData.apiPatch);
-
-    ImGui::Text("Vertex count: %i", driverData.vertexCount);
-
     ImGui::Text("Frames per second: %f", 1 / (lastFrameTime / 1000));
     ImGui::Text("Delta time: %f", deltaTime);
-
     ImGui::Text("Frame number: %i", frameCount);
 
+    ImGui::Separator();
+
+    ImGui::Text("Grass blade count: %i", MAX_BLADES);
     ImGui::Text("Grass pipeline draw call time: %fus", driverData.grassDrawCallTime);
+
+    ImGui::Separator();
+
+    ImGui::Text("Camera position: x: %i, y: %i, z: %i", (int)camera->position.x, (int)camera->position.y, (int)camera->position.z);
+    ImGui::Text("Pitch: %i", (int)camera->pitch);
+    ImGui::Text("Yaw: %i", (int)camera->yaw);
+    ImGui::Text("FOV: %i", (int)camera->fov);
 
     ImGui::End();
 }

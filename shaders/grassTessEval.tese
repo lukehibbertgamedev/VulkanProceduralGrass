@@ -40,19 +40,30 @@ void main()
     // pn = generated position from the GPU (below).
 
     // Position the generated vertices in a quad-like shape, raised by the blade height. 
-    vec4 p0 = inPosition[0] + vec4(-inBladeWidth[0], -inBladeHeight[0], 0.0, 1.0);      // Top left vertex.
-    vec4 p1 = inPosition[0] + vec4(inBladeWidth[0], -inBladeHeight[0], 0.0, 1.0);       // Top right vertex.
-    vec4 p2 = inPosition[0] + vec4(inBladeWidth[0], 0.0, 0.0, 1.0);                     // Bottom left vertex (the grass position is the centre bottom to the quad).
-    vec4 p3 = inPosition[0] + vec4(-inBladeWidth[0], 0.0, 0.0, 1.0);                    // Bottom right vertex (the grass position is the centre bottom to the quad).
+
+    // World space: X is right. Y is forward. Z is up.
+
+    vec4 topLeftWorldSpace = vec4(-inBladeWidth[0], 0.0, inBladeHeight[0], 1.0);
+    vec4 topRightWorldSpace = vec4(inBladeWidth[0], 0.0, inBladeHeight[0], 1.0);
+    vec4 bottomLeftWorldSpace = vec4(inBladeWidth[0], 0.0, 0.0, 1.0);
+    vec4 bottomRightWorldSpace = vec4(-inBladeWidth[0], 0.0, 0.0, 1.0);
+
+    // Convert to clip space for each generated vertex: thanks Charlie.
+    vec4 p0 = inPosition[0] + (ubo.proj * ubo.view * topLeftWorldSpace);          // Top left vertex.
+    vec4 p1 = inPosition[0] + (ubo.proj * ubo.view * topRightWorldSpace);         // Top right vertex.
+    vec4 p2 = inPosition[0] + (ubo.proj * ubo.view * bottomLeftWorldSpace);       // Bottom left vertex (the grass position is the centre bottom to the quad).
+    vec4 p3 = inPosition[0] + (ubo.proj * ubo.view * bottomRightWorldSpace);      // Bottom right vertex (the grass position is the centre bottom to the quad).
+
+    // gl_Position using matrix transformations here. 
+    // This may be useful when it comes to rotating the blades randomly.
+    //gl_Position = ubo.proj * ubo.view * gl_Position;
 
     // Interpolate between the points to correctly position the generated vertices on a per-quad data basis.
     vec4 a = mix(p0, p1, u);
     vec4 b = mix(p3, p2, u);
     gl_Position = mix(a, b, v);
 
-    // gl_Position using matrix transformations here. 
-    // This may be useful when it comes to rotating the blades randomly.
-    //gl_Position = ubo.proj * ubo.view * gl_Position;
+    
 
     outColor = inColor[0]; 
 }

@@ -42,6 +42,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         case GLFW_KEY_J: globalCamera.fov -= 1.0f; break;
 
         case GLFW_KEY_R: globalCamera.reset(); break;
+        case GLFW_KEY_T: globalCamera.sideSide(); break;
         }
     }
 
@@ -64,11 +65,11 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         switch (key) {
         default: break;
 
-        case GLFW_KEY_UP: globalCamera.pitch += 0.01f; break;
-        case GLFW_KEY_DOWN: globalCamera.pitch -= 0.01f; break;
+        case GLFW_KEY_UP: globalCamera.pitch += 1.f; break;
+        case GLFW_KEY_DOWN: globalCamera.pitch -= 1.f; break;
 
-        case GLFW_KEY_LEFT: globalCamera.yaw += 0.01f; break;
-        case GLFW_KEY_RIGHT: globalCamera.yaw -= 0.01f; break;
+        case GLFW_KEY_LEFT: globalCamera.yaw += 1.f; break;
+        case GLFW_KEY_RIGHT: globalCamera.yaw -= 1.f; break;
         }
     }
 }
