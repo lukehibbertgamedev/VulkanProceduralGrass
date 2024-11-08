@@ -3,6 +3,13 @@
 // The input to this shader stage will be 4 control points (quad), each vertex will be placed equidistant from each other. 
 layout(quads, fractional_even_spacing, ccw) in;
 
+// Binding is 0 here because it's a uniform buffer object with binding 0 within the descriptor set layout.
+layout(binding = 0) uniform CameraUniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+} ubo;
+
 layout(location = 0) in vec4 inColor[];
 layout(location = 1) in vec4 inPosition[];
 layout(location = 2) in float inBladeWidth[];
@@ -33,17 +40,19 @@ void main()
     // pn = generated position from the GPU (below).
 
     // Position the generated vertices in a quad-like shape, raised by the blade height. 
-    vec4 p0 = inPosition[0] + vec4(-inBladeWidth[0], -inBladeHeight[0], 0.0, 0.0);      // Top left vertex.
-    vec4 p1 = inPosition[0] + vec4(inBladeWidth[0], -inBladeHeight[0], 0.0, 0.0);       // Top right vertex.
-    vec4 p2 = inPosition[0] + vec4(inBladeWidth[0], 0.0, 0.0, 0.0);                     // Bottom left vertex (the grass position is the centre bottom to the quad).
-    vec4 p3 = inPosition[0] + vec4(-inBladeWidth[0], 0.0, 0.0, 0.0);                    // Bottom right vertex (the grass position is the centre bottom to the quad).
+    vec4 p0 = inPosition[0] + vec4(-inBladeWidth[0], -inBladeHeight[0], -3.0, 1.0);      // Top left vertex.
+    vec4 p1 = inPosition[0] + vec4(inBladeWidth[0], -inBladeHeight[0], 3.0, 1.0);       // Top right vertex.
+    vec4 p2 = inPosition[0] + vec4(inBladeWidth[0], 0.0, 0.0, 1.0);                     // Bottom left vertex (the grass position is the centre bottom to the quad).
+    vec4 p3 = inPosition[0] + vec4(-inBladeWidth[0], 0.0, 0.0, 1.0);                    // Bottom right vertex (the grass position is the centre bottom to the quad).
 
     // Interpolate between the points to correctly position the generated vertices on a per-quad data basis.
     vec4 a = mix(p0, p1, u);
     vec4 b = mix(p3, p2, u);
     gl_Position = mix(a, b, v);
 
-    // gl_Position using matrix transformations here. Potentially interpolatedPosition too.
+    // gl_Position using matrix transformations here. 
+    // This may be useful when it comes to rotating the blades randomly.
+    //gl_Position = ubo.proj * ubo.view * gl_Position;
 
     outColor = inColor[0]; 
 }

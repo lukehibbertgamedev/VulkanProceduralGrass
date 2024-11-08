@@ -1853,7 +1853,7 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     layoutBindings[0].binding = 0;
     layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; 
     layoutBindings[0].descriptorCount = 1;
-    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
     layoutBindings[0].pImmutableSamplers = nullptr;
     
     // Shader storage buffer objects.

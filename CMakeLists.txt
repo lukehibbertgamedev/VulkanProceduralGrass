@@ -10,12 +10,14 @@ set(SRC
 	${CMAKE_CURRENT_SOURCE_DIR}/src/VulkanApplication.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/GrassBlade.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/Sphere.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/Camera.cpp
 )
 
 set(INCLUDE
 	${CMAKE_CURRENT_SOURCE_DIR}/include/VulkanApplication.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/GrassBlade.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Sphere.h
+	${CMAKE_CURRENT_SOURCE_DIR}/include/Camera.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Vertex.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Utility.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/stb_image.h

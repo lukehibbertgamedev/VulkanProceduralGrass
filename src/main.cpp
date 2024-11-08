@@ -21,6 +21,52 @@ static void frameBufferResizeCallback(GLFWwindow* window, int width, int height)
     app->framebufferResized = true;
 }
 
+static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (action == GLFW_PRESS) {
+        switch (key) {
+        default: break;
+
+        case GLFW_KEY_W:
+
+            break;
+
+        case GLFW_KEY_A:
+
+            break;
+
+        case GLFW_KEY_S:
+
+            break;
+
+        case GLFW_KEY_D:
+
+            break;
+        }
+    }
+
+    else if (action == GLFW_RELEASE) {
+        switch (key) {
+        default: break;
+
+        case GLFW_KEY_W:
+
+            break;
+
+        case GLFW_KEY_A:
+
+            break;
+
+        case GLFW_KEY_S:
+
+            break;
+
+        case GLFW_KEY_D:
+
+            break;
+        }
+    }
+}
+
 // TODO: Move to its own header (timer.h).
 class Timer {
 public:
@@ -61,6 +107,9 @@ int main() {
 
     // Link the application structure to the window.
     glfwSetWindowUserPointer(window, &vkApp);
+
+    // Link functoinality to determine key presses, mostly for the dynamic camera.
+    glfwSetKeyCallback(window, keyCallback);
 
     // Link functionality to when glfw detects its framebuffer has been resized (window resizing).
     glfwSetFramebufferSizeCallback(window, frameBufferResizeCallback);
