@@ -27,9 +27,11 @@ layout(std140, binding = 1) buffer BladeInstanceDataBuffer {
 };
 
 layout(location = 0) out vec4 outColor; 
-layout(location = 1) out vec4 outPosition;
-layout(location = 2) out float outBladeWidth;
-layout(location = 3) out float outBladeHeight;
+layout(location = 1) out vec4 outP0;
+layout(location = 2) out vec4 outP1;
+layout(location = 3) out vec4 outP2;
+layout(location = 4) out float outBladeWidth;
+layout(location = 5) out float outBladeHeight;
 
 void main() {   
 
@@ -41,10 +43,16 @@ void main() {
     BladeInstanceData blade = blades[gl_InstanceIndex];       
     
     // Transform world position to clip space.
-    gl_Position = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0f);
+    vec4 clippedP0 = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0f);
+    vec4 clippedP1 = ubo.proj * ubo.view * vec4(blade.p1_and_height.xyz, 1.0f);
+    vec4 clippedP2 = ubo.proj * ubo.view * vec4(blade.p2_and_direction.xyz, 1.0f);
+
+    gl_Position = clippedP0;
 
     outColor = vec4(0.0f, 1.0f, 0.0f, 1.0f); 
-    outPosition = gl_Position;
+    outP0 = clippedP0;
+    outP1 = clippedP1;
+    outP2 = clippedP2;
     outBladeWidth = blade.p0_and_width.w;
     outBladeHeight = blade.p1_and_height.w;
 } 
