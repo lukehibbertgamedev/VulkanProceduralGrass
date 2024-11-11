@@ -19,7 +19,7 @@ layout(location = 3) out vec4 outP2[];
 layout(location = 4) out float outBladeWidth[];
 layout(location = 5) out float outBladeHeight[];
 
-#define TESS_LEVEL 6
+#define TESS_LEVEL 8
 #define NO_TESS 1
 
 void main() {
