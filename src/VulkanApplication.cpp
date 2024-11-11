@@ -1553,6 +1553,11 @@ void VulkanApplication::prepareImGuiDrawData()
 
     ImGui::Separator();
 
+    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "WASD: Move Camera");
+    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Arrows: Rotate Camera");
+    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "R/T/Y: Camera position defaults");
+    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "L/J: Change FOV");
+
     ImGui::Text("Camera position: x: %i, y: %i, z: %i", (int)camera->position.x, (int)camera->position.y, (int)camera->position.z);
     ImGui::Text("Pitch: %i / Yaw: %i / FOV: %i", (int)camera->pitch, (int)camera->yaw, (int)camera->fov);
 

@@ -41,7 +41,12 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         case GLFW_KEY_L: globalCamera.fov += 1.0f; break;
         case GLFW_KEY_J: globalCamera.fov -= 1.0f; break;
 
-        case GLFW_KEY_R: globalCamera.reset(); break;
+        case GLFW_KEY_UP: globalCamera.sensitivity.x = .05f; break;
+        case GLFW_KEY_DOWN: globalCamera.sensitivity.x = -.05f; break; //pitch
+        case GLFW_KEY_LEFT: globalCamera.sensitivity.y = .05f; break;
+        case GLFW_KEY_RIGHT: globalCamera.sensitivity.y = -.05f; break; // yawe
+
+        case GLFW_KEY_R: globalCamera.setFront(); break;
         case GLFW_KEY_T: globalCamera.setSide(); break;
         case GLFW_KEY_Y: globalCamera.setTop(); break;
         }
@@ -51,26 +56,17 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         switch (key) {
         default: break;
 
-        case GLFW_KEY_W: globalCamera.velocity.z = 0; break;
-        case GLFW_KEY_S: globalCamera.velocity.z = 0; break;
+        case GLFW_KEY_W: globalCamera.velocity.z = 0.0f; break;
+        case GLFW_KEY_S: globalCamera.velocity.z = 0.0f; break;
+        case GLFW_KEY_A: globalCamera.velocity.x = 0.0f; break;
+        case GLFW_KEY_D: globalCamera.velocity.x = 0.0f; break;
+        case GLFW_KEY_E: globalCamera.velocity.y = 0.0f; break;
+        case GLFW_KEY_Q: globalCamera.velocity.y = 0.0f; break;
 
-        case GLFW_KEY_A: globalCamera.velocity.x = 0; break;
-        case GLFW_KEY_D: globalCamera.velocity.x = 0; break;
-
-        case GLFW_KEY_E: globalCamera.velocity.y = 0; break;
-        case GLFW_KEY_Q: globalCamera.velocity.y = 0; break;
-        }
-    }
-
-    else if (action == GLFW_REPEAT) {
-        switch (key) {
-        default: break;
-
-        case GLFW_KEY_UP: globalCamera.pitch += 1.f; break;
-        case GLFW_KEY_DOWN: globalCamera.pitch -= 1.f; break;
-
-        case GLFW_KEY_LEFT: globalCamera.yaw += 1.f; break;
-        case GLFW_KEY_RIGHT: globalCamera.yaw -= 1.f; break;
+        case GLFW_KEY_UP: globalCamera.sensitivity.x = 0.0f; break;
+        case GLFW_KEY_DOWN: globalCamera.sensitivity.x = 0.0f; break; //pitch
+        case GLFW_KEY_LEFT: globalCamera.sensitivity.y = 0.0f; break;
+        case GLFW_KEY_RIGHT: globalCamera.sensitivity.y = 0.0f; break; // yawe
         }
     }
 }

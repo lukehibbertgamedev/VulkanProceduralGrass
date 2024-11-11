@@ -27,9 +27,11 @@ void Camera::update()
 {
     glm::mat4 cameraRotation = getRotationMatrix();
     position += glm::vec3(cameraRotation * glm::vec4(velocity * 0.5f, 0.f));
+    pitch += sensitivity.x;
+    yaw += sensitivity.y;
 }
 
-void Camera::reset()
+void Camera::setFront()
 {
     CameraDataDefaults defaults;
 

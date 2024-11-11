@@ -31,9 +31,10 @@ struct TopCameraDataDefaults {
 
 class Camera {
 public:
-	glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
+	glm::vec3 velocity = { 0.0f, 0.0f, 0.0f }; // camera movement speed.
 	glm::vec3 position = { 0.0f, -3.0f, 1.5f };
 
+	glm::vec2 sensitivity = { 0.0f, 0.0f }; // camera rotation speed.
 	float pitch= -30.f;
 	float yaw = 0.f;
 	float fov = 45.0f; // Degrees.
@@ -45,7 +46,7 @@ public:
 	float getFOV() const;
 
 	void update();
-	void reset();
+	void setFront();
 	void setSide();
 	void setTop(); 
 };
