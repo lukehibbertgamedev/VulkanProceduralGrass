@@ -60,25 +60,18 @@ void main()
     // If the shape has a tip, it is important that the translation has to decrease the nearer the generated point is to the top.
     //vec4 displacement = inBladeWidth[0] * normal * (0.5 - abs(u - 0.5) * (1 - v));
 
-    //v0 p0 dir
-    //v1 p1 height
-    //v2 p2 width
-    //up up stiff
-
-    vec3 a = clippedP0.xyz + v * (clippedP1.xyz - clippedP0.xyz);
-    vec3 b = clippedP1.xyz + v * (clippedP2.xyz - clippedP1.xyz);
+    float width = inBladeWidth[0];
+    float direction = inBladeDirection[0];
+    vec3 a = worldP0.xyz + v * (worldP1.xyz - worldP0.xyz);
+    vec3 b = worldP1.xyz + v * (worldP2.xyz - worldP1.xyz);
     vec3 c = a + v * (b - a);
-    vec3 t1 = vec3(sin(inBladeDirection[0]), 0.0, cos(inBladeDirection[0])); // bitan
-    float w = inBladeWidth[0];
-    vec3 c0 = c - w * t1;
-    vec3 c1 = c + w * t1;
+    vec3 t1 = vec3(cos(direction), 0.0, sin(direction));
+    vec3 c0 = c - width * t1;
+    vec3 c1 = c + width * t1;
     vec3 t0 = normalize(b - a); 
     float t = u + 0.5 * v - u * v; // triangle
-
-    vec4 position;
-    position.xyz = (1.0 - t) * c0 + t * c1;
-    position.w = 1.0;
-    gl_Position = ubo.proj * ubo.view * position;
+    vec3 position = mix(c0, c1, t);
+    gl_Position = ubo.proj * ubo.view * vec4(position, 1.0);
 
 
 
@@ -148,9 +141,9 @@ void main()
     //gl_Position = ubo.proj * ubo.view * clip;
 
     // Use gl_TessCoord.y to gradient the blade to be black at the bottom and green at the top, faking shadows.
-    outColor = inColor[0] * (1 - v); 
+    outColor = inColor[0] * (1 - -v); 
     //outColor = vec4(1.0, 0.0, v, 1.0); // for grass passing in height
-    outColor = vec4(1.0, 0.0, 0.0, 1.0); // red
+    //outColor = vec4(1.0, 0.0, 0.0, 1.0); // red for debug.
 }
 
 // Example comment image of how the vertices are generated/positioned from the single input.
