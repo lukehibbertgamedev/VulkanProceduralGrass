@@ -1,7 +1,7 @@
 #version 460 core
 
 // The input to this shader stage will be 4 control points (quad), each vertex will be placed equidistant from each other. 
-layout(quads, equal_spacing, ccw) in;
+layout(quads, fractional_even_spacing, ccw) in;
 
 // Binding is 0 here because it's a uniform buffer object with binding 0 within the descriptor set layout.
 layout(binding = 0) uniform CameraUniformBufferObject {
@@ -65,8 +65,8 @@ void main()
     //v2 p2 width
     //up up stiff
 
-    vec3 a = worldP0.xyz + v * (worldP1.xyz - worldP0.xyz);
-    vec3 b = worldP1.xyz + v * (worldP2.xyz - worldP1.xyz);
+    vec3 a = clippedP0.xyz + v * (clippedP1.xyz - clippedP0.xyz);
+    vec3 b = clippedP1.xyz + v * (clippedP2.xyz - clippedP1.xyz);
     vec3 c = a + v * (b - a);
     vec3 t1 = vec3(sin(inBladeDirection[0]), 0.0, cos(inBladeDirection[0])); // bitan
     float w = inBladeWidth[0];
@@ -149,7 +149,8 @@ void main()
 
     // Use gl_TessCoord.y to gradient the blade to be black at the bottom and green at the top, faking shadows.
     outColor = inColor[0] * (1 - v); 
-    outColor = vec4(1.0, 0.0, 0.0, 1.0);
+    //outColor = vec4(1.0, 0.0, v, 1.0); // for grass passing in height
+    outColor = vec4(1.0, 0.0, 0.0, 1.0); // red
 }
 
 // Example comment image of how the vertices are generated/positioned from the single input.
