@@ -27,12 +27,9 @@ layout(std140, binding = 1) buffer BladeInstanceDataBuffer {
 };
 
 layout(location = 0) out vec4 outColor; 
-layout(location = 1) out vec4 outP0;
-layout(location = 2) out vec4 outP1;
-layout(location = 3) out vec4 outP2;
-layout(location = 4) out float outBladeWidth;
-layout(location = 5) out float outBladeHeight;
-layout(location = 6) out float outBladeDirection;
+layout(location = 1) out vec4 outP0_Width;
+layout(location = 2) out vec4 outP1_Height;
+layout(location = 3) out vec4 outP2_Direction;
 
 void main() {   
 
@@ -41,20 +38,12 @@ void main() {
 
     // Get access to the instance data using the instance index.
     // gl_InstanceIndex provides the index of the current instance being processed when doing some form of instanced rendering.
-    BladeInstanceData blade = blades[gl_InstanceIndex];       
-    
-    // Transform world position to clip space.
-    vec4 clippedP0 = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0);
-    vec4 clippedP1 = ubo.proj * ubo.view * vec4(blade.p1_and_height.xyz, 1.0);
-    vec4 clippedP2 = ubo.proj * ubo.view * vec4(blade.p2_and_direction.xyz, 1.0);
+    BladeInstanceData blade = blades[gl_InstanceIndex];     
 
-    gl_Position = clippedP0; // Send through the bottom centre position of the grass blade, vertices will be generated from here.
+    gl_Position = vec4(blade.p0_and_width.xyz, 1.0); // World position of the grass blade (bottom centre of the quad).
 
-    outP0 = clippedP0;
-    outP1 = clippedP1;
-    outP2 = clippedP2;
-    outBladeWidth = blade.p0_and_width.w;
-    outBladeHeight = blade.p1_and_height.w;
-    outBladeDirection = blade.p2_and_direction.w;
+    outP0_Width = blade.p0_and_width;
+    outP1_Height = blade.p1_and_height;
+    outP2_Direction = blade.p2_and_direction;
     outColor = vec4(0.0f, 1.0f, 0.0f, 1.0f); 
 } 
