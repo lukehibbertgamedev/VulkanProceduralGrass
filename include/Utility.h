@@ -17,6 +17,11 @@ namespace Utils {
 		return distribution(generator);
 	}
 
+	// Returns a random float, no range limitations.
+	static float getRandomFloat() {
+		return rand() / (float)RAND_MAX;
+	}
+
 	// Returns a vector3 containing 3 random floats within the range +/-xBounds, +/-yBounds, +/-zBounds.
 	// By default, this function will negate the x component of vec2 parameters for you. Set negate to false if you wish to pass in your own negative bounds.
 	static glm::vec3 getRandomVec3(glm::vec2 xBounds, glm::vec2 yBounds, glm::vec2 zBounds, bool negate = true) {

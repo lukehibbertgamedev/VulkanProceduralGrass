@@ -10,6 +10,7 @@ layout(location = 2) in vec4 inP1[];
 layout(location = 3) in vec4 inP2[];
 layout(location = 4) in float inBladeWidth[];
 layout(location = 5) in float inBladeHeight[];
+layout(location = 6) in float inBladeDirection[];
 
 // The length of all output arrays will be equal to the patch size.
 layout(location = 0) out vec4 outColor[]; 
@@ -18,9 +19,10 @@ layout(location = 2) out vec4 outP1[];
 layout(location = 3) out vec4 outP2[];
 layout(location = 4) out float outBladeWidth[];
 layout(location = 5) out float outBladeHeight[];
+layout(location = 6) out float outBladeDirection[];
 
-#define TESS_LEVEL 8
-#define NO_TESS 1
+#define TESS_LEVEL 5
+#define NO_TESS 2
 
 void main() {
     
@@ -31,6 +33,7 @@ void main() {
     outP2[gl_InvocationID] = inP2[gl_InvocationID];
     outBladeWidth[gl_InvocationID] = inBladeWidth[gl_InvocationID];
     outBladeHeight[gl_InvocationID] = inBladeHeight[gl_InvocationID];
+    outBladeDirection[gl_InvocationID] = inBladeDirection[gl_InvocationID];
 
     if (gl_InvocationID == 0) {
 
@@ -39,6 +42,9 @@ void main() {
         gl_TessLevelOuter[1] = NO_TESS;         // Segments per top edge + 1 for the endpoints.
         gl_TessLevelOuter[2] = TESS_LEVEL;      // Segments per right edge + 1 for the endpoints.
         gl_TessLevelOuter[3] = NO_TESS;         // Segments per bottom edge + 1 for the endpoints.
+
+        gl_TessLevelInner[0] = 2.0;
+        gl_TessLevelInner[1] = 5.0;
     }
 
     outColor[gl_InvocationID] = inColor[gl_InvocationID]; 

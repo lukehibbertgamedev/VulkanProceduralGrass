@@ -32,6 +32,7 @@ layout(location = 2) out vec4 outP1;
 layout(location = 3) out vec4 outP2;
 layout(location = 4) out float outBladeWidth;
 layout(location = 5) out float outBladeHeight;
+layout(location = 6) out float outBladeDirection;
 
 void main() {   
 
@@ -43,16 +44,17 @@ void main() {
     BladeInstanceData blade = blades[gl_InstanceIndex];       
     
     // Transform world position to clip space.
-    vec4 clippedP0 = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0f);
-    vec4 clippedP1 = ubo.proj * ubo.view * vec4(blade.p1_and_height.xyz, 1.0f);
-    vec4 clippedP2 = ubo.proj * ubo.view * vec4(blade.p2_and_direction.xyz, 1.0f);
+    vec4 clippedP0 = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0);
+    vec4 clippedP1 = ubo.proj * ubo.view * vec4(blade.p1_and_height.xyz, 1.0);
+    vec4 clippedP2 = ubo.proj * ubo.view * vec4(blade.p2_and_direction.xyz, 1.0);
 
-    gl_Position = clippedP0;
+    gl_Position = clippedP0; // Send through the bottom centre position of the grass blade, vertices will be generated from here.
 
-    outColor = vec4(0.0f, 1.0f, 0.0f, 1.0f); 
     outP0 = clippedP0;
     outP1 = clippedP1;
     outP2 = clippedP2;
     outBladeWidth = blade.p0_and_width.w;
     outBladeHeight = blade.p1_and_height.w;
+    outBladeDirection = blade.p2_and_direction.w;
+    outColor = vec4(0.0f, 1.0f, 0.0f, 1.0f); 
 } 

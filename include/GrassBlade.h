@@ -6,15 +6,55 @@
 
 #include <array>
 #include <Vertex.h>
+#include <Utility.h>
 
 // A class representing ONE blade of grass using the Bézier representation.
+
+#define MAX_BLADES 100
+
+#define GRASS_MIN_WIDTH 0.025f	// Will modify the shader values.
+#define GRASS_MAX_WIDTH 0.050f	// Will modify the shader values.
+
+#define GRASS_MIN_HEIGHT 0.10f	// Will modify the shader values.
+#define GRASS_MAX_HEIGHT 1.25f	// Will modify the shader values.
+
+#define GRASS_STIFFNESS 0.5f	// Has little/no effect as of right now.
+#define GRASS_NO_ANGLE 0.0f		// Has little/no effect as of right now.
+
+//#define GRASS_LEAN 0.7f
+
+// 32 bytes large, 4 byte alignment.
+struct BladeInstanceData {
+
+	glm::vec4 p0_width = glm::vec4(0.0f);
+	glm::vec4 p1_height = glm::vec4(0.0f);
+	glm::vec4 p2_direction = glm::vec4(0.0f);
+	glm::vec4 up_stiffness = glm::vec4(0.0f);
+};
+
+class Blade {
+public:
+
+	void initialise(); // Sets up packed 4 v4 values.
+	void updatePackedVec4s(); // Call this when changing the values of any packed vec4s, this will recalculate the defaults.
+
+	// All grass members can be defined in four packed vector4s where xyz represents a vector3 and w represents a float.
+	glm::vec4 p0AndWidth = glm::vec4(0.0f);		// P0 and grass width.						   
+	glm::vec4 p1AndHeight = glm::vec4(0.0f);	// P1 and grass height.						   
+	glm::vec4 p2AndDirection = glm::vec4(0.0f);	// P2 and blade direction angle.			   
+	glm::vec4 upAndStiffness = glm::vec4(0.0f);	// Grass up vector and stiffness coefficient.  
+};
+
+// Further reading notes & implementation ideas below...
+
+
 
 // Predefined blade of grass, subdivided in a tessellation shader.
 // Additional detail can be generated without needing to store it explicitly
 
 
 // 1. [X] Generate a quadratic Bézier curve using 3 control points.
-// 2. Generate a blade shape (typically a quad) that will be subdivided in the tessellation stage.
+// 2. [X] Generate a blade shape (typically a quad) that will be subdivided in the tessellation stage.
 // 3. Map/align the base blade quad to the shape of the Bézier curve by evaluating the curve interpolation of the control points for each vertex (see De Casteljau's algorithm).
 // 4. One grass blade generated???
 
@@ -139,62 +179,6 @@
 //     v2 = v1 + v12;
 // }
 
-// float3 bezierDerivative(float3 p0, float3 p1, float3 p2, float t)
-// {
-// 	   return 2. * (1. - t) * (p1 - p0) + 2. * t * (p2 - p1);
-// }
-
-// float3 bezier(float3 p0, float3 p1, float3 p2, float t)
-// {
-// 	float3 a = lerp(p0, p1, t);
-// 	float3 b = lerp(p1, p2, t);
-// 	return lerp(a, b, t);
-// }
-
-
-
-
-	//class quadratic {
-
-	//public:
-
-
-
-	//};
-
-
-	//const uint8_t kNumPointsAlongBezier = 10;
-
-	//struct bezier { 
-	//public: 
-	//	glm::vec3 p0, p1, p2; // Control points where p0 is the base, p1 is the height, p2 is the tip.
-	//	float interpolation; // Linear interpolation value between 0-1. If this = 0.5 then it is halfway between point A and point B.
-	//};
-
-	// Given the coordinates of control points Pi, the first control point has coordinates P1 = (x1, y1), the second, P2 = (x2, y2) and so on.
-	// The curve coordinates are described by the equation that depends on parameter t between 0-1.
-	// This will generate a given point on the *final* bezier curve using three control points.
-	// p0, p1, and p2 are control points. interpolationValue is usually known as 't' within a lerp, the amount of positional blend between some point A and point B.
-
-	// Using De Casteljau's algorithm, which recursively evaluates polynomials in Bézier curves.
-
-	/*glm::vec3 lerp(const glm::vec3& p0, const glm::vec3& p1, float t) {
-		return glm::vec3((1 - t) * p0.x + t * p1.x, (1 - t) * p0.y + t * p1.y, (1 - t) * p0.z + t * p1.z);
-	}
-
-
-
-	glm::vec3 deCasteljau(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, float t) {
-		glm::vec3 p0p1 = lerp(p0, p1, t); 
-		glm::vec3 p1p2 = lerp(p1, p2, t); 
-		return lerp(p0p1, p1p2, t);
-	}*/
-
-// See more on alignment: https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap15.html#interfaces-resources-layout
-//struct ModelMatrixUniformBufferObject {
-//	alignas(16) glm::mat4 modelMatrix;
-//};
-
 // Indirect structure allows the GPU to execute draw commands without use of the CPU. This will reduce 
 // CPU-GPU synchronisation overhead, and efficiently perform instanced rendering, minimising draw calls 
 // and data transfers. This structure will act as a single draw call for all grass blades, and allows 
@@ -206,104 +190,4 @@
 //	uint32_t firstInstance;	// Index of the first instance.
 //};
 
-//struct Blade {
-//
-//	Blade();
-//
-//	// Quadratic Bézier control points containing a width value (w).
-//	// Each control point is pushed out in the blade's facing direction to generate vertices along
-//	glm::vec4 positionAndDirection = glm::vec4(0.0f);				// xyz = position. w = direction. aka: control point p0.
-//	glm::vec4 bezierPointAndHeight = glm::vec4(0.0f);				// xyz = bezier point. w = height. aka: control point p1.
-//	glm::vec4 physicalModelGuideAndWidth = glm::vec4(0.0f);			// xyz = physical model guide. w = width. aka: control point p2.
-//	glm::vec4 upVectorAndStiffnessCoefficient = glm::vec4(0.0f);	// xyz = up vector. w = stiffness coefficient.
-//
-//	static VkVertexInputBindingDescription getBindingDescription();
-//	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescription();
-//};
-
 //constexpr static unsigned int MAX_BLADES = 1 << 18; // 1 << 18 = 262,144
-//
-//struct Blades {
-//
-//	Blades();
-//
-//	// Holds all blade instances.
-//	VkBuffer bladesBuffer;
-//	VkDeviceMemory bladesBufferMemory;
-//
-//	VkBuffer bladeCountBuffer;
-//	VkDeviceMemory bladeCountBufferMemory;
-//
-//	ModelMatrixUniformBufferObject modelMatrixUBO;
-//	VkBuffer modelMatrixBuffer;
-//	VkDeviceMemory modelMatrixBufferMemory;
-//};
-//
-//class Blade {
-//public:
-//
-//	Blade();
-//
-//	float lean = 1.3f;
-//	float height = 1.25f;
-//
-//	glm::vec3 position = glm::vec3(0.0f); // The world space position of this blade.
-//	glm::vec3 direction = glm::vec3(1.0f, 0.0f, 0.0f); // In the direction that it will curve/lean.
-//
-//	float width = 1.0f;
-//
-//	// All control points contain a width value which define the total width of the blade. 
-//	// Each control point is pushed out in the blade's facing direction to generate vertices along.
-//	glm::vec3 p0 = glm::vec3(0.0f, 0.0f, 0.0f); // Blade base.
-//	glm::vec3 p1 = glm::vec3(0.0f, 0.0f, 0.0f); // Blade height.
-//	glm::vec3 p2 = glm::vec3(0.0f, 0.0f, 0.0f); // Blade tip.
-//
-//	glm::vec3 calculatePositionAlongQuadraticBezierCurve(float t);
-//};
-
-#include "Utility.h"
-
-
-namespace bezier {
-
-	static int pointCountToVisualise = 10;
-
-	// Uses De Casteljau's algorithm to evaluate polynomials in Bézier curves.
-	static glm::vec3 lerp(const glm::vec3& p0, const glm::vec3& p1, float t) {
-		return glm::vec3((1 - t) * p0.x + t * p1.x, (1 - t) * p0.y + t * p1.y, (1 - t) * p0.z + t * p1.z);
-	}
-}
-
-#define MAX_BLADES 30
-
-#define GRASS_WIDTH 0.05f		// Will modify the shader values.
-#define GRASS_HEIGHT 1.25f		// Will modify the shader values.
-#define GRASS_LEAN 0.7f
-#define GRASS_STIFFNESS 0.5f
-#define GRASS_NO_ANGLE 0.0f
-
-// 32 bytes large, 4 byte alignment.
-struct BladeInstanceData {
-
-	glm::vec4 p0_width		= glm::vec4(0.0f);
-	glm::vec4 p1_height		= glm::vec4(0.0f);
-	glm::vec4 p2_direction	= glm::vec4(0.0f);
-	glm::vec4 up_stiffness	= glm::vec4(0.0f);
-};
-
-// Note: Whatever variables are here, must match the IN parameters for the vertex shader.
-// I.e., layout(location = n) in vec4
-class Blade {
-public:
-
-	void initialise(); // Sets up packed 4 v4 values.
-	void updatePackedVec4s(); // Call this when changing the values of any packed vec4s, this will recalculate the defaults.
-
-	glm::vec3 calculatePositionAlongBezierCurve(float interpolationValue); // Quadratic bezier curve.
-
-	// All grass members can be defined in four packed vector4s where xyz represents a vector3 and w represents a float.
-	glm::vec4 p0AndWidth = glm::vec4(0.0f);		// P0 and grass width.						   
-	glm::vec4 p1AndHeight = glm::vec4(0.0f);	// P1 and grass height.						   
-	glm::vec4 p2AndDirection = glm::vec4(0.0f);	// P2 and blade direction angle.			   
-	glm::vec4 upAndStiffness = glm::vec4(0.0f);	// Grass up vector and stiffness coefficient.  
-};
