@@ -1463,8 +1463,8 @@ void VulkanApplication::populateBladeInstanceBuffer()
     // Calculate the bounds of the flat plane (Y is not needed yet as there is no terrain height).
     // [0, 0, 0] is the origin of the plane, the bounds extend half the scale in each direction.
     // Warning: This does not take into account the position of the ground plane.
-    glm::vec2 planeBoundsX = glm::vec2(-(MEADOW_SCALE_X) + groundPlane.position.x + 0.5f, (MEADOW_SCALE_X) + groundPlane.position.x - 0.5f);
-    glm::vec2 planeBoundsY = glm::vec2(-(MEADOW_SCALE_Y) + groundPlane.position.y + 0.5f, (MEADOW_SCALE_Y) + groundPlane.position.y - 0.5f);    
+    glm::vec2 planeBoundsX = glm::vec2(-(MEADOW_SCALE_X * 0.5f) + groundPlane.position.x + 0.5f, (MEADOW_SCALE_X * 0.5f) + groundPlane.position.x - 0.5f);
+    glm::vec2 planeBoundsY = glm::vec2(-(MEADOW_SCALE_Y * 0.5f) + groundPlane.position.y + 0.5f, (MEADOW_SCALE_Y * 0.5f) + groundPlane.position.y - 0.5f);
     
     // Do this outside the loop to avoid continuously creating struct instances, just change the data inside it.
     BladeInstanceData bladeInstanceData = {};

@@ -33,7 +33,10 @@ void main()
 
     float width = P0.w;
     float direction = P2.w;
-    float smoothnessFactor = 0.5; // Half the smoothing value resulting in a sharper tip.
+
+    // Suitably ranged [0.3, 1.0]. The closer to 1, the smoother the tip. The closer to 0.3, the pointier the tip.
+    // 0.0 results in too thin of a blade with no visuals, 0.1 results in line blades, 0.2 results in very thin blades, 0.3 onwards is suitable.
+    float smoothnessFactor = 0.6; 
 
     // De Casteljau's algorithm to get a point on the Bézier curve.
     vec3 a = P0.xyz + v * (P1.xyz - P0.xyz);
