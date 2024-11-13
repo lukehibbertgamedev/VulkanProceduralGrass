@@ -12,8 +12,8 @@
 
 #define MAX_BLADES 400
 
-#define GRASS_MIN_WIDTH 0.025f	// Will modify the shader values.
-#define GRASS_MAX_WIDTH 0.050f	// Will modify the shader values.
+#define GRASS_MIN_WIDTH 0.050f	// Will modify the shader values.
+#define GRASS_MAX_WIDTH 0.100f	// Will modify the shader values.
 
 #define GRASS_MIN_HEIGHT 0.10f	// Will modify the shader values.
 #define GRASS_MAX_HEIGHT 1.00f	// Will modify the shader values.
