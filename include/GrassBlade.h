@@ -10,15 +10,13 @@
 
 // A class representing ONE blade of grass using the Bézier representation.
 
-#define MAX_BLADES 40
+#define MAX_BLADES 400
 
 #define GRASS_MIN_WIDTH 0.025f	// Will modify the shader values.
 #define GRASS_MAX_WIDTH 0.050f	// Will modify the shader values.
 
-#define GRASS_HEIGHT_MODIFIER 0.035f // Will modify the shader values. Used to make wider blades taller.
-
 #define GRASS_MIN_HEIGHT 0.10f	// Will modify the shader values.
-#define GRASS_MAX_HEIGHT 1.25f	// Will modify the shader values.
+#define GRASS_MAX_HEIGHT 1.00f	// Will modify the shader values.
 
 #define GRASS_STIFFNESS 0.5f	// Has little/no effect as of right now.
 #define GRASS_NO_ANGLE 0.0f		// Has little/no effect as of right now.

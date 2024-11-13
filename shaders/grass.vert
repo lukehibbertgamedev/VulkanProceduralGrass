@@ -40,6 +40,9 @@ void main() {
     // gl_InstanceIndex provides the index of the current instance being processed when doing some form of instanced rendering.
     BladeInstanceData blade = blades[gl_InstanceIndex];     
 
+    // Important note: When using tessellation, the clip space conversion is done in the evaluation
+    // shader for every vertex, effectively delaying the conversion until all vertices are generated.
+
     gl_Position = vec4(blade.p0_and_width.xyz, 1.0); // World position of the grass blade (bottom centre of the quad).
 
     outP0_Width = blade.p0_and_width;

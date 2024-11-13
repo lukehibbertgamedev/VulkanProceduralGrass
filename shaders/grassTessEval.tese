@@ -45,23 +45,22 @@ void main()
 
     // Tangent and bitangent.
     vec3 t0 = normalize(b - a); 
-    vec3 t1 = vec3(cos(direction), 0.0, sin(direction));    
+    vec3 t1 = vec3(cos(direction), sin(direction), 0.0); // Assumes Z is up.    
 
+    // Normal and 3D shape displacement.
     vec3 normal = normalize(cross(t0, t1));
-    vec3 displacement = (width * (0.5 - abs(u - 0.5) * (1.0 - v))) * normal;
+    vec3 displacement = (width * (0.5 - abs(u - 0.5) * (1.0 - v))) * 0.5 * normal;
 
     // Resulting curve points that span the width of the blade, lerping between these values will provide a smooth tip.
-    vec3 c0 = c - width * t1;
-    vec3 c1 = c + width * t1;
-
-    vec3 displacedC0 = c0 + displacement;
-    vec3 displacedC1 = c1 + displacement;
+    // Using displacement here moves the central vertices backwards from the base, decreasing to the tip.
+    vec3 c0 = (c - width * t1) + displacement;
+    vec3 c1 = (c + width * t1) + displacement;
     
     // Define interpolation parameter ...
     float t = u + 0.5 * v - u * v; 
 
     // Lerp between ...
-    vec3 position = mix(displacedC0, displacedC1, t * smoothnessFactor);
+    vec3 position = mix(c0, c1, t * smoothnessFactor);
 
     // Convert the final position into clip space.
     gl_Position = ubo.proj * ubo.view * vec4(position, 1.0);
