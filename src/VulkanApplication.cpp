@@ -859,12 +859,17 @@ VkResult VulkanApplication::createComputePipeline()
     computeShaderStageInfo.module = grassComputeShaderModule;
     computeShaderStageInfo.pName = "main";
 
+    VkPushConstantRange pushConstantRange = {};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(float);
+
     VkPipelineLayoutCreateInfo computePipelineLayoutInfo = {};
     computePipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     computePipelineLayoutInfo.pNext = nullptr;
     computePipelineLayoutInfo.flags = 0;
-    computePipelineLayoutInfo.pushConstantRangeCount = 0;
-    computePipelineLayoutInfo.pPushConstantRanges = nullptr;
+    computePipelineLayoutInfo.pushConstantRangeCount = 1;
+    computePipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
     computePipelineLayoutInfo.setLayoutCount = 1;
     computePipelineLayoutInfo.pSetLayouts = &grassDescriptorSetLayout;
 
@@ -1855,7 +1860,12 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
-    vkCmdDispatch(commandBuffer, THREAD_GROUP_SIZE, 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
+    float elapsed = glfwGetTime();
+    vkCmdPushConstants(commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &elapsed);
+
+    vkCmdDispatch(commandBuffer, MAX_BLADES, 1, 1); // Currently only a 2 dimensional array of thread groups and work groups.
+
+    //vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 0, nullptr);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to end recording compute command buffer!");

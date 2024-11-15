@@ -12,23 +12,32 @@ struct BladeInstanceData {
 
 // Read from the previous frame, and write to the current frame. 
 // This will wrap so the updated current frame will become the readonly previous frame.
-layout(std140, binding = 1) readonly buffer BladeInstanceDataBufferLastFrame {
-    BladeInstanceData blades[]; 
-} bladeInstanceDataBufferLastFrame;
+layout(std140, binding = 1) buffer BladeInstanceDataBufferLastFrame {
+    BladeInstanceData bladesIn[]; 
+};
 
 // Write to the current frame, wrapped to the next frame to allow new data to be read.
 layout(std140, binding = 2) buffer BladeInstanceDataBufferCurrentFrame {
-    BladeInstanceData blades[]; 
-} bladeInstanceDataBufferCurrentFrame;
+    BladeInstanceData bladesOut[]; 
+};
 
-layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+layout(push_constant) uniform PushConstants {
+    float elapsed;
+} pushConstants;
+
+layout (local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
 
 void main() 
 {
     uint threadID_x = gl_GlobalInvocationID.x; // Thread ID within the grid's x-space.
 
-    BladeInstanceData bladeIn = bladeInstanceDataBufferLastFrame.blades[threadID_x];
-    BladeInstanceData bladeOut = bladeInstanceDataBufferCurrentFrame.blades[threadID_x];
+    BladeInstanceData bladeIn = bladesIn[threadID_x];
 
-    bladeOut = bladeIn;
+    float frequency = 1.0;
+    float amplitude = 0.4;
+    float sway = amplitude * sin(pushConstants.elapsed * frequency);
+
+    bladesOut[threadID_x].p2_and_direction.x = bladeIn.p2_and_direction.x + sway;  
+
+
 }

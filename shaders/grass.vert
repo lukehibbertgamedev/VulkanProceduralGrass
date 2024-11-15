@@ -43,7 +43,7 @@ void main() {
 
     // Get access to the instance data using the instance index.
     // gl_InstanceIndex provides the index of the current instance being processed when doing some form of instanced rendering.
-    BladeInstanceData blade = bladeInstanceDataBufferLastFrame.blades[gl_InstanceIndex];     
+    BladeInstanceData blade = bladeInstanceDataBufferCurrentFrame.blades[gl_InstanceIndex];     
 
     // Important note: When using tessellation, the clip space conversion is done in the evaluation
     // shader for every vertex, effectively delaying the conversion until all vertices are generated.
