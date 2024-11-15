@@ -207,7 +207,7 @@ int main() {
 
     vkApp.createBladeInstanceStagingBuffer(); 
 
-    ret = vkApp.createCommandBuffer(); 
+    ret = vkApp.createCommandBuffers(); 
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command buffer.");
 
     ret = vkApp.createSynchronizationObjects();

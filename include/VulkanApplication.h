@@ -104,7 +104,7 @@ public:
 	VkResult createUniformBuffers();								//			 |
 	VkResult createDescriptorPool();								//			 |
 	VkResult createDescriptorSets();								//			 |
-	VkResult createCommandBuffer();									//			 |
+	VkResult createCommandBuffers();									//			 |
 	VkResult createSynchronizationObjects();						//			 |
 	VkResult createDefaultCamera();									//			 |
 	VkResult createImGuiImplementation();							// - - - - - '
@@ -126,6 +126,7 @@ public:
 
 	// Bind pipelines and populate the command buffer with commands (i.e., vkCmdDraw) for that pipeline.
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex); 
+	void recordComputeCommandBuffer(VkCommandBuffer commandBuffer);
 
 	// Reads a SPIR-V code file and turns it into a handle that can be bound to a VkPipeline.
 	VkShaderModule createShaderModule(const std::vector<char>& code);
@@ -134,6 +135,10 @@ public:
 	void cleanupSwapchain();
 	void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 private:
+
+	VkResult createGraphicsCommandBuffer();
+	VkResult createComputeCommandBuffer();
+
 	VkResult createModelDescriptorSetLayout(); // For camera ubo.
 	VkResult createGrassDescriptorSetLayout(); // For grass data ssbo.
 
@@ -205,6 +210,9 @@ public:
 	std::vector<VkSemaphore> renderFinishedSemaphores = {};				// Per-frame synchronisation used for signalling when rendering to an image is completed allowing safe image presentation to the screen.
 	std::vector<VkFence> inFlightFences = {};							// Per-frame synchronisation used for signalling when a frame's rendering has completed allowing the GPU tasks to complete.
 	
+	std::vector<VkFence> computeInFlightFences = {};
+	std::vector<VkSemaphore> computeFinishedSemaphores = {};
+
 	// Descriptors.
 	VkDescriptorPool descriptorPool = VK_NULL_HANDLE;					// A handle to the manager that allocates descriptor sets to increase correct resource allocation.
 	VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;				// A handle to the manager that allocates descriptor sets specifically for ImGui resources necessary for rendering its interface.
