@@ -1,0 +1,34 @@
+#version 450
+
+// A shader copy of the BladeInstanceData structure defined in GrassBlade.h.
+// This contains all instances of all grass blades, indexed by gl_InstanceIndex.
+struct BladeInstanceData {
+    
+    vec4 p0_and_width;
+    vec4 p1_and_height;
+    vec4 p2_and_direction;
+    vec4 upVec_and_stiffness;             
+};
+
+// Read from the previous frame, and write to the current frame. 
+// This will wrap so the updated current frame will become the readonly previous frame.
+layout(std140, binding = 1) readonly buffer BladeInstanceDataBufferLastFrame {
+    BladeInstanceData blades[]; 
+} bladeInstanceDataBufferLastFrame;
+
+// Write to the current frame, wrapped to the next frame to allow new data to be read.
+layout(std140, binding = 2) buffer BladeInstanceDataBufferCurrentFrame {
+    BladeInstanceData blades[]; 
+} bladeInstanceDataBufferCurrentFrame;
+
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+void main() 
+{
+    uint threadID_x = gl_GlobalInvocationID.x; // Thread ID within the grid's x-space.
+
+    BladeInstanceData bladeIn = bladeInstanceDataBufferLastFrame.blades[threadID_x];
+    BladeInstanceData bladeOut = bladeInstanceDataBufferCurrentFrame.blades[threadID_x];
+
+    bladeOut = bladeIn;
+}

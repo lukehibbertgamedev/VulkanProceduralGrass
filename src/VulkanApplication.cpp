@@ -406,13 +406,10 @@ VkResult VulkanApplication::createLogicalDevice()
 
     VkPhysicalDeviceFeatures deviceFeatures = {};
     //deviceFeatures.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+    deviceFeatures.fillModeNonSolid = VK_TRUE; // Enable Vulkan to use VK_POLYGON_MODE_POINT or LINE.
+    deviceFeatures.samplerAnisotropy = VK_TRUE; // Enable Vulkan to support anisotropic filtering.
     deviceFeatures.tessellationShader = VK_TRUE; // Enable Vulkan to be able to link and execute tessellation shaders.
     deviceFeatures.shaderTessellationAndGeometryPointSize = VK_TRUE; // Enable Vulkan to allow the use of gl_PointSize within tessellation shaders.
-    deviceFeatures.fillModeNonSolid = VK_TRUE; // Enable Vulkan to use VK_POLYGON_MODE_POINT or LINE.
-
-    //deviceFeatures.samplerAnisotropy = VK_TRUE;
-    //deviceFeatures.sampleRateShading = VK_TRUE; // Enable sample shading feature for the device.
-    //deviceFeatures.geometryShader = VK_TRUE;
 
     VkDeviceCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -676,6 +673,12 @@ VkResult VulkanApplication::createPipelines()
         return ret;
     }
 
+    ret = createComputePipeline();
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("could not create compute pipeline.");
+        return ret;
+    }
+
     ret = createGrassPipeline();
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("could not create grass pipeline.");
@@ -819,6 +822,49 @@ VkResult VulkanApplication::createMeshPipeline()
     vkDestroyShaderModule(m_LogicalDevice, meshVertexShaderModule, nullptr);
 
     return VK_SUCCESS;
+}
+
+VkResult VulkanApplication::createComputePipeline()
+{
+    auto grassComputeShaderCode = readFile("../shaders/grassCompute.comp.spv");
+    VkShaderModule grassComputeShaderModule = createShaderModule(grassComputeShaderCode);
+
+    VkPipelineShaderStageCreateInfo computeShaderStageInfo = {};
+    computeShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    computeShaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    computeShaderStageInfo.module = grassComputeShaderModule;
+    computeShaderStageInfo.pName = "main";
+
+    VkPipelineLayoutCreateInfo computePipelineLayoutInfo = {};
+    computePipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    computePipelineLayoutInfo.pNext = nullptr;
+    computePipelineLayoutInfo.flags = 0;
+    computePipelineLayoutInfo.pushConstantRangeCount = 0;
+    computePipelineLayoutInfo.pPushConstantRanges = nullptr;
+    computePipelineLayoutInfo.setLayoutCount = 1;
+    computePipelineLayoutInfo.pSetLayouts = &grassDescriptorSetLayout;
+
+    // Create the layout/blueprint for how the compute pipeline will be created.
+    if (vkCreatePipelineLayout(m_LogicalDevice, &computePipelineLayoutInfo, nullptr, &computePipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create compute pipeline layout!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    VkComputePipelineCreateInfo computePipelineCreateInfo = {};
+    computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    computePipelineCreateInfo.pNext = nullptr;
+    computePipelineCreateInfo.flags = 0;
+    computePipelineCreateInfo.layout = computePipelineLayout; 
+    computePipelineCreateInfo.stage = computeShaderStageInfo;
+    computePipelineCreateInfo.basePipelineHandle = 0;
+    computePipelineCreateInfo.basePipelineIndex = 0;
+
+    if (vkCreateComputePipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &computePipeline) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create compute pipeline!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    return VK_SUCCESS; 
 }
 
 VkResult VulkanApplication::createGrassPipeline()
@@ -1064,18 +1110,24 @@ VkResult VulkanApplication::createShaderStorageBuffers()
     // Memory property bits:
     // - device local is the most efficient for device access
 
-    VkResult ret = createBuffer(
-        bufferSize, 
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        bladeInstanceDataBuffer,
-        bladeInstanceDataBufferMemory
-    );
+    VkResult ret = VK_SUCCESS;
 
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation.");
-        return ret;
-    }
+    bladeInstanceDataBuffer.resize(kMaxFramesInFlight);
+    bladeInstanceDataBufferMemory.resize(kMaxFramesInFlight);
+
+    // Create 2 SSBOs per-framebuffer, this application uses double-buffering.
+    for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
+        
+        ret = createBuffer(bufferSize, 
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            bladeInstanceDataBuffer[i], bladeInstanceDataBufferMemory[i]);
+
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation.");
+            return ret;
+        }
+    } 
 
     return ret;
 }
@@ -1294,16 +1346,16 @@ VkResult VulkanApplication::createDescriptorPool()
     // Also include one here for the dynamic storage buffer to be used for an arbitrary number of grass blade objects.
 
     VkDescriptorPoolSize poolSizes[] = {
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3}
     };
 
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; 
-    poolInfo.poolSizeCount = 2;
+    poolInfo.poolSizeCount = (uint32_t)std::size(poolSizes); 
     poolInfo.pPoolSizes = poolSizes;
-    poolInfo.maxSets = 2;
+    poolInfo.maxSets = 3; // Must be at >= the maximum pool size for one type.
 
     if (vkCreateDescriptorPool(m_LogicalDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool!");
@@ -1513,25 +1565,34 @@ void VulkanApplication::createBladeInstanceStagingBuffer()
     // Memory properties: 
     // - Host visible: Allows mapping and writing data to the buffer directly from the CPU.
     // - Host coherent: Removes the need for manually flushing mapped memory so that the GPU sees the changes. Less error-prone.
-    VkResult ret = createBuffer(
-        bladeInstanceBufferRequiredSize, 
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,                                               
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,     
-        bladeInstanceStagingBuffer,  
-        bladeInstanceStagingBufferMemory 
-    );
 
-    // To upload data to the GPU, you first need to map and copy the CPU local data to a staging buffer,
-    // then make sure to copy the staging buffer data over to the shader resource buffer using a single time command.
+    bladeInstanceStagingBuffer.resize(kMaxFramesInFlight);
+    bladeInstanceStagingBufferMemory.resize(kMaxFramesInFlight);
 
-    // Map the memory and copy the data from the local vector into the staging buffer.
-    void* data;
-    vkMapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory, 0, bladeInstanceBufferRequiredSize, 0, &data);
-    memcpy(data, localBladeInstanceBuffer.data(), (size_t)bladeInstanceBufferRequiredSize);
-    vkUnmapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory);
+    // Create 2 staging buffers per-SSBO, this application uses double-buffering.
+    for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
 
-    // Copy data from the staging buffer (host) to the shader storage buffer (GPU).
-    copyBuffer(bladeInstanceStagingBuffer, bladeInstanceDataBuffer, bladeInstanceBufferRequiredSize);
+        VkResult ret = createBuffer(bladeInstanceBufferRequiredSize,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+            bladeInstanceStagingBuffer[i], bladeInstanceStagingBufferMemory[i]);
+
+        if (ret != VK_SUCCESS) {
+            throw std::runtime_error("bad buffer creation.");
+        }
+
+        // To upload data to the GPU, you first need to map and copy the CPU local data to a staging buffer,
+        // then make sure to copy the staging buffer data over to the shader resource buffer using a single time command.
+
+        // Map the memory and copy the data from the local vector into the staging buffer.
+        void* data;
+        vkMapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory[i], 0, bladeInstanceBufferRequiredSize, 0, &data);
+        memcpy(data, localBladeInstanceBuffer.data(), (size_t)bladeInstanceBufferRequiredSize);
+        vkUnmapMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory[i]);
+
+        // Copy data from the staging buffer (host) to the shader storage buffer (GPU).
+        copyBuffer(bladeInstanceStagingBuffer[i], bladeInstanceDataBuffer[i], bladeInstanceBufferRequiredSize);
+    }    
 }
 
 void VulkanApplication::prepareImGuiDrawData()
@@ -1714,7 +1775,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipeline);
 
     VkDeviceSize quadOffsetsGRASS[] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer, quadOffsetsGRASS);
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer[currentFrame], quadOffsetsGRASS);
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
@@ -1781,8 +1842,10 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     vkFreeCommandBuffers(m_LogicalDevice, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 
     // Staging Buffer.
-    vkDestroyBuffer(m_LogicalDevice, bladeInstanceStagingBuffer, nullptr);
-    vkFreeMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory, nullptr);
+    for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
+        vkDestroyBuffer(m_LogicalDevice, bladeInstanceStagingBuffer[i], nullptr);
+        vkFreeMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory[i], nullptr);
+    }
 
     // Descriptor Sets - uses descriptor pool, so destroy pool later.
     std::array<VkDescriptorSet, 2> descriptorSets = { grassPipelineDescriptorSet, modelPipelineDescriptorSet }; 
@@ -1801,8 +1864,10 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     vkFreeMemory(m_LogicalDevice, uniformBufferMemory, nullptr);
 
     // Shader Storage Buffer Object.
-    vkDestroyBuffer(m_LogicalDevice, bladeInstanceDataBuffer, nullptr);
-    vkFreeMemory(m_LogicalDevice, bladeInstanceDataBufferMemory, nullptr);
+    for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
+        vkDestroyBuffer(m_LogicalDevice, bladeInstanceDataBuffer[i], nullptr);
+        vkFreeMemory(m_LogicalDevice, bladeInstanceDataBufferMemory[i], nullptr);
+    }
 
     // Index Buffers.
     vkDestroyBuffer(m_LogicalDevice, bladeShapeIndexBuffer, nullptr);
@@ -2014,23 +2079,31 @@ VkResult VulkanApplication::createModelDescriptorSetLayout()
 VkResult VulkanApplication::createGrassDescriptorSetLayout()
 {
     // This layout requires a UBO for the camera data to be used here too, so that the grass positions can be represented as points.
-    std::array<VkDescriptorSetLayoutBinding, 2> layoutBindings = {};
+    std::array<VkDescriptorSetLayoutBinding, 3> layoutBindings = {};
 
     // Uniform buffer objects.
     layoutBindings[0] = {};
     layoutBindings[0].binding = 0;
     layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; 
     layoutBindings[0].descriptorCount = 1;
-    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
     layoutBindings[0].pImmutableSamplers = nullptr;
     
-    // Shader storage buffer objects.
+    // Shader storage buffer object last frame.
     layoutBindings[1] = {};
     layoutBindings[1].binding = 1;
     layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // Warning: This may need to be dynamic SSBO down the line.
     layoutBindings[1].descriptorCount = 1;
-    layoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT; // For use within the vertex and tessellation control shader.
+    layoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT; 
     layoutBindings[1].pImmutableSamplers = nullptr;
+
+    // Shader storage buffer object current frame
+    layoutBindings[2] = {};
+    layoutBindings[2].binding = 2;
+    layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // Warning: This may need to be dynamic SSBO down the line.
+    layoutBindings[2].descriptorCount = 1;
+    layoutBindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+    layoutBindings[2].pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -2105,7 +2178,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
         return ret;
     }   
 
-    std::array<VkWriteDescriptorSet, 2> grassDescriptorWrites = {};
+    std::array<VkWriteDescriptorSet, 3> grassDescriptorWrites = {};
 
     VkDescriptorBufferInfo uboBufferInfo = {};
     uboBufferInfo.buffer = uniformBuffer;
@@ -2121,10 +2194,10 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     grassDescriptorWrites[0].descriptorCount = 1;
     grassDescriptorWrites[0].pBufferInfo = &uboBufferInfo;
 
-    VkDescriptorBufferInfo ssboBufferInfo = {};
-    ssboBufferInfo.buffer = bladeInstanceDataBuffer;
-    ssboBufferInfo.offset = 0;
-    ssboBufferInfo.range = sizeof(BladeInstanceData) * MAX_BLADES;
+    VkDescriptorBufferInfo ssboBufferInfoLastFrame = {};
+    ssboBufferInfoLastFrame.buffer = bladeInstanceDataBuffer[(currentFrame - 1) % kMaxFramesInFlight]; // Return the index for the previous frame, % to ensure correct wrapping.  
+    ssboBufferInfoLastFrame.offset = 0;  
+    ssboBufferInfoLastFrame.range = sizeof(BladeInstanceData) * MAX_BLADES; 
 
     grassDescriptorWrites[1] = {};
     grassDescriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2133,7 +2206,21 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     grassDescriptorWrites[1].dstArrayElement = 0;
     grassDescriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     grassDescriptorWrites[1].descriptorCount = 1;
-    grassDescriptorWrites[1].pBufferInfo = &ssboBufferInfo;    
+    grassDescriptorWrites[1].pBufferInfo = &ssboBufferInfoLastFrame;
+
+    VkDescriptorBufferInfo ssboBufferInfoCurrentFrame = {};
+    ssboBufferInfoCurrentFrame.buffer = bladeInstanceDataBuffer[(currentFrame) % kMaxFramesInFlight]; // Return the index for the current frame, % to ensure correct wrapping. 
+    ssboBufferInfoCurrentFrame.offset = 0; 
+    ssboBufferInfoCurrentFrame.range = sizeof(BladeInstanceData) * MAX_BLADES; 
+
+    grassDescriptorWrites[2] = {};
+    grassDescriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    grassDescriptorWrites[2].dstSet = grassPipelineDescriptorSet;
+    grassDescriptorWrites[2].dstBinding = 2;
+    grassDescriptorWrites[2].dstArrayElement = 0;
+    grassDescriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    grassDescriptorWrites[2].descriptorCount = 1;
+    grassDescriptorWrites[2].pBufferInfo = &ssboBufferInfoCurrentFrame;
 
     vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(grassDescriptorWrites.size()), grassDescriptorWrites.data(), 0, nullptr);
 
@@ -2351,11 +2438,7 @@ QueueFamilyIndices VulkanApplication::findQueueFamilies(VkPhysicalDevice device)
     for (const auto& queueFamily : queueFamilies) {
         
         driverData.queueFamilyCount = queueFamilyCount;
-        driverData.queueFlags = queueFamily.queueFlags;
-
-        if (indices.isComplete()) {
-            break;
-        }
+        driverData.queueFlags = queueFamily.queueFlags;        
 
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_SurfaceKHR, &presentSupport);
@@ -2369,6 +2452,10 @@ QueueFamilyIndices VulkanApplication::findQueueFamilies(VkPhysicalDevice device)
         if (presentSupport) {
             indices.presentFamily = i;
         }      
+
+        if (indices.isComplete()) {
+            break;
+        }
 
         i++;
     }

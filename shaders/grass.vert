@@ -20,11 +20,16 @@ layout(binding = 0) uniform CameraUniformBufferObject {
     mat4 proj;
 } ubo;
 
-// Binding is 1 here because it's a shader storage buffer object with binding 1 within the descriptor set layout.
-// The shader storage buffer binding for the data buffer, populated by VulkanApplication::populateBladeInstanceBuffer().
-layout(std140, binding = 1) buffer BladeInstanceDataBuffer {
+// Read from the previous frame, and write to the current frame. 
+// This will wrap so the updated current frame will become the readonly previous frame.
+layout(std140, binding = 1) readonly buffer BladeInstanceDataBufferLastFrame {
     BladeInstanceData blades[]; 
-};
+} bladeInstanceDataBufferLastFrame;
+
+// Write to the current frame, wrapped to the next frame to allow new data to be read.
+layout(std140, binding = 2) buffer BladeInstanceDataBufferCurrentFrame {
+    BladeInstanceData blades[]; 
+} bladeInstanceDataBufferCurrentFrame;
 
 layout(location = 0) out vec4 outColor; 
 layout(location = 1) out vec4 outP0_Width;
@@ -38,7 +43,7 @@ void main() {
 
     // Get access to the instance data using the instance index.
     // gl_InstanceIndex provides the index of the current instance being processed when doing some form of instanced rendering.
-    BladeInstanceData blade = blades[gl_InstanceIndex];     
+    BladeInstanceData blade = bladeInstanceDataBufferLastFrame.blades[gl_InstanceIndex];     
 
     // Important note: When using tessellation, the clip space conversion is done in the evaluation
     // shader for every vertex, effectively delaying the conversion until all vertices are generated.
