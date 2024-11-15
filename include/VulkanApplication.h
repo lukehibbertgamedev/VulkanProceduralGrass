@@ -205,14 +205,14 @@ public:
 	std::vector<VkSemaphore> imageAvailableSemaphores = {};				// Per-frame synchronisation used for signalling when swapchain images are available for rendering.
 	std::vector<VkSemaphore> renderFinishedSemaphores = {};				// Per-frame synchronisation used for signalling when rendering to an image is completed allowing safe image presentation to the screen.
 	std::vector<VkFence> inFlightFences = {};							// Per-frame synchronisation used for signalling when a frame's rendering has completed allowing the GPU tasks to complete.
-	std::vector<VkSemaphore> computeFinishedSemaphores = {};			// Per-frame synchronisation used for signalling when a compute command has finished executing.
-	std::vector<VkFence> computeInFlightFences = {};					// Per-frame synchronisation used for signalling when a frame's compute command queue has completed.
+	//std::vector<VkSemaphore> computeFinishedSemaphores = {};			// Per-frame synchronisation used for signalling when a compute command has finished executing.
+	//std::vector<VkFence> computeInFlightFences = {};					// Per-frame synchronisation used for signalling when a frame's compute command queue has completed.
 
 	// Descriptors.
 	VkDescriptorPool descriptorPool = VK_NULL_HANDLE;					// A handle to the manager that allocates descriptor sets to increase correct resource allocation.
 	VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;				// A handle to the manager that allocates descriptor sets specifically for ImGui resources necessary for rendering its interface.
-	VkDescriptorSetLayout computeDescriptorSetLayout = VK_NULL_HANDLE;	// A description of how descriptor sets (ie., resources/buffers) are accessed specifically by compute shaders.
-	std::vector<VkDescriptorSet> computeDescriptorSets = {};			// A collection of resources/buffers/images that can be bound to compute shaders during compute operations.
+	//VkDescriptorSetLayout computeDescriptorSetLayout = VK_NULL_HANDLE;	// A description of how descriptor sets (ie., resources/buffers) are accessed specifically by compute shaders.
+	//std::vector<VkDescriptorSet> computeDescriptorSets = {};			// A collection of resources/buffers/images that can be bound to compute shaders during compute operations.
 
 	// Multi-sampling.
 	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;			// ...

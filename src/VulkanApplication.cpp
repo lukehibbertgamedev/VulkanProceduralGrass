@@ -1300,6 +1300,7 @@ VkResult VulkanApplication::createDescriptorPool()
 
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; 
     poolInfo.poolSizeCount = 2;
     poolInfo.pPoolSizes = poolSizes;
     poolInfo.maxSets = 2;
@@ -1743,38 +1744,114 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
 void VulkanApplication::cleanupApplication(GLFWwindow* window)
 {
-    cleanupSwapchain();
 
+    // [X] 1. Window
+    // [X] 2. Instance
+    // [X] 3. Debug Messenger
+    // [X] 4. Window surface
+    // [/] 5. Physical Device
+    // [ ] 6. Logical Device
+    // [ ] 7. Swapchain
+    // [ ] 8. Swapchain Image Views
+    // [ ] 9. Render Pass
+    // [ ]10. Descriptor Set Layouts
+    // [ ]11. Pipelines
+    // [ ]12. Depth Resources
+    // [ ]13. Frame Buffers
+    // [ ]14. Command Pool
+    // [ ]15. Vertex Buffer
+    // [ ]16. Index Buffer
+    // [ ]17. SSBO 
+    // [ ]18. UBO
+    // [ ]19. Descriptor Pool
+    // [ ]20. Descriptor Sets
+    // [ ]21. Staging Buffer
+    // [ ]22. Command Buffer
+    // [ ]23. Sync Objects
+    // [X]24. ImGui (done before)
+
+    // Synchronisation Objects. 
+    for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
+        vkDestroyFence(m_LogicalDevice, inFlightFences[i], nullptr);
+        vkDestroySemaphore(m_LogicalDevice, renderFinishedSemaphores[i], nullptr);
+        vkDestroySemaphore(m_LogicalDevice, imageAvailableSemaphores[i], nullptr);
+    }
+
+    // Command Buffer - uses command pool, so destroy pool later.
+    vkFreeCommandBuffers(m_LogicalDevice, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+
+    // Staging Buffer.
+    vkDestroyBuffer(m_LogicalDevice, bladeInstanceStagingBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory, nullptr);
+
+    // Descriptor Sets - uses descriptor pool, so destroy pool later.
+    std::array<VkDescriptorSet, 2> descriptorSets = { grassPipelineDescriptorSet, modelPipelineDescriptorSet }; 
+    vkFreeDescriptorSets(m_LogicalDevice, descriptorPool, static_cast<uint32_t>(descriptorSets.size()), descriptorSets.data());
+
+    // Descriptor Set Layouts.
+    vkDestroyDescriptorSetLayout(m_LogicalDevice, grassDescriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(m_LogicalDevice, modelDescriptorSetLayout, nullptr);
+
+    // Descriptor Pool.
+    vkDestroyDescriptorPool(m_LogicalDevice, imguiDescriptorPool, nullptr);
+    vkDestroyDescriptorPool(m_LogicalDevice, descriptorPool, nullptr); 
+
+    // Uniform Buffer Object.
     vkDestroyBuffer(m_LogicalDevice, uniformBuffer, nullptr);
     vkFreeMemory(m_LogicalDevice, uniformBufferMemory, nullptr);
 
-    vkDestroyDescriptorPool(m_LogicalDevice, descriptorPool, nullptr);
-    //vkDestroyDescriptorSetLayout(m_LogicalDevice, descriptorSetLayout, nullptr);
+    // Shader Storage Buffer Object.
+    vkDestroyBuffer(m_LogicalDevice, bladeInstanceDataBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, bladeInstanceDataBufferMemory, nullptr);
 
-    //vkDestroyPipeline(m_LogicalDevice, graphicsPipeline, nullptr);
-    //vkDestroyPipelineLayout(m_LogicalDevice, pipelineLayout, nullptr);
+    // Index Buffers.
+    vkDestroyBuffer(m_LogicalDevice, bladeShapeIndexBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, bladeShapeIndexBufferMemory, nullptr);
+    vkDestroyBuffer(m_LogicalDevice, quadIndexBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, quadIndexBufferMemory, nullptr);
 
-    vkDestroyRenderPass(m_LogicalDevice, renderPass, nullptr);
+    // Vertex Buffers.
+    vkDestroyBuffer(m_LogicalDevice, bladeShapeVertexBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, bladeShapeVertexBufferMemory, nullptr);
+    vkDestroyBuffer(m_LogicalDevice, quadVertexBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, quadVertexBufferMemory, nullptr);
 
-    for (size_t i = 0; i < kMaxFramesInFlight; i++) {
-        vkDestroySemaphore(m_LogicalDevice, renderFinishedSemaphores[i], nullptr);
-        vkDestroySemaphore(m_LogicalDevice, imageAvailableSemaphores[i], nullptr);
-        vkDestroyFence(m_LogicalDevice, inFlightFences[i], nullptr);
-    }
-
+    // Command Pool.
     vkDestroyCommandPool(m_LogicalDevice, commandPool, nullptr);
 
+    // Depth Resources.
+    vkDestroyImageView(m_LogicalDevice, depthImageView, nullptr);
+    vkDestroyImage(m_LogicalDevice, depthImage, nullptr);
+    vkFreeMemory(m_LogicalDevice, depthImageMemory, nullptr);
+    
+    // Pipelines.
+    vkDestroyPipelineLayout(m_LogicalDevice, grassPipelineLayout, nullptr);
+    vkDestroyPipelineLayout(m_LogicalDevice, modelPipelineLayout, nullptr);
+    vkDestroyPipeline(m_LogicalDevice, grassPipeline, nullptr);
+    vkDestroyPipeline(m_LogicalDevice, modelPipeline, nullptr);
+
+    // Render Pass.
+    vkDestroyRenderPass(m_LogicalDevice, renderPass, nullptr);
+
+    // Swapchain, Swapchain Image Views, & Frame Buffers.
+    cleanupSwapchain();
+
+    // Logical Device.
     vkDestroyDevice(m_LogicalDevice, nullptr);
 
+    // Window Surface.
+    vkDestroySurfaceKHR(m_VkInstance, m_SurfaceKHR, nullptr);
+
+    // Debug Messenger.
     if (kEnableValidationLayers) {
         destroyDebugUtilsMessengerEXT(m_VkInstance, m_DebugMessenger, nullptr);
     }
 
-    vkDestroySurfaceKHR(m_VkInstance, m_SurfaceKHR, nullptr);
+    // Instance.
     vkDestroyInstance(m_VkInstance, nullptr);
 
+    // Window.
     glfwDestroyWindow(window);
-
     glfwTerminate();
 }
 
