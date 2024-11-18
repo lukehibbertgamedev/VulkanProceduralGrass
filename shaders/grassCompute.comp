@@ -25,6 +25,24 @@ layout(push_constant) uniform PushConstants {
     float elapsed;
 } pushConstants;
 
+void keepPersistentLength(in vec3 v0, inout vec3 v1, inout vec3 v2, in float height) {
+    vec3 v01 = v1 - v0;
+    vec3 v12 = v2 - v1;
+    float lv01 = length(v01);
+    float lv12 = length(v12);
+    float L1 = lv01 + lv12;
+    float L0 = length(v2 - v0);
+
+    //http://steve.hollasch.net/cgindex/curves/cbezarclen.html
+    float L = (2.0 * L0 + L1) / 3.0;
+
+    float ldiff = height / L;
+    v01 = v01 * ldiff;
+    v12 = v12 * ldiff;
+    v1 = v0 + v01;
+    v2 = v1 + v12;
+}
+
 layout (local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
 
 void main() 
@@ -34,10 +52,11 @@ void main()
     BladeInstanceData bladeIn = bladesIn[threadID_x];
 
     float height = bladeIn.p1_and_height.w;
+    vec3 directionVector = vec3(cos(bladeIn.p2_and_direction.w), sin(bladeIn.p2_and_direction.w), 0.0); // Assumes Z is up.
 
     float sway = (2.0 * sin(pushConstants.elapsed * (bladeIn.p0_and_width.w * height * 15.0)) * 0.5 + 0.5) * 0.5 + 0.3;
 
     bladesOut[threadID_x].p2_and_direction.x = bladeIn.p2_and_direction.x + sway * (height - 0.06);  
 
-    //float ratio = height 
+    keepPersistentLength(bladeIn.p0_and_width.xyz, bladeIn.p1_and_height.xyz, bladeIn.p2_and_direction.xyz, bladeIn.p1_and_height.w);
 }
