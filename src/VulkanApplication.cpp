@@ -1874,32 +1874,6 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
 void VulkanApplication::cleanupApplication(GLFWwindow* window)
 {
-
-    // [X] 1. Window
-    // [X] 2. Instance
-    // [X] 3. Debug Messenger
-    // [X] 4. Window surface
-    // [/] 5. Physical Device
-    // [ ] 6. Logical Device
-    // [ ] 7. Swapchain
-    // [ ] 8. Swapchain Image Views
-    // [ ] 9. Render Pass
-    // [ ]10. Descriptor Set Layouts
-    // [ ]11. Pipelines
-    // [ ]12. Depth Resources
-    // [ ]13. Frame Buffers
-    // [ ]14. Command Pool
-    // [ ]15. Vertex Buffer
-    // [ ]16. Index Buffer
-    // [ ]17. SSBO 
-    // [ ]18. UBO
-    // [ ]19. Descriptor Pool
-    // [ ]20. Descriptor Sets
-    // [ ]21. Staging Buffer
-    // [ ]22. Command Buffer
-    // [ ]23. Sync Objects
-    // [X]24. ImGui (done before)
-
     // Synchronisation Objects. 
     for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
         vkDestroyFence(m_LogicalDevice, inFlightFences[i], nullptr);

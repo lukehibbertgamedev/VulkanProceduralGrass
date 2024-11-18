@@ -33,11 +33,11 @@ void main()
 
     BladeInstanceData bladeIn = bladesIn[threadID_x];
 
-    float frequency = 1.0;
-    float amplitude = 0.3;
-    float sway = sin(pushConstants.elapsed) * 0.5 + 0.5;
+    float height = bladeIn.p1_and_height.w;
 
-    bladesOut[threadID_x].p2_and_direction.x = bladeIn.p2_and_direction.x + sway * 0.5;  
+    float sway = (2.0 * sin(pushConstants.elapsed * (bladeIn.p0_and_width.w * height * 15.0)) * 0.5 + 0.5) * 0.5 + 0.3;
 
+    bladesOut[threadID_x].p2_and_direction.x = bladeIn.p2_and_direction.x + sway * (height - 0.06);  
 
+    //float ratio = height 
 }

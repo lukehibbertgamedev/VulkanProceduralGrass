@@ -17,7 +17,7 @@ constexpr uint32_t THREAD_GROUP_SIZE = MAX_BLADES / 256;
 #define GRASS_MAX_WIDTH 0.100f	// Will modify the shader values.
 
 #define GRASS_MIN_HEIGHT 0.10f	// Will modify the shader values.
-#define GRASS_MAX_HEIGHT 1.00f	// Will modify the shader values.
+#define GRASS_MAX_HEIGHT 0.80f	// Will modify the shader values.
 
 #define GRASS_STIFFNESS 0.5f	// Has little/no effect as of right now.
 #define GRASS_NO_ANGLE 0.0f		// Has little/no effect as of right now.
