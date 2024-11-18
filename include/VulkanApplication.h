@@ -25,8 +25,8 @@
 #include <string>
 
 // Ground plane bounds definitions (Z is typically up).
-#define MEADOW_SCALE_X 9
-#define MEADOW_SCALE_Y 9
+#define MEADOW_SCALE_X 60
+#define MEADOW_SCALE_Y 60
 #define MEADOW_SCALE_Z 1
 
 static constexpr bool kEnableValidationLayers = true;
