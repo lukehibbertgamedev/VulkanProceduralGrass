@@ -40,7 +40,14 @@ void keepPersistentLength(in vec3 v0, inout vec3 v1, inout vec3 v2, in float hei
     v01 = v01 * ldiff;
     v12 = v12 * ldiff;
     v1 = v0 + v01;
-    v2 = v1 + v12;
+    v2.z = (v1.z + v12.z) * 0.5;
+}
+
+vec3 calculateDirectionVector(in vec3 up, in float directionAngle) {
+    float sinDir = sin(directionAngle);
+    float cosDir = cos(directionAngle);
+    vec3 temp = normalize(vec3(sinDir, sinDir + cosDir, cosDir));
+    return normalize(cross(up, temp));
 }
 
 layout (local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
@@ -49,14 +56,18 @@ void main()
 {
     uint threadID_x = gl_GlobalInvocationID.x; // Thread ID within the grid's x-space.
 
-    BladeInstanceData bladeIn = bladesIn[threadID_x];
+    BladeInstanceData bladeIn = bladesIn[threadID_x]; 
 
     float height = bladeIn.p1_and_height.w;
-    vec3 directionVector = vec3(cos(bladeIn.p2_and_direction.w), sin(bladeIn.p2_and_direction.w), 0.0); // Assumes Z is up.
+    vec3 directionVector = vec3(cos(radians(bladeIn.p2_and_direction.w)), 0.0, sin(radians(bladeIn.p2_and_direction.w))); // Assumes Z is up.
 
-    float sway = (2.0 * sin(pushConstants.elapsed * (bladeIn.p0_and_width.w * height * 15.0)) * 0.5 + 0.5) * 0.5 + 0.3;
+    float speedOfSway = 4.0;
+    float sway = (2.0 * sin(pushConstants.elapsed * (height * speedOfSway)) * 0.5 + 0.5) * 0.5 + 0.3;  
 
-    bladesOut[threadID_x].p2_and_direction.x = bladeIn.p2_and_direction.x + sway * (height - 0.06);  
+    //bladesOut[threadID_x].p2_and_direction.xyz = calculateDirectionVector(bladeIn.upVec_and_stiffness.xyz, bladeIn.p2_and_direction.w) + sway * (height - 0.06);  
 
-    keepPersistentLength(bladeIn.p0_and_width.xyz, bladeIn.p1_and_height.xyz, bladeIn.p2_and_direction.xyz, bladeIn.p1_and_height.w);
+    //keepPersistentLength(bladeIn.p0_and_width.xyz, bladeIn.p1_and_height.xyz, bladeIn.p2_and_direction.xyz, bladeIn.p1_and_height.w);
+    //bladesOut[threadID_x] = bladeIn;
+    bladesOut[threadID_x].p2_and_direction.xyz = directionVector + sway * (height - 0.06);  
+    keepPersistentLength(bladeIn.p0_and_width.xyz, bladesOut[threadID_x].p1_and_height.xyz, bladesOut[threadID_x].p2_and_direction.xyz, bladeIn.p1_and_height.w);
 }

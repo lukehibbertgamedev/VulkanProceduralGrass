@@ -53,5 +53,5 @@ void main() {
     outP0_Width = blade.p0_and_width;
     outP1_Height = blade.p1_and_height;
     outP2_Direction = blade.p2_and_direction;
-    outColor = vec4(0.0f, 1.0f, 0.0f, 1.0f); 
+    outColor = vec4(0.0, 1.0, 0.0, 1.0); 
 } 
