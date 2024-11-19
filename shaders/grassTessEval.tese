@@ -66,7 +66,7 @@ void main()
     gl_Position = ubo.proj * ubo.view * vec4(position, 1.0);
 
     // Use gl_TessCoord.y to gradient the blade to be black at the bottom and green at the top, faking shadows.
-    outColor = inColor[0] * v; // (1-v) if needed
+    outColor = mix(inColor[0] * v, vec4(1.0, 1.0, 1.0, 1.0), v); // (1-v) if needed
     //outColor = vec4(1.0, 0.0, v, 1.0); // for grass passing in height
     //outColor = vec4(1.0, 0.0, 0.0, 1.0); // red for debug.
     //outColor = vec4(1.0, 1.0, 1.0, 1.0); // white for visual.

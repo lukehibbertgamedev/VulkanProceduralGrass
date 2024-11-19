@@ -8,5 +8,8 @@ void main() {
 
     outColor = inColor;
 
-    //outColor = mix(vec4(0.0, 0.2, 0.0, 1.0), vec4(0.0, 0.4, 0.0, 1.0), inColor.z);
+
+    //vec4 blackGreen = mix(vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), inColor.z);
+
+    //outColor = mix(blackGreen, vec4(1.0, 1.0, 1.0, 1.0), inColor.z);
 }
