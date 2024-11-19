@@ -11,6 +11,16 @@ Read the paper [here](https://publik.tuwien.ac.at/files/PubDat_220935.pdf).
 
 **Note**: This project is only supported on Windows.
 
+Pre-requisites:
+- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/)
+- [Vulkan SDK](https://vulkan.lunarg.com/sdk/home)
+
 Clone the repository using ```git clone --recurse-submodules github.com/lukehibbertgamedev/VulkanProceduralGrass.git```.
 
 Run ```generate_vs.bat```, this will unpack and build CMake, then generate a Visual Studio 2022 solution within build_x64/.
+
+## Vulkan SDK
+
+If using a university computer, ensure to open the Vulkan Configurator using AppsAnywhere. This will ensure the Vulkan SDK is on the desktop, and can be accessed by the CMake files.
+
+If using a personal computer, ensure the Vulkan SDK is downloaded to a global space on your desktop, typically the C drive.
