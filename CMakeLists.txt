@@ -64,24 +64,29 @@ target_include_directories("ImGui" PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/third_part
 target_include_directories("ImGui" PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/backends)
 target_link_libraries(${PROJECT_NAME} ImGui)
 
-file(GLOB VK_SOURCES     
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/empty.cpp # To force the cache to understand which target language this library is.
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vulkan/*.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vulkan/*.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vulkan/utility/*.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vulkan/utility/*.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vk_video/*.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vma/vk_mem_alloc.h
-)
-add_library("PortableVulkan" SHARED ${VK_SOURCES})
-target_include_directories("PortableVulkan" PUBLIC 
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vulkan
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vma
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vk_video
-)
-#target_link_libraries(${PROJECT_NAME} PortableVulkan)
-target_link_libraries(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/lib/vulkan-1.lib")
+# file(GLOB VK_SOURCES     
+#     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/empty.cpp # To force the cache to understand which target language this library is.
+#     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vulkan/*.h
+#     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vulkan/*.hpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vulkan/utility/*.h
+#     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vulkan/utility/*.hpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vk_video/*.h
+#     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vma/vk_mem_alloc.h
+# )
+# add_library("PortableVulkan" SHARED ${VK_SOURCES})
+# target_include_directories("PortableVulkan" PUBLIC 
+#     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include
+#     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vulkan
+#     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vma
+#     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/include/vk_video
+# )
+# target_link_libraries(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/third_party/PortableVulkanSDK1.3/lib/vulkan-1.lib")
+
+# Find the Vulkan package, the SDK should be on university computers now. Use the above approach if this doesn't work for you.
+find_package(Vulkan REQUIRED)
+include_directories(${Vulkan_INCLUDE_DIRS})
+link_libraries(${Vulkan_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} Vulkan::Vulkan)
 
 # Copy DLLs to output directory without directly targeting them.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
