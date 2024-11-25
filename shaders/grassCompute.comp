@@ -87,7 +87,7 @@ vec3 GetWindOffset(vec2 pos, vec3 windDirection, float time) {
     float windx = 2.0 * sin(0.5 * t);
     float windy = 1.0 * sin(1.0 * t);
     vec3 windVec = vec3(windx, windy, 0.0);
-    return windVec;
+    return windVec * 0.25;
 }
 
 layout (local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
@@ -124,10 +124,12 @@ void main()
     //keepPersistentLength(bladeIn.p0_and_width.xyz, bladeIn.p1_and_height.xyz, modifiedP2, height);
     //bladesOut[threadID_x].p2_and_direction.xyz = modifiedP2;  
 
-    
-    bladesOut[threadID_x].p2_and_direction.xyz += GetWindOffset(bladeIn.p2_and_direction.xy, directionVector, pushConstants.elapsed);
+    //vec3 modifiedP2 = bladeIn.p1_and_height.xyz + directionVector * height * 0.3;
+    vec3 modifiedP2 = bladeIn.p2_and_direction.xyz;
+    modifiedP2 += GetWindOffset(bladeIn.p2_and_direction.xy, directionVector, pushConstants.elapsed);
     keepPersistentLength(bladeIn.p0_and_width.xyz, bladeIn.p1_and_height.xyz, bladesOut[threadID_x].p2_and_direction.xyz, height);
-    //bladesOut[threadID_x].p2_and_direction.xyz = modifiedP2;  
+    bladesOut[threadID_x] = bladeIn;
+    bladesOut[threadID_x].p2_and_direction.xyz = modifiedP2;  
 
 
 }
