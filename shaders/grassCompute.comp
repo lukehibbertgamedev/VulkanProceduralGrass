@@ -10,6 +10,13 @@ struct BladeInstanceData {
     vec4 upVec_and_stiffness;             
 };
 
+layout(binding = 0) uniform CameraUniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+    vec4 frustumPlanes[6];
+} ubo;
+
 // Read from the previous frame, and write to the current frame. 
 // This will wrap so the updated current frame will become the readonly previous frame.
 layout(std140, binding = 1) buffer BladeInstanceDataBufferLastFrame {
@@ -20,6 +27,11 @@ layout(std140, binding = 1) buffer BladeInstanceDataBufferLastFrame {
 layout(std140, binding = 2) buffer BladeInstanceDataBufferCurrentFrame {
     BladeInstanceData bladesOut[]; 
 };
+
+layout(set = 0, binding = 3) buffer NumBladesBuffer {
+    //uint numVisible;
+    uint numCulled;
+} numBladesBuffer;
 
 layout(push_constant) uniform PushConstants {
     float elapsed;
@@ -49,7 +61,6 @@ void keepPersistentLength(in vec3 v0, inout vec3 v1, inout vec3 v2, in float hei
 vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
 vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
 vec3 fade(vec3 t) {return t*t*t*(t*(t*6.0-15.0)+10.0);}
-
 float cnoise(vec3 P){
   vec3 Pi0 = floor(P); // Integer part for indexing
   vec3 Pi1 = Pi0 + vec3(1.0); // Integer part + 1
@@ -110,8 +121,7 @@ float cnoise(vec3 P){
   float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x); 
   return 2.2 * n_xyz;
 }
-
-vec3 GetWindOffset(vec3 pos, float w, float time) {
+vec3 getWindOffset(vec3 pos, float w, float time) {
     vec3 direction = vec3(cos(radians(w)), 0.0, sin(radians(w))); // Assumes Z is up
     float posOnSin = direction.x * pos.x - direction.z * pos.y;
     float t = time + posOnSin + 4.0 * cnoise(pos);
@@ -121,24 +131,56 @@ vec3 GetWindOffset(vec3 pos, float w, float time) {
     return windVec * 0.25;
 }
 
+// Credit: From Sascha Willems shaders/glsl/computecullandlod/cull.comp.
+bool frustumCheck(vec4 pos, float radius) {
+    // Check sphere against frustum planes
+	for (int i = 0; i < 6; i++) 
+	{
+		if (dot(pos, ubo.frustumPlanes[i]) + radius < 0.0)
+		{
+			return false;
+		}
+	}
+	return true;
+}
 
 layout (local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
 
 void main() 
 {
+    uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x* gl_WorkGroupSize.x;
     uint threadID_x = gl_GlobalInvocationID.x; // Thread ID within the grid's x-space.
+    BladeInstanceData bladeIn = bladesIn[threadID_x]; // This blade instance.
 
-    BladeInstanceData bladeIn = bladesIn[threadID_x]; 
+    // barrier();
 
+    // Frustum culling.
+    vec4 v0ClipSpace = ubo.proj * ubo.view * vec4(bladeIn.p0_and_width.xyz, 1.0);
+    vec4 v1ClipSpace = ubo.proj * ubo.view * vec4(bladeIn.p1_and_height.xyz, 1.0);
+    vec4 v2ClipSpace = ubo.proj * ubo.view * vec4(bladeIn.p2_and_direction.xyz, 1.0);
+    v0ClipSpace /= v0ClipSpace.w; // Normalise.
+    v1ClipSpace /= v1ClipSpace.w; // Normalise.
+    v2ClipSpace /= v2ClipSpace.w; // Normalise.
+    float shrinkFactor = 0.6;
+    float shrinkMin = -shrinkFactor;
+    float shrinkMax =  shrinkFactor;
+    bool v0OutFrustum = v0ClipSpace.x < shrinkMin || v0ClipSpace.x > shrinkMax || v0ClipSpace.y < shrinkMin || v0ClipSpace.y > shrinkMax;
+    bool v1OutFrustum = v1ClipSpace.x < shrinkMin || v1ClipSpace.x > shrinkMax || v1ClipSpace.y < shrinkMin || v1ClipSpace.y > shrinkMax;
+    bool v2OutFrustum = v2ClipSpace.x < shrinkMin || v2ClipSpace.x > shrinkMax || v2ClipSpace.y < shrinkMin || v2ClipSpace.y > shrinkMax;
+    if (v0OutFrustum && v1OutFrustum && v2OutFrustum) { 
+        numBladesBuffer.numCulled += 1;
+        return; // Cull this blade.
+    } 
+    //else {
+    //    numBladesBuffer.numVisible += 1;
+    //}
+
+    // Wind forces.
     float height = bladeIn.p1_and_height.w;
     vec3 directionVector = vec3(cos(radians(bladeIn.p2_and_direction.w)), 0.0, sin(radians(bladeIn.p2_and_direction.w))); // Assumes Z is up.
-
-    //vec3 modifiedP2 = bladeIn.p1_and_height.xyz + directionVector * height * 0.3;
     vec3 modifiedP2 = bladeIn.p2_and_direction.xyz;
-    modifiedP2 += GetWindOffset(bladeIn.p2_and_direction.xyz, bladeIn.p2_and_direction.w, pushConstants.elapsed);
+    modifiedP2 += getWindOffset(bladeIn.p2_and_direction.xyz, bladeIn.p2_and_direction.w, pushConstants.elapsed);
     keepPersistentLength(bladeIn.p0_and_width.xyz, bladeIn.p1_and_height.xyz, modifiedP2, height);
     bladesOut[threadID_x] = bladeIn;
     bladesOut[threadID_x].p2_and_direction.xyz = modifiedP2;  
-
-
 }

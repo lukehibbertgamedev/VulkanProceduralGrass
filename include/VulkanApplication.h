@@ -49,6 +49,8 @@ public:
 
 	int vertexCount = 0;
 
+	uint32_t numCulled = 0;
+
 	float grassDrawCallTime = 0.0f;
 };
 
@@ -56,6 +58,12 @@ struct CameraUniformBufferObject {
 	alignas(16) glm::mat4 model;
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
+	alignas(16) glm::vec4 frustumPlanes[6];
+};
+
+struct NumBladesBufferObject {
+	//uint32_t numVisible;
+	uint32_t numCulled;
 };
 
 struct QueueFamilyIndices {
@@ -82,6 +90,10 @@ public:
 	// Updates the uniform buffer object that is bound to both the model and grass pipeline, so they receive the most recent data (re-maps the memory).
 	void updateUniformBuffer(uint32_t currentFrame);
 
+	// ...
+	void updateIndirectBuffer(uint32_t instanceCount);
+	uint32_t retrieveNumBlades();
+
 	void linkWindowToVulkan(GLFWwindow* window);					// - - - - - .
 	void linkCameraToVulkan(Camera* camera);						//			 |
 	VkResult createInstance();										//			 |
@@ -104,7 +116,7 @@ public:
 	VkResult createUniformBuffers();								//			 |
 	VkResult createDescriptorPool();								//			 |
 	VkResult createDescriptorSets();								//			 |
-	VkResult createCommandBuffers();									//			 |
+	VkResult createCommandBuffers();								//			 |
 	VkResult createSynchronizationObjects();						//			 |
 	VkResult createDefaultCamera();									//			 |
 	VkResult createImGuiImplementation();							// - - - - - '
@@ -112,6 +124,8 @@ public:
 	void createMeshObjects();					// Creates the ground plane.
 	void populateBladeInstanceBuffer();			// Populates a vector of blade instance data.
 	void createBladeInstanceStagingBuffer();	// Copy the vector of instance data to the GPU.
+	void createIndirectDrawBuffer();			// Create the buffer for indirect drawing.
+	void createNumBladesBuffer();				// Create the buffer to hold the number of active blades.
 
 	void prepareImGuiDrawData();
 
@@ -237,7 +251,7 @@ public:
 	 
 	std::vector<VkBuffer> bladeInstanceStagingBuffer;								// A temporary holding buffer containing the blade data ready for CPU > GPU copy.
 	std::vector<VkDeviceMemory> bladeInstanceStagingBufferMemory;					// Allocated memory for the holding buffer used to copy blade data to the GPU.
-	std::vector<BladeInstanceData> localBladeInstanceBuffer;			// A CPU buffer of instance data per-blade, populates the staging buffer, which populates the SSBO. 
+	std::vector<GrassBladeInstanceData> localBladeInstanceBuffer;			// A CPU buffer of instance data per-blade, populates the staging buffer, which populates the SSBO. 
 
 	// Shader storage buffer objects (SSBO). 
 	// There needs to be 2 of these since we are double buffering, the data is read from the last frame and written to the current, and then swapped.
@@ -272,9 +286,16 @@ public:
 	VkPipeline computePipeline = VK_NULL_HANDLE;						// A pipeline structure for the grass animation and culling pass.
 
 	Camera* camera;														// A handle to a dynamic camera that works with WASDEQ, arrow keys, LJ, and RTY. 
+	Frustum frustum;													// A handle to six planes defining a view frustum to cull blades from.
 
 	VkImage depthImage = VK_NULL_HANDLE;								// A handle to the image that represents a depth stencil.
 	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;					// Allocated memory for this image resource.
 	VkImageView depthImageView = VK_NULL_HANDLE;						// A handle to the actual image data for the depth stencil.
+
+	VkBuffer indirectBuffer;											// ...
+	VkDeviceMemory indirectBufferMemory;								// ...
+
+	VkBuffer numBladesBuffer;											// ...
+	VkDeviceMemory numBladesBufferMemory;								// ...
 
 };

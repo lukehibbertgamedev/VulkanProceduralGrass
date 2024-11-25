@@ -206,6 +206,8 @@ int main() {
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor sets."); 
 
     vkApp.createBladeInstanceStagingBuffer(); 
+    vkApp.createIndirectDrawBuffer();
+    vkApp.createNumBladesBuffer();
 
     ret = vkApp.createCommandBuffers(); 
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command buffer.");

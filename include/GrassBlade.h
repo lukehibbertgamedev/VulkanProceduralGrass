@@ -10,7 +10,7 @@
 
 // A class representing ONE blade of grass using the Bézier representation.
 
-constexpr uint32_t MAX_BLADES = 2 << 18;
+constexpr uint32_t MAX_BLADES = 2 << 16;
 constexpr uint32_t THREAD_GROUP_SIZE = MAX_BLADES / 256;
 
 #define GRASS_MIN_WIDTH 0.050f	// Will modify the shader values.
@@ -25,7 +25,7 @@ constexpr uint32_t THREAD_GROUP_SIZE = MAX_BLADES / 256;
 //#define GRASS_LEAN 0.7f
 
 // 32 bytes large, 4 byte alignment.
-struct BladeInstanceData {
+struct GrassBladeInstanceData {
 
 	glm::vec4 p0_width = glm::vec4(0.0f);
 	glm::vec4 p1_height = glm::vec4(0.0f);
@@ -33,7 +33,15 @@ struct BladeInstanceData {
 	glm::vec4 up_stiffness = glm::vec4(0.0f);
 };
 
-class Blade {
+
+struct GrassBladeIndirectDrawCommand {
+	uint32_t vertexCount;
+	uint32_t instanceCount;
+	uint32_t firstVertex;
+	uint32_t firstInstance;
+};
+
+class GrassBlade {
 public:
 
 	void initialise(); // Sets up packed 4 v4 values.
@@ -46,61 +54,14 @@ public:
 	glm::vec4 upAndStiffness = glm::vec4(0.0f);	// Grass up vector and stiffness coefficient.  
 };
 
-// Further reading notes & implementation ideas below...
-
-
-
-// Predefined blade of grass, subdivided in a tessellation shader.
-// Additional detail can be generated without needing to store it explicitly
-
-
-// 1. [X] Generate a quadratic Bézier curve using 3 control points.
-// 2. [X] Generate a blade shape (typically a quad) that will be subdivided in the tessellation stage.
-// 3. Map/align the base blade quad to the shape of the Bézier curve by evaluating the curve interpolation of the control points for each vertex (see De Casteljau's algorithm).
-// 4. One grass blade generated???
-
-// A quad with a base point at p0, extends by base width in orientation direction. Matches the height of blade.height.
-// Subdivide quad to increase level of detail in vertices for manipulation in compute shader.
-
-
 // Preprocess: Distribute blades over a 3D surface terrain.
 // Render: Evaluate physical model (apply wind/update animation) > cull > render as tessellated object (using indirect? get gpu mesh data render that)
-
-// The grass blade consists only of 3 vertices p0, p1, p2, which are the control points for a quadratic Bézier curve.
-// p0 is a fixed position (as it is the base of the blade)
-// p2 is moved according to wind/animation/physical models (this is the control point mostly affecting the tip)
-// p1 is moved according to p2 (as this is the connecting height of the blade from the tip)
-// A blade also contains height, width, stiffness, up-vector, and direction angle. (this can be covered using 4 v4s)
-// Grass will be generated as a single blade.
-// Blades are generated with an initial pose where p1 and p2 are in the same place(?) according to height, up vector, and p0 // why??
 
 // v3 displacement of p2 = (recovery + gravity + wind) * change in time + "collision"(?) -> saved into a force map texture -> change in time = time required for the last frame (not normalised)
 // recovery: a counterforce to other previously applied forces which follows Hooke's law dependent on the blade's stiffness coefficient.
 // gravity: the paper goes into mad gravity detail but ha no this is -9.81
 // wind: depends on a wind direction, strength of wind at blade position (p0), alignment of the blade toward the wind direction computed into vector wi (p0).  
 // wind then uses multiple sin and cosine functions with different frequencies. wind can be stored in a height map and sampled at grass positions.
-
-// grass blades that are 'straighter' will be affected by wind more than blades that are 'bent' 
-
-// blade validation: 
-// p2 can never be below p0, or the terrain but checking this takes too long so p2 = p2 - UP * min(UP * (p2 - p0), 0)
-
-// p1 position calculation: Lproj = ||p2 - p0 - UP * ((p2 - p0) * UP|| 
-// if Lproj = 0, p2 rests straight up and p1 has the same position but the blade will always need *some* curvature so:
-// p1 = p0 + height * UP * max(1 - (Lproj / height), 0.05 * max(Lproj / height, 1)) // 0.05 = constant curvature factor
-
-// ensure Bézier is not larger than the height of the blade, without this, the length of the blade would be inconsistent when influenced by forces and is a drawback of Jahrmann et al
-// this can be done in approximation of Bézier curve lengths as it would take too much time to do otherwise (given a bezier curve degree n)
-// https://www.sciencedirect.com/science/article/pii/0925772195000542#:~:text=In%20particular%2C%20if%20a%20B%C3%A9zier,polygon%2Dlengths%20of%20the%20pieces.
-// Lbezier = 2*L0+(n-1)*L1 / n+1 where L0 is the distance between the first (p0) and last (p2) control points and L1 is the sum of all distances between a control point and its subsequent one (p0 -> p1 -> p2)
-// once its length is calculated, a ratio r between the height of the blade and the length of the bezier curve is 
-// calculated, on top of this, correction is applied by multiplying each segment between the control points with r where p1corr p2corr are the corrected control point positions
-// r = height / Lbezier
-// p1corr = p0 + r * (p1 - p0)
-// p2corr = p1corr + r * (p2 - p1)
-
-// Each blade is rendered as a tessellated 2D object, tessellation is used to provide a dynamic level of detail to the blade shape. 
-// Because each blade has individual state and position, we cannot render mutliple instances of a single patch (but can single blades).
 
 // Culling single blades requires a rendering pipeline that allows for a dynamic amount of geometry to be rendered perframe. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // Indirect rendering does not include parameters of the draw command, instead, parameters are read from a buffer that is stored in GPU memory. 

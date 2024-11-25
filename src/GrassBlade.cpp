@@ -1,6 +1,6 @@
 #include "GrassBlade.h"
 
-void Blade::initialise()
+void GrassBlade::initialise()
 {
 	glm::vec3 p0 = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f); // Z-axis is up when using Vulkan.
@@ -12,7 +12,7 @@ void Blade::initialise()
 	upAndStiffness = glm::vec4(up, GRASS_STIFFNESS);
 }
 
-void Blade::updatePackedVec4s()
+void GrassBlade::updatePackedVec4s()
 {
 	glm::vec3 p0 = glm::vec3(p0AndWidth.x, p0AndWidth.y, p0AndWidth.z);
 	glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f); // Z-axis is up when using Vulkan.
