@@ -209,6 +209,7 @@ int main() {
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor sets."); 
 
     vkApp.createBladeInstanceStagingBuffer(); 
+    vkApp.uploadIndirectCommandData();
 
     ret = vkApp.createCommandBuffers(); 
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command buffer.");

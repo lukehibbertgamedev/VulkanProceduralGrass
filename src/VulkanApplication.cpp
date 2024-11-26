@@ -145,6 +145,9 @@ VkShaderModule VulkanApplication::createShaderModule(const std::vector<char>& co
 void VulkanApplication::render()
 {
 
+    //uint32_t numBladesCulled = retrieveNumBlades();
+    //updateIndirectBuffer(MAX_BLADES - numBladesCulled); // max - culled = visible
+
     // Compute pipeline stage:
 
     vkWaitForFences(m_LogicalDevice, 1, &computeInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
@@ -170,10 +173,8 @@ void VulkanApplication::render()
 
     vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); 
 
-    uint32_t numBladesCulled = retrieveNumBlades();
 
     updateUniformBuffer(currentFrame);
-    updateIndirectBuffer(MAX_BLADES - numBladesCulled); // max - culled = visible
 
     uint32_t imageIndex;
     VkResult ret = vkAcquireNextImageKHR(m_LogicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
@@ -437,6 +438,7 @@ VkResult VulkanApplication::createLogicalDevice()
     deviceFeatures.samplerAnisotropy = VK_TRUE; // Enable Vulkan to support anisotropic filtering.
     deviceFeatures.tessellationShader = VK_TRUE; // Enable Vulkan to be able to link and execute tessellation shaders.
     deviceFeatures.shaderTessellationAndGeometryPointSize = VK_TRUE; // Enable Vulkan to allow the use of gl_PointSize within tessellation shaders.
+    deviceFeatures.multiDrawIndirect = VK_TRUE; // Enable Vulkan to allow the use of indirect draw commands.
 
     VkDeviceCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -1379,7 +1381,7 @@ VkResult VulkanApplication::createDescriptorPool()
 
     VkDescriptorPoolSize poolSizes[] = {
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3}
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4}
     };
 
     VkDescriptorPoolCreateInfo poolInfo = {};
@@ -1387,7 +1389,7 @@ VkResult VulkanApplication::createDescriptorPool()
     poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; 
     poolInfo.poolSizeCount = (uint32_t)std::size(poolSizes); 
     poolInfo.pPoolSizes = poolSizes;
-    poolInfo.maxSets = 4; // Must be at >= the maximum pool size for one type.
+    poolInfo.maxSets = 5; // Must be at >= the maximum pool size for one type.
 
     if (vkCreateDescriptorPool(m_LogicalDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool!");
@@ -1644,15 +1646,30 @@ void VulkanApplication::createBladeInstanceStagingBuffer()
 
 void VulkanApplication::createIndirectDrawBuffer()
 {
-    VkDeviceSize indirectBufferRequiredSize = sizeof(GrassBladeIndirectDrawCommand);
+    VkDeviceSize indirectBufferRequiredSize = sizeof(BladeDrawIndirect);
     VkResult ret = createBuffer(indirectBufferRequiredSize, 
-        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, 
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, // Used for indirect | Used as storage buffer | Upload data from CPU.
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // Data can be accessed by CPU | No need to manually manage CPU cache.
         indirectBuffer, indirectBufferMemory);
     
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("bad buffer creation");
     }
+}
+
+void VulkanApplication::uploadIndirectCommandData()
+{
+    // Send the data to the GPU.
+    BladeDrawIndirect indirectCommand = {};
+    indirectCommand.vertexCount = 4; 
+    indirectCommand.instanceCount = MAX_BLADES; // One draw call for all blades. 
+    indirectCommand.firstVertex = 0; 
+    indirectCommand.firstInstance = 0; 
+
+    void* data;
+    vkMapMemory(m_LogicalDevice, indirectBufferMemory, 0, sizeof(BladeDrawIndirect), 0, &data);
+    memcpy(data, &indirectCommand, sizeof(BladeDrawIndirect));
+    vkUnmapMemory(m_LogicalDevice, indirectBufferMemory);
 }
 
 void VulkanApplication::createNumBladesBuffer()
@@ -1860,7 +1877,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer[currentFrame], quadOffsetsGRASS);
 
     
-    uint32_t numBladesThisFrame = retrieveNumBlades(); // max - culled = visible
+    //uint32_t numBladesThisFrame = retrieveNumBlades(); // max - culled = visible
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
@@ -1870,7 +1887,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     vkCmdDraw(commandBuffer, 4, MAX_BLADES, 0, 0);
 
     // The 1 indicates how many draw calls to perform, with indirect rendering you want to draw everything in 1 call.
-    //vkCmdDrawIndirect(commandBuffer, indirectBuffer, 0, 1, sizeof(GrassBladeIndirectDrawCommand));
+    //vkCmdDrawIndirect(commandBuffer, indirectBuffer, 0, 1, sizeof(BladeDrawIndirect));
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
@@ -2074,9 +2091,9 @@ VkExtent2D VulkanApplication::chooseSwapExtent(GLFWwindow* window, const VkSurfa
 void VulkanApplication::updateIndirectBuffer(uint32_t instanceCount)
 {
     void* data;
-    vkMapMemory(m_LogicalDevice, indirectBufferMemory, 0, sizeof(GrassBladeIndirectDrawCommand), 0, &data);
+    vkMapMemory(m_LogicalDevice, indirectBufferMemory, 0, sizeof(BladeDrawIndirect), 0, &data);
 
-    GrassBladeIndirectDrawCommand* command = (GrassBladeIndirectDrawCommand*)data;
+    BladeDrawIndirect* command = (BladeDrawIndirect*)data;
     command->vertexCount = 4; // The tessellation primitive generator expects to be generating quads, hence the value of 4.
     command->instanceCount = instanceCount;
     command->firstVertex = 0;
@@ -2238,7 +2255,7 @@ VkResult VulkanApplication::createModelDescriptorSetLayout()
 VkResult VulkanApplication::createGrassDescriptorSetLayout()
 {
     // This layout requires a UBO for the camera data to be used here too, so that the grass positions can be represented as points.
-    std::array<VkDescriptorSetLayoutBinding, 4> layoutBindings = {};
+    std::array<VkDescriptorSetLayoutBinding, 5> layoutBindings = {};
 
     // Uniform buffer objects.
     layoutBindings[0] = {};
@@ -2271,6 +2288,14 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     layoutBindings[3].descriptorCount = 1;
     layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     layoutBindings[3].pImmutableSamplers = nullptr;
+
+    // Shader buffer object for populating indirect draw command data.
+    layoutBindings[4] = {};
+    layoutBindings[4].binding = 4;
+    layoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    layoutBindings[4].descriptorCount = 1;
+    layoutBindings[4].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    layoutBindings[4].pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -2345,7 +2370,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
         return ret;
     }   
 
-    std::array<VkWriteDescriptorSet, 4> grassDescriptorWrites = {};
+    std::array<VkWriteDescriptorSet, 5> grassDescriptorWrites = {};
 
     VkDescriptorBufferInfo uboBufferInfo = {};
     uboBufferInfo.buffer = uniformBuffer;
@@ -2402,6 +2427,20 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     grassDescriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     grassDescriptorWrites[3].descriptorCount = 1;
     grassDescriptorWrites[3].pBufferInfo = &sboNumBladesBufferInfo;
+
+    VkDescriptorBufferInfo sboIndirectCommandBufferInfo = {};
+    sboIndirectCommandBufferInfo.buffer = indirectBuffer;
+    sboIndirectCommandBufferInfo.offset = 0;
+    sboIndirectCommandBufferInfo.range = sizeof(BladeDrawIndirect);
+
+    grassDescriptorWrites[4] = {};
+    grassDescriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    grassDescriptorWrites[4].dstSet = grassPipelineDescriptorSet;
+    grassDescriptorWrites[4].dstBinding = 4;
+    grassDescriptorWrites[4].dstArrayElement = 0;
+    grassDescriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    grassDescriptorWrites[4].descriptorCount = 1;
+    grassDescriptorWrites[4].pBufferInfo = &sboIndirectCommandBufferInfo;
 
     vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(grassDescriptorWrites.size()), grassDescriptorWrites.data(), 0, nullptr);
 
@@ -2588,6 +2627,7 @@ bool VulkanApplication::checkPhysicalDeviceSuitability(VkPhysicalDevice device)
     return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU 
         && deviceFeatures.tessellationShader
         && deviceFeatures.shaderTessellationAndGeometryPointSize
+        && deviceFeatures.multiDrawIndirect
         && indices.isComplete()
         && checkPhysicalDeviceExtensionSupport(device)
         && isSwapchainAdequate;

@@ -65,6 +65,13 @@ struct NumBladesBufferObject {
 	alignas(4) uint32_t numCulled;
 };
 
+struct BladeDrawIndirect {
+	alignas(4) uint32_t vertexCount;
+	alignas(4) uint32_t instanceCount;
+	alignas(4) uint32_t firstVertex;
+	alignas(4) uint32_t firstInstance;
+};
+
 struct PushConstantsObject {
 	alignas(4) uint32_t totalNumBlades;
 	alignas(4) float elapsed;
@@ -129,6 +136,7 @@ public:
 	void populateBladeInstanceBuffer();			// Populates a vector of blade instance data.
 	void createBladeInstanceStagingBuffer();	// Copy the vector of instance data to the GPU.
 	void createIndirectDrawBuffer();			// Create the buffer for indirect drawing.
+	void uploadIndirectCommandData();			// Map the indirect data to the GPU.
 	void createNumBladesBuffer();				// Create the buffer to hold the number of active blades.
 
 	void prepareImGuiDrawData();

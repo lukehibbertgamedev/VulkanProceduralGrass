@@ -1,41 +1,48 @@
 #version 450
 
 // A shader copy of the BladeInstanceData structure defined in GrassBlade.h.
-// This contains all instances of all grass blades, indexed by gl_InstanceIndex.
-struct BladeInstanceData {
-    
+// This contains all data of all grass blades.
+struct BladeInstanceData {    
     vec4 p0_and_width;
     vec4 p1_and_height;
     vec4 p2_and_direction;
     vec4 upVec_and_stiffness;             
 };
 
+// UBO containing camera data. Bound to the model and grass pipeline so ignore model here.
 layout(binding = 0) uniform CameraUniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
 } ubo;
 
-// Read from the previous frame, and write to the current frame. 
-// This will wrap so the updated current frame will become the readonly previous frame.
-layout(std140, binding = 1) buffer BladeInstanceDataBufferLastFrame {
-    BladeInstanceData bladesIn[]; 
-};
+// The SSBO containing ALL blades.
+layout(std140, binding = 1) buffer AllBladeInstanceDataBuffer {
+    BladeInstanceData allBlades[]; 
+} allBladeInstanceDataBuffer;
 
-// Write to the current frame, wrapped to the next frame to allow new data to be read.
-layout(std140, binding = 2) buffer BladeInstanceDataBufferCurrentFrame {
-    BladeInstanceData bladesOut[]; 
-};
+// The SSBO for the blades that are within frustum.
+layout(std140, binding = 2) buffer VisibleBladeInstanceDataBuffer {
+    BladeInstanceData visibleBlades[]; 
+} visibleBladeInstanceDataBuffer;
 
+// A buffer to write the number of blades culled via compute culling, this is displayed in ImGui.
 layout(std140, binding = 3) buffer NumBladesBuffer {
     uint numCulled;
 } numBladesBuffer;
 
-layout(push_constant) uniform PushConstantsObject {
-    
+// Buffer containing indirect draw command data, this changes due to culling grass blades out so the size will not be the same per-frame.
+layout(set = 0, binding = 4) buffer IndirectDrawData {
+    uint vertexCount;   // Number of vertices to draw.
+    uint instanceCount; // Number of instances to draw.
+    uint firstVertex;   // Index of the first vertex.
+    uint firstInstance; // Instance ID of the first instance to draw.
+} indirectDrawData;
+
+// Push constants for quick and easy readonly data that the shader needs.
+layout(push_constant) uniform PushConstantsObject {    
     uint totalNumBlades;
     float elapsed;
-
 } pushConstantsObject;
 
 void keepPersistentLength(in vec3 v0, inout vec3 v1, inout vec3 v2, in float height) {
@@ -132,6 +139,7 @@ vec3 getWindOffset(vec3 pos, float w, float time) {
     return windVec * 0.25;
 }
 
+// 32 threads per-warp, as per most hardware requirements.
 layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 void main() 
@@ -149,12 +157,12 @@ void main()
     }
     barrier();
 
-    BladeInstanceData bladeIn = bladesIn[gl_GlobalInvocationID.x]; // This blade instance.
+    BladeInstanceData blade = allBladeInstanceDataBuffer.allBlades[gl_GlobalInvocationID.x]; // This blade instance.
 
     // Frustum culling.
-    vec4 v0ClipSpace = ubo.proj * ubo.view * vec4(bladeIn.p0_and_width.xyz, 1.0);
-    vec4 v1ClipSpace = ubo.proj * ubo.view * vec4(bladeIn.p1_and_height.xyz, 1.0);
-    vec4 v2ClipSpace = ubo.proj * ubo.view * vec4(bladeIn.p2_and_direction.xyz, 1.0);
+    vec4 v0ClipSpace = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0);
+    vec4 v1ClipSpace = ubo.proj * ubo.view * vec4(blade.p1_and_height.xyz, 1.0);
+    vec4 v2ClipSpace = ubo.proj * ubo.view * vec4(blade.p2_and_direction.xyz, 1.0);
     v0ClipSpace /= v0ClipSpace.w; // Normalise.
     v1ClipSpace /= v1ClipSpace.w; // Normalise.
     v2ClipSpace /= v2ClipSpace.w; // Normalise.
@@ -171,11 +179,16 @@ void main()
     barrier();
 
     // Wind forces.
-    float height = bladeIn.p1_and_height.w;
-    vec3 directionVector = vec3(cos(radians(bladeIn.p2_and_direction.w)), 0.0, sin(radians(bladeIn.p2_and_direction.w))); // Assumes Z is up.
-    vec3 modifiedP2 = bladeIn.p2_and_direction.xyz;
-    modifiedP2 += getWindOffset(bladeIn.p2_and_direction.xyz, bladeIn.p2_and_direction.w, pushConstantsObject.elapsed);
-    keepPersistentLength(bladeIn.p0_and_width.xyz, bladeIn.p1_and_height.xyz, modifiedP2, height);
-    bladesOut[gl_GlobalInvocationID.x] = bladeIn;
-    bladesOut[gl_GlobalInvocationID.x].p2_and_direction.xyz = modifiedP2;  
+    float height = blade.p1_and_height.w;
+    vec3 directionVector = vec3(cos(radians(blade.p2_and_direction.w)), 0.0, sin(radians(blade.p2_and_direction.w))); // Assumes Z is up.
+    vec3 modifiedP2 = blade.p2_and_direction.xyz;
+    modifiedP2 += getWindOffset(blade.p2_and_direction.xyz, blade.p2_and_direction.w, pushConstantsObject.elapsed);
+    keepPersistentLength(blade.p0_and_width.xyz, blade.p1_and_height.xyz, modifiedP2, height);
+
+    uint visibleIndex = atomicAdd(indirectDrawData.instanceCount, 1);
+    visibleBladeInstanceDataBuffer.visibleBlades[visibleIndex] = blade;
+    visibleBladeInstanceDataBuffer.visibleBlades[visibleIndex].p2_and_direction.xyz = modifiedP2; 
+
+    //visibleBladeInstanceDataBuffer.visibleBlades[gl_GlobalInvocationID.x] = blade;
+    //visibleBladeInstanceDataBuffer.visibleBlades[gl_GlobalInvocationID.x].p2_and_direction.xyz = modifiedP2; 
 }

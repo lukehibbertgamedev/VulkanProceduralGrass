@@ -33,14 +33,6 @@ struct GrassBladeInstanceData {
 	glm::vec4 up_stiffness = glm::vec4(0.0f);
 };
 
-
-struct GrassBladeIndirectDrawCommand {
-	uint32_t vertexCount;
-	uint32_t instanceCount;
-	uint32_t firstVertex;
-	uint32_t firstInstance;
-};
-
 class GrassBlade {
 public:
 
