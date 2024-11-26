@@ -25,8 +25,8 @@
 #include <string>
 
 // Ground plane bounds definitions (Z is typically up).
-#define MEADOW_SCALE_X 60
-#define MEADOW_SCALE_Y 60
+#define MEADOW_SCALE_X 6
+#define MEADOW_SCALE_Y 6
 #define MEADOW_SCALE_Z 1
 
 static constexpr bool kEnableValidationLayers = true;
@@ -52,6 +52,7 @@ public:
 	uint32_t numCulled = 0;
 
 	float grassDrawCallTime = 0.0f;
+	float computeCallTime = 0.0f;
 };
 
 struct CameraUniformBufferObject {
@@ -62,8 +63,12 @@ struct CameraUniformBufferObject {
 };
 
 struct NumBladesBufferObject {
-	//uint32_t numVisible;
-	uint32_t numCulled;
+	alignas(16) uint32_t numCulled;
+};
+
+struct PushConstantsObject {
+	alignas(16) float elapsed;
+	alignas(16) uint32_t totalNumBlades;
 };
 
 struct QueueFamilyIndices {
@@ -297,5 +302,6 @@ public:
 
 	VkBuffer numBladesBuffer;											// ...
 	VkDeviceMemory numBladesBufferMemory;								// ...
+
 
 };

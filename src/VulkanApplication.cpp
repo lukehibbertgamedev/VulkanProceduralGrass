@@ -170,8 +170,10 @@ void VulkanApplication::render()
 
     vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); 
 
+    uint32_t numBladesCulled = retrieveNumBlades();
+
     updateUniformBuffer(currentFrame);
-    //updateIndirectBuffer(retrieveNumBlades());
+    updateIndirectBuffer(MAX_BLADES - numBladesCulled); // max - culled = visible
 
     uint32_t imageIndex;
     VkResult ret = vkAcquireNextImageKHR(m_LogicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
@@ -866,7 +868,7 @@ VkResult VulkanApplication::createComputePipeline()
     VkPushConstantRange pushConstantRange = {};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(float);
+    pushConstantRange.size = sizeof(PushConstantsObject);
 
     VkPipelineLayoutCreateInfo computePipelineLayoutInfo = {};
     computePipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -1380,8 +1382,7 @@ VkResult VulkanApplication::createDescriptorPool()
 
     VkDescriptorPoolSize poolSizes[] = {
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 2},
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3}
     };
 
     VkDescriptorPoolCreateInfo poolInfo = {};
@@ -1685,10 +1686,17 @@ void VulkanApplication::prepareImGuiDrawData()
 
     ImGui::Separator();
 
-    ImGui::Text("Max grass blade count: %i", MAX_BLADES);
-    ImGui::Text("Num grass blades culled: %i", driverData.numCulled);
-    ImGui::Text("Grass blades: %i/%i", MAX_BLADES - driverData.numCulled, MAX_BLADES);
+    ImGui::Text("Max grass blade count: %u", MAX_BLADES);
+    ImGui::Text("Num grass blades culled: %u", driverData.numCulled);
+
+    ImGui::Separator();
+
+    ImGui::Text("Grass blades: %u/%u", MAX_BLADES - driverData.numCulled, MAX_BLADES);
+    
+    ImGui::Separator();
+
     ImGui::Text("Grass pipeline draw call time: %fus", driverData.grassDrawCallTime);
+    ImGui::Text("Compute pipeline execution time: %fus", driverData.computeCallTime);
 
     ImGui::Separator();
 
@@ -1855,20 +1863,17 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer[currentFrame], quadOffsetsGRASS);
 
     
-    uint32_t numBladesThisFrame = retrieveNumBlades();
-    uint32_t dynamicOffsetLastFrame = sizeof(GrassBladeInstanceData) * numBladesThisFrame * (currentFrame - 1);
-    uint32_t dynamicOffsetThisFrame = sizeof(GrassBladeInstanceData) * numBladesThisFrame * currentFrame;
-    std::array<uint32_t, 2> dynamicOffsets = { dynamicOffsetLastFrame, dynamicOffsetThisFrame };
+    uint32_t numBladesThisFrame = retrieveNumBlades(); // max - culled = visible
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &grassPipelineDescriptorSet, static_cast<uint32_t>(dynamicOffsets.size()), dynamicOffsets.data());
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
     auto start = std::chrono::high_resolution_clock::now();
 
     // The tessellation primitive generator expects to be generating quads, hence the value of 4.
-    //vkCmdDraw(commandBuffer, 4, MAX_BLADES, 0, 0);
+    vkCmdDraw(commandBuffer, 4, MAX_BLADES, 0, 0);
 
     // The 1 indicates how many draw calls to perform, with indirect rendering you want to draw everything in 1 call.
-    vkCmdDrawIndirect(commandBuffer, indirectBuffer, 0, 1, sizeof(GrassBladeIndirectDrawCommand));
+    //vkCmdDrawIndirect(commandBuffer, indirectBuffer, 0, 1, sizeof(GrassBladeIndirectDrawCommand));
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
@@ -1900,17 +1905,28 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
 
-    uint32_t numBladesThisFrame = retrieveNumBlades(); // Max - num culled = current active;
-    uint32_t dynamicOffsetLastFrame = sizeof(GrassBladeInstanceData) * numBladesThisFrame * (currentFrame - 1);
-    uint32_t dynamicOffsetThisFrame = sizeof(GrassBladeInstanceData) * numBladesThisFrame * currentFrame;
-    std::array<uint32_t, 2> dynamicOffsets = { dynamicOffsetLastFrame, dynamicOffsetThisFrame };
-
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
-    float elapsed = glfwGetTime();
-    vkCmdPushConstants(commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &elapsed);
+    PushConstantsObject pushConstantsObject = {};
+    pushConstantsObject.elapsed = glfwGetTime();
+    pushConstantsObject.totalNumBlades = MAX_BLADES;
 
-    vkCmdDispatch(commandBuffer, MAX_BLADES, 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
+    vkCmdPushConstants(commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstantsObject), &pushConstantsObject);
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // This should run ONCE PER-BLADE. Dividing the work-group by 32 to match the ideal size of a warp on most hardware, then working with
+    // 32 threads per-thread group on the local size in the shader. These values are multiplied so it makes the MAX count anyway.
+
+    // maxblades / threads per group = thread group count in one dimension.
+
+    // MAX / 32 + 1 ensures that the thread groups are round up
+
+    vkCmdDispatch(commandBuffer, (MAX_BLADES / 32) , 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    driverData.computeCallTime = duration.count() * 1000000; // Convert from seconds to microseconds.
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to end recording compute command buffer!");
@@ -2079,6 +2095,8 @@ void VulkanApplication::updateIndirectBuffer(uint32_t instanceCount)
 
 uint32_t VulkanApplication::retrieveNumBlades()
 {
+    vkDeviceWaitIdle(m_LogicalDevice);
+
     void* data;
     vkMapMemory(m_LogicalDevice, numBladesBufferMemory, 0, sizeof(NumBladesBufferObject), 0, &data);
 
@@ -2241,7 +2259,7 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     // Shader storage buffer object last frame.
     layoutBindings[1] = {};
     layoutBindings[1].binding = 1;
-    layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC; 
+    layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; 
     layoutBindings[1].descriptorCount = 1;
     layoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT; 
     layoutBindings[1].pImmutableSamplers = nullptr;
@@ -2249,7 +2267,7 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     // Shader storage buffer object current frame
     layoutBindings[2] = {};
     layoutBindings[2].binding = 2;
-    layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC; 
+    layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; 
     layoutBindings[2].descriptorCount = 1;
     layoutBindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
     layoutBindings[2].pImmutableSamplers = nullptr;
@@ -2261,7 +2279,6 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     layoutBindings[3].descriptorCount = 1;
     layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     layoutBindings[3].pImmutableSamplers = nullptr;
-
 
     VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -2362,7 +2379,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     grassDescriptorWrites[1].dstSet = grassPipelineDescriptorSet;
     grassDescriptorWrites[1].dstBinding = 1;
     grassDescriptorWrites[1].dstArrayElement = 0;
-    grassDescriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    grassDescriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     grassDescriptorWrites[1].descriptorCount = 1;
     grassDescriptorWrites[1].pBufferInfo = &ssboBufferInfoLastFrame;
 
@@ -2376,7 +2393,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     grassDescriptorWrites[2].dstSet = grassPipelineDescriptorSet;
     grassDescriptorWrites[2].dstBinding = 2;
     grassDescriptorWrites[2].dstArrayElement = 0;
-    grassDescriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    grassDescriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     grassDescriptorWrites[2].descriptorCount = 1;
     grassDescriptorWrites[2].pBufferInfo = &ssboBufferInfoCurrentFrame;
 

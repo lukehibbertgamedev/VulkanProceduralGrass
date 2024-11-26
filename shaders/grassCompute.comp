@@ -29,13 +29,13 @@ layout(std140, binding = 2) buffer BladeInstanceDataBufferCurrentFrame {
 };
 
 layout(std140, binding = 3) buffer NumBladesBuffer {
-    //uint numVisible;
     uint numCulled;
 } numBladesBuffer;
 
-layout(push_constant) uniform PushConstants {
+layout(push_constant) uniform PushConstantsObject {
     float elapsed;
-} pushConstants;
+    uint totalNumBlades;
+} pushConstantsObject;
 
 void keepPersistentLength(in vec3 v0, inout vec3 v1, inout vec3 v2, in float height) {
     vec3 v01 = v1 - v0;
@@ -144,15 +144,27 @@ bool frustumCheck(vec4 pos, float radius) {
 	return true;
 }
 
-layout (local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 void main() 
 {
+    // Ensure the compute shader doesn't run more times than there are blades. 
+    // This shader runs once per-blade.
+    if (gl_GlobalInvocationID.x >= pushConstantsObject.totalNumBlades) {
+        //return;
+    }
+    barrier();
+
+    // Reset the number of culled blades.
+    if (gl_GlobalInvocationID.x == 0) {
+        numBladesBuffer.numCulled = 0;
+    }
+    barrier();
+
+
     uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x* gl_WorkGroupSize.x;
     uint threadID_x = gl_GlobalInvocationID.x; // Thread ID within the grid's x-space.
     BladeInstanceData bladeIn = bladesIn[threadID_x]; // This blade instance.
-
-    // barrier();
 
     // Frustum culling.
     vec4 v0ClipSpace = ubo.proj * ubo.view * vec4(bladeIn.p0_and_width.xyz, 1.0);
@@ -168,19 +180,17 @@ void main()
     bool v1OutFrustum = v1ClipSpace.x < shrinkMin || v1ClipSpace.x > shrinkMax || v1ClipSpace.y < shrinkMin || v1ClipSpace.y > shrinkMax;
     bool v2OutFrustum = v2ClipSpace.x < shrinkMin || v2ClipSpace.x > shrinkMax || v2ClipSpace.y < shrinkMin || v2ClipSpace.y > shrinkMax;
     if (v0OutFrustum && v1OutFrustum && v2OutFrustum) { 
-        //numBladesBuffer.numCulled += 1;
         atomicAdd(numBladesBuffer.numCulled, 1);
         return; // Cull this blade.
     } 
-    //else {
-    //    numBladesBuffer.numVisible += 1;
-    //}
+
+    //barrier();
 
     // Wind forces.
     float height = bladeIn.p1_and_height.w;
     vec3 directionVector = vec3(cos(radians(bladeIn.p2_and_direction.w)), 0.0, sin(radians(bladeIn.p2_and_direction.w))); // Assumes Z is up.
     vec3 modifiedP2 = bladeIn.p2_and_direction.xyz;
-    modifiedP2 += getWindOffset(bladeIn.p2_and_direction.xyz, bladeIn.p2_and_direction.w, pushConstants.elapsed);
+    modifiedP2 += getWindOffset(bladeIn.p2_and_direction.xyz, bladeIn.p2_and_direction.w, pushConstantsObject.elapsed);
     keepPersistentLength(bladeIn.p0_and_width.xyz, bladeIn.p1_and_height.xyz, modifiedP2, height);
     bladesOut[threadID_x] = bladeIn;
     bladesOut[threadID_x].p2_and_direction.xyz = modifiedP2;  
