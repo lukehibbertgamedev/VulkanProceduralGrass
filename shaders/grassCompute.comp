@@ -28,7 +28,7 @@ layout(std140, binding = 2) buffer BladeInstanceDataBufferCurrentFrame {
     BladeInstanceData bladesOut[]; 
 };
 
-layout(set = 0, binding = 3) buffer NumBladesBuffer {
+layout(std140, binding = 3) buffer NumBladesBuffer {
     //uint numVisible;
     uint numCulled;
 } numBladesBuffer;
@@ -168,7 +168,8 @@ void main()
     bool v1OutFrustum = v1ClipSpace.x < shrinkMin || v1ClipSpace.x > shrinkMax || v1ClipSpace.y < shrinkMin || v1ClipSpace.y > shrinkMax;
     bool v2OutFrustum = v2ClipSpace.x < shrinkMin || v2ClipSpace.x > shrinkMax || v2ClipSpace.y < shrinkMin || v2ClipSpace.y > shrinkMax;
     if (v0OutFrustum && v1OutFrustum && v2OutFrustum) { 
-        numBladesBuffer.numCulled += 1;
+        //numBladesBuffer.numCulled += 1;
+        atomicAdd(numBladesBuffer.numCulled, 1);
         return; // Cull this blade.
     } 
     //else {

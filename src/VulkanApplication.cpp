@@ -171,7 +171,7 @@ void VulkanApplication::render()
     vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); 
 
     updateUniformBuffer(currentFrame);
-    updateIndirectBuffer(retrieveNumBlades());
+    //updateIndirectBuffer(retrieveNumBlades());
 
     uint32_t imageIndex;
     VkResult ret = vkAcquireNextImageKHR(m_LogicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
@@ -1380,7 +1380,8 @@ VkResult VulkanApplication::createDescriptorPool()
 
     VkDescriptorPoolSize poolSizes[] = {
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 3}
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 2},
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}
     };
 
     VkDescriptorPoolCreateInfo poolInfo = {};
@@ -1899,12 +1900,12 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
 
-    uint32_t numBladesThisFrame = retrieveNumBlades();
+    uint32_t numBladesThisFrame = retrieveNumBlades(); // Max - num culled = current active;
     uint32_t dynamicOffsetLastFrame = sizeof(GrassBladeInstanceData) * numBladesThisFrame * (currentFrame - 1);
     uint32_t dynamicOffsetThisFrame = sizeof(GrassBladeInstanceData) * numBladesThisFrame * currentFrame;
     std::array<uint32_t, 2> dynamicOffsets = { dynamicOffsetLastFrame, dynamicOffsetThisFrame };
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &grassPipelineDescriptorSet, static_cast<uint32_t>(dynamicOffsets.size()), dynamicOffsets.data());
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
     float elapsed = glfwGetTime();
     vkCmdPushConstants(commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &elapsed);
@@ -2227,7 +2228,7 @@ VkResult VulkanApplication::createModelDescriptorSetLayout()
 VkResult VulkanApplication::createGrassDescriptorSetLayout()
 {
     // This layout requires a UBO for the camera data to be used here too, so that the grass positions can be represented as points.
-    std::array<VkDescriptorSetLayoutBinding, 3> layoutBindings = {};
+    std::array<VkDescriptorSetLayoutBinding, 4> layoutBindings = {};
 
     // Uniform buffer objects.
     layoutBindings[0] = {};
@@ -2253,21 +2254,14 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     layoutBindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
     layoutBindings[2].pImmutableSamplers = nullptr;
 
-    //// Shader storage buffer object for indirect draw commands.
-    //layoutBindings[3] = {};
-    //layoutBindings[3].binding = 3;
-    //layoutBindings[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-    //layoutBindings[3].descriptorCount = 1;
-    //layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    //layoutBindings[3].pImmutableSamplers = nullptr;
+    // Shader buffer object for returning the number of grass blades for the draw calls.
+    layoutBindings[3] = {};
+    layoutBindings[3].binding = 3;
+    layoutBindings[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    layoutBindings[3].descriptorCount = 1;
+    layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    layoutBindings[3].pImmutableSamplers = nullptr;
 
-    //// Uniform buffer object for returning the number of grass blades for the draw calls.
-    //layoutBindings[4] = {};
-    //layoutBindings[4].binding = 4;
-    //layoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    //layoutBindings[4].descriptorCount = 1;
-    //layoutBindings[4].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    //layoutBindings[4].pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -2342,7 +2336,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
         return ret;
     }   
 
-    std::array<VkWriteDescriptorSet, 3> grassDescriptorWrites = {};
+    std::array<VkWriteDescriptorSet, 4> grassDescriptorWrites = {};
 
     VkDescriptorBufferInfo uboBufferInfo = {};
     uboBufferInfo.buffer = uniformBuffer;
@@ -2386,6 +2380,19 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     grassDescriptorWrites[2].descriptorCount = 1;
     grassDescriptorWrites[2].pBufferInfo = &ssboBufferInfoCurrentFrame;
 
+    VkDescriptorBufferInfo sboNumBladesBufferInfo = {};
+    sboNumBladesBufferInfo.buffer = numBladesBuffer;
+    sboNumBladesBufferInfo.offset = 0;
+    sboNumBladesBufferInfo.range = sizeof(NumBladesBufferObject);
+
+    grassDescriptorWrites[3] = {};
+    grassDescriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    grassDescriptorWrites[3].dstSet = grassPipelineDescriptorSet;
+    grassDescriptorWrites[3].dstBinding = 3;
+    grassDescriptorWrites[3].dstArrayElement = 0;
+    grassDescriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    grassDescriptorWrites[3].descriptorCount = 1;
+    grassDescriptorWrites[3].pBufferInfo = &sboNumBladesBufferInfo;
 
     vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(grassDescriptorWrites.size()), grassDescriptorWrites.data(), 0, nullptr);
 
