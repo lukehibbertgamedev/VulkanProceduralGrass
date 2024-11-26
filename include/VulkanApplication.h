@@ -59,16 +59,15 @@ struct CameraUniformBufferObject {
 	alignas(16) glm::mat4 model;
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
-	alignas(16) glm::vec4 frustumPlanes[6];
 };
 
 struct NumBladesBufferObject {
-	alignas(16) uint32_t numCulled;
+	alignas(4) uint32_t numCulled;
 };
 
 struct PushConstantsObject {
-	alignas(16) float elapsed;
-	alignas(16) uint32_t totalNumBlades;
+	alignas(4) uint32_t totalNumBlades;
+	alignas(4) float elapsed;
 };
 
 struct QueueFamilyIndices {
@@ -291,7 +290,6 @@ public:
 	VkPipeline computePipeline = VK_NULL_HANDLE;						// A pipeline structure for the grass animation and culling pass.
 
 	Camera* camera;														// A handle to a dynamic camera that works with WASDEQ, arrow keys, LJ, and RTY. 
-	Frustum frustum;													// A handle to six planes defining a view frustum to cull blades from.
 
 	VkImage depthImage = VK_NULL_HANDLE;								// A handle to the image that represents a depth stencil.
 	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;					// Allocated memory for this image resource.

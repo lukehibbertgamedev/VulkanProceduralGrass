@@ -263,9 +263,6 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     ubo.view = camera->getViewMatrix();
     ubo.proj = projectionMatrix;
 
-    //frustum.update(ubo.proj * ubo.view);
-    //memcpy(ubo.frustumPlanes, frustum.planes.data(), sizeof(glm::vec4) * 6);
-
     // Copy the contents of the ubo structure into a mapped memory location effectively updating the uniform buffer with the most recent data.
     void* data;
     vkMapMemory(m_LogicalDevice, uniformBufferMemory, 0, sizeof(ubo), 0, &data); // Validation error: attempting to map memory on already mapped memory.
@@ -1908,8 +1905,8 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
     PushConstantsObject pushConstantsObject = {};
-    pushConstantsObject.elapsed = glfwGetTime();
     pushConstantsObject.totalNumBlades = MAX_BLADES;
+    pushConstantsObject.elapsed = glfwGetTime();
 
     vkCmdPushConstants(commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstantsObject), &pushConstantsObject);
 
@@ -1917,12 +1914,7 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
     // This should run ONCE PER-BLADE. Dividing the work-group by 32 to match the ideal size of a warp on most hardware, then working with
     // 32 threads per-thread group on the local size in the shader. These values are multiplied so it makes the MAX count anyway.
-
-    // maxblades / threads per group = thread group count in one dimension.
-
-    // MAX / 32 + 1 ensures that the thread groups are round up
-
-    vkCmdDispatch(commandBuffer, (MAX_BLADES / 32) , 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
+    vkCmdDispatch(commandBuffer, ((MAX_BLADES - 1) / 32u) + 1u, 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;

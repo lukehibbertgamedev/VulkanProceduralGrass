@@ -5,7 +5,6 @@ layout(binding = 0) uniform CameraUniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
-    vec4 frustumPlanes[6];
 } ubo;
 
 layout(location = 0) in vec3 inPosition;

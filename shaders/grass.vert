@@ -18,7 +18,6 @@ layout(binding = 0) uniform CameraUniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
-    vec4 frustumPlanes[6];
 } ubo;
 
 // Read from the previous frame, and write to the current frame. 
