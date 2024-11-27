@@ -22,7 +22,7 @@ layout(binding = 0) uniform CameraUniformBufferObject {
 
 // Read from the previous frame, and write to the current frame. 
 // This will wrap so the updated current frame will become the readonly previous frame.
-layout(std140, binding = 1) readonly buffer BladeInstanceDataBufferLastFrame {
+layout(std140, binding = 1) buffer BladeInstanceDataBufferLastFrame {
     BladeInstanceData blades[]; 
 } bladeInstanceDataBufferLastFrame;
 

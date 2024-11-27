@@ -998,7 +998,7 @@ VkResult VulkanApplication::createGrassPipeline()
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL; 
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;                    // This should be VK_CULL_MODE_BACK_BIT, but for testing purposes this is off. 
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;                     
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
     
@@ -1662,7 +1662,7 @@ void VulkanApplication::uploadIndirectCommandData()
     // Send the data to the GPU.
     BladeDrawIndirect indirectCommand = {};
     indirectCommand.vertexCount = 4; 
-    indirectCommand.instanceCount = MAX_BLADES; // One draw call for all blades. 
+    indirectCommand.instanceCount = 0; // One draw call for all blades. 
     indirectCommand.firstVertex = 0; 
     indirectCommand.firstInstance = 0; 
 
@@ -1701,11 +1701,11 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::Separator();
 
     ImGui::Text("Max grass blade count: %u", MAX_BLADES);
-    ImGui::Text("Num grass blades culled: %u", driverData.numCulled);
+    ImGui::Text("Num grass blades culled: %u", MAX_BLADES - driverData.numVisible);
 
     ImGui::Separator();
 
-    ImGui::Text("Grass blades: %u/%u", MAX_BLADES - driverData.numCulled, MAX_BLADES);
+    ImGui::Text("Grass blades: %u/%u", driverData.numVisible, MAX_BLADES);
     
     ImGui::Separator();
 
@@ -1718,9 +1718,10 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Arrows: Rotate Camera");
     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "R/T/Y: Camera position defaults");
     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "L/J: Change FOV");
-
-    ImGui::Text("Camera position: x: %i, y: %i, z: %i", (int)camera->position.x, (int)camera->position.y, (int)camera->position.z);
-    ImGui::Text("Pitch: %i / Yaw: %i / FOV: %i", (int)camera->pitch, (int)camera->yaw, (int)camera->fov);
+    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.2f, 1.0f), "Camera position: x: %i, y: %i, z: %i", (int)camera->position.x, (int)camera->position.y, (int)camera->position.z);
+    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.2f, 1.0f), "Pitch: %i / Yaw: %i / FOV: %i", (int)camera->pitch, (int)camera->yaw, (int)camera->fov);
+    
+    ImGui::Separator();
 
     ImGui::End();
 }
@@ -1879,12 +1880,14 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     
     //uint32_t numBladesThisFrame = retrieveNumBlades(); // max - culled = visible
 
+
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
+    uint32_t numVisibleBlades = MAX_BLADES - retrieveNumVisibleBlades();
     auto start = std::chrono::high_resolution_clock::now();
 
     // The tessellation primitive generator expects to be generating quads, hence the value of 4.
-    vkCmdDraw(commandBuffer, 4, MAX_BLADES, 0, 0);
+    vkCmdDraw(commandBuffer, 4, numVisibleBlades, 0, 0);
 
     // The 1 indicates how many draw calls to perform, with indirect rendering you want to draw everything in 1 call.
     //vkCmdDrawIndirect(commandBuffer, indirectBuffer, 0, 1, sizeof(BladeDrawIndirect));
@@ -1931,11 +1934,20 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
     // This should run ONCE PER-BLADE. Dividing the work-group by 32 to match the ideal size of a warp on most hardware, then working with
     // 32 threads per-thread group on the local size in the shader. These values are multiplied so it makes the MAX count anyway.
-    vkCmdDispatch(commandBuffer, ((MAX_BLADES - 1) / 32u) + 1u, 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
+    vkCmdDispatch(commandBuffer, MAX_BLADES / 32u, 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     driverData.computeCallTime = duration.count() * 1000000; // Convert from seconds to microseconds.
+
+    // Ensure that the writes from compute are visible to the program before continuing.
+    //VkMemoryBarrier memoryBarrier = {};
+    //memoryBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    //memoryBarrier.pNext = nullptr;
+    //memoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    //memoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    //vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 
+    //    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 1, &memoryBarrier, 0, nullptr, 0, nullptr);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to end recording compute command buffer!");
@@ -2102,19 +2114,19 @@ void VulkanApplication::updateIndirectBuffer(uint32_t instanceCount)
     vkUnmapMemory(m_LogicalDevice, indirectBufferMemory);
 }
 
-uint32_t VulkanApplication::retrieveNumBlades()
+uint32_t VulkanApplication::retrieveNumVisibleBlades()
 {
     vkDeviceWaitIdle(m_LogicalDevice);
 
     void* data;
     vkMapMemory(m_LogicalDevice, numBladesBufferMemory, 0, sizeof(NumBladesBufferObject), 0, &data);
 
-    uint32_t numCulled = *static_cast<uint32_t*>(data);
-    driverData.numCulled = numCulled;
+    uint32_t numVisible = *static_cast<uint32_t*>(data);
+    driverData.numVisible = numVisible;
 
     vkUnmapMemory(m_LogicalDevice, numBladesBufferMemory);
 
-    return numCulled;
+    return numVisible;
 }
 
 void VulkanApplication::linkWindowToVulkan(GLFWwindow* window)

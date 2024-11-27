@@ -10,8 +10,7 @@
 
 // A class representing ONE blade of grass using the Bézier representation.
 
-constexpr uint32_t MAX_BLADES = 2 << 5;
-constexpr uint32_t THREAD_GROUP_SIZE = MAX_BLADES / 256;
+constexpr uint32_t MAX_BLADES = 2 << 10;
 
 #define GRASS_MIN_WIDTH 0.050f	// Will modify the shader values.
 #define GRASS_MAX_WIDTH 0.100f	// Will modify the shader values.

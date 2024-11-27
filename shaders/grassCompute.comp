@@ -28,7 +28,7 @@ layout(std140, binding = 2) buffer VisibleBladeInstanceDataBuffer {
 
 // A buffer to write the number of blades culled via compute culling, this is displayed in ImGui.
 layout(std140, binding = 3) buffer NumBladesBuffer {
-    uint numCulled;
+    uint numVisible;
 } numBladesBuffer;
 
 // Buffer containing indirect draw command data, this changes due to culling grass blades out so the size will not be the same per-frame.
@@ -153,7 +153,7 @@ void main()
 
     // Reset the number of culled blades.
     if (gl_GlobalInvocationID.x == 0) {
-        numBladesBuffer.numCulled = 0;
+        numBladesBuffer.numVisible = 0;
     }
     barrier();
 
@@ -172,11 +172,11 @@ void main()
     bool v0OutFrustum = v0ClipSpace.x < shrinkMin || v0ClipSpace.x > shrinkMax || v0ClipSpace.y < shrinkMin || v0ClipSpace.y > shrinkMax;
     bool v1OutFrustum = v1ClipSpace.x < shrinkMin || v1ClipSpace.x > shrinkMax || v1ClipSpace.y < shrinkMin || v1ClipSpace.y > shrinkMax;
     bool v2OutFrustum = v2ClipSpace.x < shrinkMin || v2ClipSpace.x > shrinkMax || v2ClipSpace.y < shrinkMin || v2ClipSpace.y > shrinkMax;
-    if (v0OutFrustum && v1OutFrustum && v2OutFrustum) { 
-        atomicAdd(numBladesBuffer.numCulled, 1);
-        return; // Cull this blade.
+    if (v0OutFrustum && v1OutFrustum && v2OutFrustum) {         
+        return; // Cull.      
     } 
-    barrier();
+
+    atomicAdd(numBladesBuffer.numVisible, 1);
 
     // Wind forces.
     float height = blade.p1_and_height.w;
@@ -184,11 +184,8 @@ void main()
     vec3 modifiedP2 = blade.p2_and_direction.xyz;
     modifiedP2 += getWindOffset(blade.p2_and_direction.xyz, blade.p2_and_direction.w, pushConstantsObject.elapsed);
     keepPersistentLength(blade.p0_and_width.xyz, blade.p1_and_height.xyz, modifiedP2, height);
+    blade.p2_and_direction.xyz = modifiedP2;
 
-    uint visibleIndex = atomicAdd(indirectDrawData.instanceCount, 1);
-    visibleBladeInstanceDataBuffer.visibleBlades[visibleIndex] = blade;
-    visibleBladeInstanceDataBuffer.visibleBlades[visibleIndex].p2_and_direction.xyz = modifiedP2; 
-
-    //visibleBladeInstanceDataBuffer.visibleBlades[gl_GlobalInvocationID.x] = blade;
-    //visibleBladeInstanceDataBuffer.visibleBlades[gl_GlobalInvocationID.x].p2_and_direction.xyz = modifiedP2; 
+    // Update out blade.
+    visibleBladeInstanceDataBuffer.visibleBlades[atomicAdd(indirectDrawData.instanceCount, 1)] = blade;
 }

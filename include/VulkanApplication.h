@@ -49,7 +49,7 @@ public:
 
 	int vertexCount = 0;
 
-	uint32_t numCulled = 0;
+	uint32_t numVisible = 0;
 
 	float grassDrawCallTime = 0.0f;
 	float computeCallTime = 0.0f;
@@ -62,7 +62,7 @@ struct CameraUniformBufferObject {
 };
 
 struct NumBladesBufferObject {
-	alignas(4) uint32_t numCulled;
+	alignas(4) uint32_t numVisible;
 };
 
 struct BladeDrawIndirect {
@@ -103,7 +103,7 @@ public:
 
 	// ...
 	void updateIndirectBuffer(uint32_t instanceCount);
-	uint32_t retrieveNumBlades();
+	uint32_t retrieveNumVisibleBlades();
 
 	void linkWindowToVulkan(GLFWwindow* window);					// - - - - - .
 	void linkCameraToVulkan(Camera* camera);						//			 |
