@@ -775,7 +775,7 @@ VkResult VulkanApplication::createMeshPipeline()
     // You want to specifically use a patch list here, so the tessellation primitive generator can generate patches of subdivided meshes.
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {}; 
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO; 
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE; 
 
     // Configure how the tessellation connects to the pipeline, most importantly defining the patch control points.
@@ -2346,7 +2346,7 @@ VkResult VulkanApplication::createModelDescriptorSetLayout()
     samplerBinding.binding = 1;
     samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     samplerBinding.descriptorCount = 1;
-    samplerBinding.stageFlags = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    samplerBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
     samplerBinding.pImmutableSamplers = nullptr;
 
     std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboBinding, samplerBinding };
