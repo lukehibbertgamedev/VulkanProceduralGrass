@@ -65,6 +65,8 @@ struct NumBladesBufferObject {
 	alignas(4) uint32_t numVisible;
 };
 
+// Allow draw call parameters to be stored in GPU memory.
+// Passing the parameters in indirectly, not directly into the call.
 struct BladeDrawIndirect {
 	alignas(4) uint32_t vertexCount;
 	alignas(4) uint32_t instanceCount;
@@ -102,7 +104,6 @@ public:
 	void updateUniformBuffer(uint32_t currentFrame);
 
 	// ...
-	void updateIndirectBuffer(uint32_t instanceCount);
 	uint32_t retrieveNumVisibleBlades();
 
 	void linkWindowToVulkan(GLFWwindow* window);					// - - - - - .
@@ -135,8 +136,6 @@ public:
 	void createMeshObjects();					// Creates the ground plane.
 	void populateBladeInstanceBuffer();			// Populates a vector of blade instance data.
 	void createBladeInstanceStagingBuffer();	// Copy the vector of instance data to the GPU.
-	void createIndirectDrawBuffer();			// Create the buffer for indirect drawing.
-	void uploadIndirectCommandData();			// Map the indirect data to the GPU.
 	void createNumBladesBuffer();				// Create the buffer to hold the number of active blades.
 
 	void prepareImGuiDrawData();
@@ -302,9 +301,6 @@ public:
 	VkImage depthImage = VK_NULL_HANDLE;								// A handle to the image that represents a depth stencil.
 	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;					// Allocated memory for this image resource.
 	VkImageView depthImageView = VK_NULL_HANDLE;						// A handle to the actual image data for the depth stencil.
-
-	VkBuffer indirectBuffer;											// ...
-	VkDeviceMemory indirectBufferMemory;								// ...
 
 	VkBuffer numBladesBuffer;											// ...
 	VkDeviceMemory numBladesBufferMemory;								// ...

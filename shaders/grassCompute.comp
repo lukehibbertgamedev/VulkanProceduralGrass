@@ -21,23 +21,15 @@ layout(std140, binding = 1) buffer AllBladeInstanceDataBuffer {
     BladeInstanceData allBlades[]; 
 } allBladeInstanceDataBuffer;
 
-// The SSBO for the blades that are within frustum.
+// The SSBO for the blades that are within frustum (this is the same binding used in the vert, tcs, tes, and frag shaders).
 layout(std140, binding = 2) buffer VisibleBladeInstanceDataBuffer {
     BladeInstanceData visibleBlades[]; 
 } visibleBladeInstanceDataBuffer;
 
-// A buffer to write the number of blades culled via compute culling, this is displayed in ImGui.
+// A buffer to write the number of visible blades after compute culling, this is displayed in ImGui.
 layout(std140, binding = 3) buffer NumBladesBuffer {
     uint numVisible;
 } numBladesBuffer;
-
-// Buffer containing indirect draw command data, this changes due to culling grass blades out so the size will not be the same per-frame.
-layout(set = 0, binding = 4) buffer IndirectDrawData {
-    uint vertexCount;   // Number of vertices to draw.
-    uint instanceCount; // Number of instances to draw.
-    uint firstVertex;   // Index of the first vertex.
-    uint firstInstance; // Instance ID of the first instance to draw.
-} indirectDrawData;
 
 // Push constants for quick and easy readonly data that the shader needs.
 layout(push_constant) uniform PushConstantsObject {    
@@ -154,25 +146,19 @@ void main()
     // Reset the number of culled blades.
     if (gl_GlobalInvocationID.x == 0) {
         numBladesBuffer.numVisible = 0;
-        indirectDrawData.vertexCount = 0;
     }
     //barrier();
 
     BladeInstanceData blade = allBladeInstanceDataBuffer.allBlades[gl_GlobalInvocationID.x]; // This blade instance.
 
     // Frustum culling.
-    vec4 v0ClipSpace = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0);
-    vec4 v1ClipSpace = ubo.proj * ubo.view * vec4(blade.p1_and_height.xyz, 1.0);
-    vec4 v2ClipSpace = ubo.proj * ubo.view * vec4(blade.p2_and_direction.xyz, 1.0);
-    v0ClipSpace /= v0ClipSpace.w; // Normalise.
-    v1ClipSpace /= v1ClipSpace.w; // Normalise.
-    v2ClipSpace /= v2ClipSpace.w; // Normalise.
-    float shrinkFactor = 0.6;
-    float shrinkMin = -shrinkFactor;
-    float shrinkMax =  shrinkFactor;
-    bool v0OutFrustum = v0ClipSpace.x < shrinkMin || v0ClipSpace.x > shrinkMax || v0ClipSpace.y < shrinkMin || v0ClipSpace.y > shrinkMax;// || v0ClipSpace.z < shrinkMin || v0ClipSpace.z > shrinkMax;
-    bool v1OutFrustum = v1ClipSpace.x < shrinkMin || v1ClipSpace.x > shrinkMax || v1ClipSpace.y < shrinkMin || v1ClipSpace.y > shrinkMax;// || v1ClipSpace.z < shrinkMin || v1ClipSpace.z > shrinkMax;
-    bool v2OutFrustum = v2ClipSpace.x < shrinkMin || v2ClipSpace.x > shrinkMax || v2ClipSpace.y < shrinkMin || v2ClipSpace.y > shrinkMax;// || v2ClipSpace.z < shrinkMin || v2ClipSpace.z > shrinkMax;
+    float shrinkFactor = 1.0; // Shrink the frustum for testing purposes where 0 is no frustum and 1 is screen-space.    
+    vec4 v0ClipSpace = ubo.proj * ubo.view * vec4(blade.p0_and_width.xyz, 1.0); v0ClipSpace /= v0ClipSpace.w;       // Normalise.
+    vec4 v1ClipSpace = ubo.proj * ubo.view * vec4(blade.p1_and_height.xyz, 1.0); v1ClipSpace /= v1ClipSpace.w;      // Normalise.
+    vec4 v2ClipSpace = ubo.proj * ubo.view * vec4(blade.p2_and_direction.xyz, 1.0); v2ClipSpace /= v2ClipSpace.w;   // Normalise.  
+    bool v0OutFrustum = v0ClipSpace.x < -shrinkFactor || v0ClipSpace.x > shrinkFactor || v0ClipSpace.y < -shrinkFactor || v0ClipSpace.y > shrinkFactor;
+    bool v1OutFrustum = v1ClipSpace.x < -shrinkFactor || v1ClipSpace.x > shrinkFactor || v1ClipSpace.y < -shrinkFactor || v1ClipSpace.y > shrinkFactor;
+    bool v2OutFrustum = v2ClipSpace.x < -shrinkFactor || v2ClipSpace.x > shrinkFactor || v2ClipSpace.y < -shrinkFactor || v2ClipSpace.y > shrinkFactor;
     if (v0OutFrustum && v1OutFrustum && v2OutFrustum) {         
         return; // Cull.      
     } 
@@ -185,7 +171,7 @@ void main()
     keepPersistentLength(blade.p0_and_width.xyz, blade.p1_and_height.xyz, modifiedP2, height);
     blade.p2_and_direction.xyz = modifiedP2;
 
-    // Update out blade.
+    // Update out blade, atomic add here since we want to not only add a blade, but index into this array with no data races.
     visibleBladeInstanceDataBuffer.visibleBlades[atomicAdd(numBladesBuffer.numVisible, 1)] = blade;
 
 }

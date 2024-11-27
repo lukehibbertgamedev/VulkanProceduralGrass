@@ -1565,8 +1565,8 @@ void VulkanApplication::populateBladeInstanceBuffer()
     // Calculate the bounds of the flat plane (Y is not needed yet as there is no terrain height).
     // [0, 0, 0] is the origin of the plane, the bounds extend half the scale in each direction.
     // Warning: This does not take into account the position of the ground plane.
-    glm::vec2 planeBoundsX = glm::vec2(-(MEADOW_SCALE_X * 0.5f) + groundPlane.position.x + 0.5f, (MEADOW_SCALE_X * 0.5f) + groundPlane.position.x - 0.5f);
-    glm::vec2 planeBoundsY = glm::vec2(-(MEADOW_SCALE_Y * 0.5f) + groundPlane.position.y + 0.5f, (MEADOW_SCALE_Y * 0.5f) + groundPlane.position.y - 0.5f);
+    glm::vec2 planeBoundsX = glm::vec2(-(MEADOW_SCALE_X) + groundPlane.position.x + 0.5f, (MEADOW_SCALE_X) + groundPlane.position.x - 0.5f);
+    glm::vec2 planeBoundsY = glm::vec2(-(MEADOW_SCALE_Y) + groundPlane.position.y + 0.5f, (MEADOW_SCALE_Y) + groundPlane.position.y - 0.5f);
     
     // Do this outside the loop to avoid continuously creating struct instances, just change the data inside it.
     GrassBladeInstanceData bladeInstanceData = {};
@@ -1642,34 +1642,6 @@ void VulkanApplication::createBladeInstanceStagingBuffer()
         // Copy data from the staging buffer (host) to the shader storage buffer (GPU).
         copyBuffer(bladeInstanceStagingBuffer[i], bladeInstanceDataBuffer[i], bladeInstanceBufferRequiredSize);
     }    
-}
-
-void VulkanApplication::createIndirectDrawBuffer()
-{
-    VkDeviceSize indirectBufferRequiredSize = sizeof(BladeDrawIndirect);
-    VkResult ret = createBuffer(indirectBufferRequiredSize, 
-        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, // Used for indirect | Used as storage buffer | Upload data from CPU.
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // Data can be accessed by CPU | No need to manually manage CPU cache.
-        indirectBuffer, indirectBufferMemory);
-    
-    if (ret != VK_SUCCESS) {
-        throw std::runtime_error("bad buffer creation");
-    }
-}
-
-void VulkanApplication::uploadIndirectCommandData()
-{
-    // Send the data to the GPU.
-    BladeDrawIndirect indirectCommand = {};
-    indirectCommand.vertexCount = 0;    // Number of visible blades.
-    indirectCommand.instanceCount = 1;  // One draw call for all blades. 
-    indirectCommand.firstVertex = 0; 
-    indirectCommand.firstInstance = 0; 
-
-    void* data;
-    vkMapMemory(m_LogicalDevice, indirectBufferMemory, 0, sizeof(BladeDrawIndirect), 0, &data);
-    memcpy(data, &indirectCommand, sizeof(BladeDrawIndirect));
-    vkUnmapMemory(m_LogicalDevice, indirectBufferMemory);
 }
 
 void VulkanApplication::createNumBladesBuffer()
@@ -1877,10 +1849,6 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     VkDeviceSize quadOffsetsGRASS[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer[currentFrame], quadOffsetsGRASS);
 
-    
-    //uint32_t numBladesThisFrame = retrieveNumBlades(); // max - culled = visible
-
-
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
     uint32_t numVisibleBlades = retrieveNumVisibleBlades();
@@ -1888,9 +1856,6 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     // The tessellation primitive generator expects to be generating quads, hence the value of 4.
     vkCmdDraw(commandBuffer, 4, numVisibleBlades, 0, 0);
-
-    // The 1 indicates how many draw calls to perform, with indirect rendering you want to draw everything in 1 call.
-    //vkCmdDrawIndirect(commandBuffer, indirectBuffer, 0, 1, sizeof(BladeDrawIndirect));
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
@@ -1939,19 +1904,6 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     driverData.computeCallTime = duration.count() * 1000000; // Convert from seconds to microseconds.
-
-    // Memory barrier to enforce synchronisation between compute and graphics.
-    VkBufferMemoryBarrier bufferBarrier = {}; 
-    bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    bufferBarrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-    bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    bufferBarrier.buffer = indirectBuffer;
-    bufferBarrier.offset = 0;
-    bufferBarrier.size = sizeof(BladeDrawIndirect);
-
-    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &bufferBarrier, 0, nullptr);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to end recording compute command buffer!");
@@ -2102,20 +2054,6 @@ VkExtent2D VulkanApplication::chooseSwapExtent(GLFWwindow* window, const VkSurfa
 
         return actualExtent;
     }
-}
-
-void VulkanApplication::updateIndirectBuffer(uint32_t instanceCount)
-{
-    void* data;
-    vkMapMemory(m_LogicalDevice, indirectBufferMemory, 0, sizeof(BladeDrawIndirect), 0, &data);
-
-    BladeDrawIndirect* command = (BladeDrawIndirect*)data;
-    command->vertexCount = 4; // The tessellation primitive generator expects to be generating quads, hence the value of 4.
-    command->instanceCount = instanceCount;
-    command->firstVertex = 0;
-    command->firstInstance = 0;
-
-    vkUnmapMemory(m_LogicalDevice, indirectBufferMemory);
 }
 
 uint32_t VulkanApplication::retrieveNumVisibleBlades()
@@ -2271,7 +2209,7 @@ VkResult VulkanApplication::createModelDescriptorSetLayout()
 VkResult VulkanApplication::createGrassDescriptorSetLayout()
 {
     // This layout requires a UBO for the camera data to be used here too, so that the grass positions can be represented as points.
-    std::array<VkDescriptorSetLayoutBinding, 5> layoutBindings = {};
+    std::array<VkDescriptorSetLayoutBinding, 4> layoutBindings = {};
 
     // Uniform buffer objects.
     layoutBindings[0] = {};
@@ -2304,14 +2242,6 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     layoutBindings[3].descriptorCount = 1;
     layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     layoutBindings[3].pImmutableSamplers = nullptr;
-
-    // Shader buffer object for populating indirect draw command data.
-    layoutBindings[4] = {};
-    layoutBindings[4].binding = 4;
-    layoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    layoutBindings[4].descriptorCount = 1;
-    layoutBindings[4].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    layoutBindings[4].pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -2386,7 +2316,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
         return ret;
     }   
 
-    std::array<VkWriteDescriptorSet, 5> grassDescriptorWrites = {};
+    std::array<VkWriteDescriptorSet, 4> grassDescriptorWrites = {};
 
     VkDescriptorBufferInfo uboBufferInfo = {};
     uboBufferInfo.buffer = uniformBuffer;
@@ -2443,20 +2373,6 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     grassDescriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     grassDescriptorWrites[3].descriptorCount = 1;
     grassDescriptorWrites[3].pBufferInfo = &sboNumBladesBufferInfo;
-
-    VkDescriptorBufferInfo sboIndirectCommandBufferInfo = {};
-    sboIndirectCommandBufferInfo.buffer = indirectBuffer;
-    sboIndirectCommandBufferInfo.offset = 0;
-    sboIndirectCommandBufferInfo.range = sizeof(BladeDrawIndirect);
-
-    grassDescriptorWrites[4] = {};
-    grassDescriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    grassDescriptorWrites[4].dstSet = grassPipelineDescriptorSet;
-    grassDescriptorWrites[4].dstBinding = 4;
-    grassDescriptorWrites[4].dstArrayElement = 0;
-    grassDescriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    grassDescriptorWrites[4].descriptorCount = 1;
-    grassDescriptorWrites[4].pBufferInfo = &sboIndirectCommandBufferInfo;
 
     vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(grassDescriptorWrites.size()), grassDescriptorWrites.data(), 0, nullptr);
 
