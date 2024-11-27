@@ -187,6 +187,9 @@ int main() {
 
     vkApp.populateBladeInstanceBuffer(); // SSBO data.
 
+    ret = vkApp.createTextureResources();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create image | sampler resources.");
+
     ret = vkApp.createVertexBuffer();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create vertex buffer.");
 

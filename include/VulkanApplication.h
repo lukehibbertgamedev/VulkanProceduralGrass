@@ -119,6 +119,7 @@ public:
 	VkResult createRenderPass();									//			 |
 	VkResult createDescriptorSetLayouts();							//			 |
 	VkResult createDepthResources();								//			 | - Vulkan application initialisation.
+	VkResult createTextureResources();										//			 |
 	VkResult createPipelines();										//			 |
 	VkResult createFrameBuffers();									//			 |
 	VkResult createCommandPool();									//			 |
@@ -173,6 +174,10 @@ private:
 	VkResult createMeshPipeline(); // For regular rendering of meshes.
 	VkResult createComputePipeline(); // Animates and culls grass blades.
 	VkResult createGrassPipeline(); // Exclusively for grass rendering.
+
+	VkResult createHeightMapImage();
+	VkResult createHeightMapImageView();
+	VkResult createHeightMapSampler();
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
@@ -305,5 +310,10 @@ public:
 	VkBuffer numBladesBuffer;											// ...
 	VkDeviceMemory numBladesBufferMemory;								// ...
 
+	// Height map data.
+	VkImage heightMapImage;
+	VkImageView heightMapImageView;
+	VkDeviceMemory heightMapImageMemory;
+	VkSampler heightMapSampler;
 
 };

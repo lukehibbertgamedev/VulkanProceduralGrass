@@ -721,10 +721,14 @@ VkResult VulkanApplication::createMeshPipeline()
 {
     // Read SPIR-V files.
     auto meshVertexShaderCode = readFile("../shaders/mesh.vert.spv"); 
+    auto terrainTessellationControlShaderCode = readFile("../shaders/terrainTessControl.tesc.spv");
+    auto terrainTessellationEvalShaderCode = readFile("../shaders/terrainTessEval.tese.spv");
     auto fragmentShaderCode = readFile("../shaders/basicShader.frag.spv");
 
     // Load shader modules.
     VkShaderModule meshVertexShaderModule = createShaderModule(meshVertexShaderCode); 
+    VkShaderModule tessellationControlShaderModule = createShaderModule(terrainTessellationControlShaderCode);
+    VkShaderModule tessellationEvaluationShaderModule = createShaderModule(terrainTessellationEvalShaderCode);
     VkShaderModule fragmentShaderModule = createShaderModule(fragmentShaderCode);
 
     // Configure how the vertex shader will execute within the pipeline.
@@ -734,6 +738,20 @@ VkResult VulkanApplication::createMeshPipeline()
     meshVertexShaderStageInfo.module = meshVertexShaderModule; 
     meshVertexShaderStageInfo.pName = "main"; 
 
+    // Configure the same for the tessellation control shader.
+    VkPipelineShaderStageCreateInfo tessellationControlShaderStageInfo = {};
+    tessellationControlShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    tessellationControlShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    tessellationControlShaderStageInfo.module = tessellationControlShaderModule;
+    tessellationControlShaderStageInfo.pName = "main";
+
+    // Configure the same for the tessellation evaluation shader.
+    VkPipelineShaderStageCreateInfo tessellationEvaluationShaderStageInfo = {};
+    tessellationEvaluationShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    tessellationEvaluationShaderStageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    tessellationEvaluationShaderStageInfo.module = tessellationEvaluationShaderModule;
+    tessellationEvaluationShaderStageInfo.pName = "main";
+
     // Configure the same for the fragment shader.
     VkPipelineShaderStageCreateInfo fragmentShaderStageInfo = {}; 
     fragmentShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO; 
@@ -742,7 +760,7 @@ VkResult VulkanApplication::createMeshPipeline()
     fragmentShaderStageInfo.pName = "main"; 
 
     // Connect all shader stages for this pipeline.
-    VkPipelineShaderStageCreateInfo shaderStages[] = { meshVertexShaderStageInfo, fragmentShaderStageInfo };
+    VkPipelineShaderStageCreateInfo shaderStages[] = { meshVertexShaderStageInfo, tessellationControlShaderStageInfo, tessellationEvaluationShaderStageInfo, fragmentShaderStageInfo };
 
     // Configure how vertex data is structured and passed from a vertex buffer into a pipeline stage.
     VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
@@ -754,10 +772,19 @@ VkResult VulkanApplication::createMeshPipeline()
     vertexInputInfo.pVertexAttributeDescriptions = Vertex::getAttributeDescriptions().data();
 
     // Specify how the vertices that are provided by the vertex shader are then assembled into primitives for rendering.
+    // You want to specifically use a patch list here, so the tessellation primitive generator can generate patches of subdivided meshes.
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {}; 
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO; 
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; 
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE; 
+
+    // Configure how the tessellation connects to the pipeline, most importantly defining the patch control points.
+    // The most important is the number of patch control points (per-patch vertices), the evaluation shader is working with quads, hence the value of 4.
+    VkPipelineTessellationStateCreateInfo tessellationState = {};
+    tessellationState.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+    tessellationState.pNext = nullptr;
+    tessellationState.flags = 0;                // Reserved by Vulkan for future use, this must be 0.
+    tessellationState.patchControlPoints = 4;
 
     // Specify the structures that may change at runtime.
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -777,7 +804,7 @@ VkResult VulkanApplication::createMeshPipeline()
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_NONE; // VK_CULL_MODE_BACK_BIT
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -830,6 +857,7 @@ VkResult VulkanApplication::createMeshPipeline()
     modelPipelineCreateInfo.pStages = shaderStages; 
     modelPipelineCreateInfo.pVertexInputState = &vertexInputInfo; 
     modelPipelineCreateInfo.pInputAssemblyState = &inputAssembly;
+    modelPipelineCreateInfo.pTessellationState = &tessellationState;
     modelPipelineCreateInfo.pViewportState = &viewportState; 
     modelPipelineCreateInfo.pRasterizationState = &rasterizer; 
     modelPipelineCreateInfo.pMultisampleState = &multisampling; 
@@ -1075,6 +1103,100 @@ VkResult VulkanApplication::createGrassPipeline()
     return VK_SUCCESS;
 }
 
+VkResult VulkanApplication::createHeightMapImage()
+{
+    // Read the pixel data for the texture.
+    int texWidth, texHeight, texChannels;
+    stbi_uc* pixels = stbi_load("../assets/RollingHillsHeightMap.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+    if (!pixels) {
+        throw std::runtime_error("failed to load texture image!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Create a staging buffer to upload pixel data to the GPU.
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    VkResult ret = createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad buffer creation.");
+        return ret;
+    }
+
+    // Upload pixel data to the GPU.
+    void* data;
+    vkMapMemory(m_LogicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, pixels, static_cast<size_t>(imageSize));
+    vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
+
+    // Since the GPU now has a reference to the pixel data, we don't need to store it on the host anymore.
+    stbi_image_free(pixels);
+
+    // Create an image handle.
+    ret = createImage(texWidth, texHeight, 1, msaaSamples, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        heightMapImage, heightMapImageMemory);
+
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad image creation.");
+        return ret;
+    }
+
+    // Allow the height map image to be formatted to the same as the texture data that was read in.
+    transitionImageLayout(heightMapImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    copyBufferToImage(stagingBuffer, heightMapImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+    transitionImageLayout(heightMapImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, stagingBufferMemory, nullptr);
+
+    return ret;
+}
+
+VkResult VulkanApplication::createHeightMapImageView()
+{
+    heightMapImageView = createImageView(heightMapImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    if (!heightMapImageView) {
+        throw std::runtime_error("bad texture image view.");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    return VK_SUCCESS;
+}
+
+VkResult VulkanApplication::createHeightMapSampler()
+{
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(m_PhysicalDevice, &properties);
+
+    VkSamplerCreateInfo samplerInfo = {};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_FALSE;
+    samplerInfo.maxAnisotropy = 1.0f;
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+
+    if (vkCreateSampler(m_LogicalDevice, &samplerInfo, nullptr, &heightMapSampler) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create texture sampler!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    return VK_SUCCESS;
+}
+
 VkResult VulkanApplication::createFrameBuffers()
 {
     swapChainFramebuffers.resize(swapChainImageViews.size());
@@ -1130,6 +1252,31 @@ VkResult VulkanApplication::createDepthResources()
     depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
     return VK_SUCCESS;
+}
+
+VkResult VulkanApplication::createTextureResources()
+{
+    VkResult ret = VK_SUCCESS;
+
+    ret = createHeightMapImage();
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad height map image creation.");
+        return ret;
+    }
+
+    ret = createHeightMapImageView();
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad height map image view creation.");
+        return ret;
+    }
+
+    ret = createHeightMapSampler();
+    if (ret != VK_SUCCESS) {
+        throw std::runtime_error("bad sampler creation.");
+        return ret;
+    }
+
+    return ret;
 }
 
 VkResult VulkanApplication::createShaderStorageBuffers()
@@ -1729,7 +1876,9 @@ VkResult VulkanApplication::createBuffer(VkDeviceSize size, VkBufferUsageFlags u
     return VK_SUCCESS;
 }
 
-VkResult VulkanApplication::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory)
+VkResult VulkanApplication::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, 
+    VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, 
+    VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory)
 {
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1793,7 +1942,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     std::array<VkClearValue, 2> clearValues = {};
     clearValues[0] = {};
-    clearValues[0].color = { { 0.05f, 0.3f, 0.9f, 1.0f} };
+    clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f} }; // { { 0.05f, 0.3f, 0.9f, 1.0f} };
     clearValues[1] = {};
     clearValues[1].depthStencil = { 1.0f, 0 };
 
@@ -1855,7 +2004,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     auto start = std::chrono::high_resolution_clock::now();
 
     // The tessellation primitive generator expects to be generating quads, hence the value of 4.
-    vkCmdDraw(commandBuffer, 4, numVisibleBlades, 0, 0);
+    //vkCmdDraw(commandBuffer, 4, numVisibleBlades, 0, 0);
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
@@ -2190,15 +2339,26 @@ VkResult VulkanApplication::createModelDescriptorSetLayout()
     uboBinding.binding = 0;
     uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     uboBinding.descriptorCount = 1;
-    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
     uboBinding.pImmutableSamplers = nullptr;
 
-    VkDescriptorSetLayoutCreateInfo uboLayoutInfo = {};
-    uboLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    uboLayoutInfo.bindingCount = 1;
-    uboLayoutInfo.pBindings = &uboBinding;
+    VkDescriptorSetLayoutBinding samplerBinding = {};
+    samplerBinding.binding = 1;
+    samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerBinding.descriptorCount = 1;
+    samplerBinding.stageFlags = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    samplerBinding.pImmutableSamplers = nullptr;
 
-    if (vkCreateDescriptorSetLayout(m_LogicalDevice, &uboLayoutInfo, nullptr, &modelDescriptorSetLayout) != VK_SUCCESS) {
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboBinding, samplerBinding };
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.pNext = nullptr;
+    layoutInfo.flags = 0;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
+
+    if (vkCreateDescriptorSetLayout(m_LogicalDevice, &layoutInfo, nullptr, &modelDescriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create model descriptor set layout!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -2276,21 +2436,43 @@ VkResult VulkanApplication::createModelDescriptorSets()
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
+    std::array<VkWriteDescriptorSet, 2> modelDescriptorWrites = {};
+
     VkDescriptorBufferInfo uboBufferInfo = {};
     uboBufferInfo.buffer = uniformBuffer;
     uboBufferInfo.offset = 0;
     uboBufferInfo.range = sizeof(CameraUniformBufferObject); // Assumes only one CameraUniformBufferObject will be sent.    
 
-    VkWriteDescriptorSet modelDescriptorWrite = {};
-    modelDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    modelDescriptorWrite.dstSet = modelPipelineDescriptorSet;
-    modelDescriptorWrite.dstBinding = 0;
-    modelDescriptorWrite.dstArrayElement = 0;
-    modelDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    modelDescriptorWrite.descriptorCount = 1;
-    modelDescriptorWrite.pBufferInfo = &uboBufferInfo;
+    modelDescriptorWrites[0] = {};
+    modelDescriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    modelDescriptorWrites[0].pNext = nullptr;
+    modelDescriptorWrites[0].dstSet = modelPipelineDescriptorSet;
+    modelDescriptorWrites[0].dstBinding = 0;
+    modelDescriptorWrites[0].dstArrayElement = 0;
+    modelDescriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    modelDescriptorWrites[0].descriptorCount = 1;
+    modelDescriptorWrites[0].pImageInfo = nullptr;
+    modelDescriptorWrites[0].pBufferInfo = &uboBufferInfo;
+    modelDescriptorWrites[0].pTexelBufferView = nullptr;
 
-    vkUpdateDescriptorSets(m_LogicalDevice, 1, &modelDescriptorWrite, 0, nullptr);
+    VkDescriptorImageInfo heightMapImageInfo = {};
+    heightMapImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    heightMapImageInfo.imageView = heightMapImageView;
+    heightMapImageInfo.sampler = heightMapSampler;
+
+    modelDescriptorWrites[1] = {};
+    modelDescriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    modelDescriptorWrites[1].pNext = nullptr;
+    modelDescriptorWrites[1].dstSet = modelPipelineDescriptorSet;
+    modelDescriptorWrites[1].dstBinding = 1;
+    modelDescriptorWrites[1].dstArrayElement = 0;
+    modelDescriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    modelDescriptorWrites[1].descriptorCount = 1;
+    modelDescriptorWrites[1].pImageInfo = &heightMapImageInfo;
+    modelDescriptorWrites[1].pBufferInfo = nullptr;
+    modelDescriptorWrites[1].pTexelBufferView = nullptr;
+
+    vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(modelDescriptorWrites.size()), modelDescriptorWrites.data(), 0, nullptr);
 
     return VK_SUCCESS;
 }
@@ -2515,7 +2697,7 @@ VkCommandBuffer VulkanApplication::beginSingleTimeCommands()
     VkCommandBuffer commandBuffer;
     vkAllocateCommandBuffers(m_LogicalDevice, &allocInfo, &commandBuffer);
     
-    VkCommandBufferBeginInfo beginInfo{};
+    VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     
