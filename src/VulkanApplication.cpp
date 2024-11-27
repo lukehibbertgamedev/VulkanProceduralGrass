@@ -1661,8 +1661,8 @@ void VulkanApplication::uploadIndirectCommandData()
 {
     // Send the data to the GPU.
     BladeDrawIndirect indirectCommand = {};
-    indirectCommand.vertexCount = 4; 
-    indirectCommand.instanceCount = 0; // One draw call for all blades. 
+    indirectCommand.vertexCount = 0;    // Number of visible blades.
+    indirectCommand.instanceCount = 1;  // One draw call for all blades. 
     indirectCommand.firstVertex = 0; 
     indirectCommand.firstInstance = 0; 
 
@@ -1701,7 +1701,7 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::Separator();
 
     ImGui::Text("Max grass blade count: %u", MAX_BLADES);
-    ImGui::Text("Num grass blades culled: %u", MAX_BLADES - driverData.numVisible);
+    ImGui::Text("Num grass blades culled: %u", MAX_BLADES - driverData.numVisible); 
 
     ImGui::Separator();
 
@@ -1883,7 +1883,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
-    uint32_t numVisibleBlades = MAX_BLADES - retrieveNumVisibleBlades();
+    uint32_t numVisibleBlades = retrieveNumVisibleBlades();
     auto start = std::chrono::high_resolution_clock::now();
 
     // The tessellation primitive generator expects to be generating quads, hence the value of 4.
@@ -1934,20 +1934,24 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
     // This should run ONCE PER-BLADE. Dividing the work-group by 32 to match the ideal size of a warp on most hardware, then working with
     // 32 threads per-thread group on the local size in the shader. These values are multiplied so it makes the MAX count anyway.
-    vkCmdDispatch(commandBuffer, MAX_BLADES / 32u, 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
+    vkCmdDispatch(commandBuffer, ((MAX_BLADES - 1) / 32u) + 1, 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     driverData.computeCallTime = duration.count() * 1000000; // Convert from seconds to microseconds.
 
-    // Ensure that the writes from compute are visible to the program before continuing.
-    //VkMemoryBarrier memoryBarrier = {};
-    //memoryBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-    //memoryBarrier.pNext = nullptr;
-    //memoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    //memoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 
-    //    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 1, &memoryBarrier, 0, nullptr, 0, nullptr);
+    // Memory barrier to enforce synchronisation between compute and graphics.
+    VkBufferMemoryBarrier bufferBarrier = {}; 
+    bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    bufferBarrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+    bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bufferBarrier.buffer = indirectBuffer;
+    bufferBarrier.offset = 0;
+    bufferBarrier.size = sizeof(BladeDrawIndirect);
+
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &bufferBarrier, 0, nullptr);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to end recording compute command buffer!");

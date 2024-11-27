@@ -149,13 +149,14 @@ void main()
     if (gl_GlobalInvocationID.x >= pushConstantsObject.totalNumBlades) {   
         return;
     }
-    barrier();
+    //barrier();
 
     // Reset the number of culled blades.
     if (gl_GlobalInvocationID.x == 0) {
         numBladesBuffer.numVisible = 0;
+        indirectDrawData.vertexCount = 0;
     }
-    barrier();
+    //barrier();
 
     BladeInstanceData blade = allBladeInstanceDataBuffer.allBlades[gl_GlobalInvocationID.x]; // This blade instance.
 
@@ -169,14 +170,12 @@ void main()
     float shrinkFactor = 0.6;
     float shrinkMin = -shrinkFactor;
     float shrinkMax =  shrinkFactor;
-    bool v0OutFrustum = v0ClipSpace.x < shrinkMin || v0ClipSpace.x > shrinkMax || v0ClipSpace.y < shrinkMin || v0ClipSpace.y > shrinkMax;
-    bool v1OutFrustum = v1ClipSpace.x < shrinkMin || v1ClipSpace.x > shrinkMax || v1ClipSpace.y < shrinkMin || v1ClipSpace.y > shrinkMax;
-    bool v2OutFrustum = v2ClipSpace.x < shrinkMin || v2ClipSpace.x > shrinkMax || v2ClipSpace.y < shrinkMin || v2ClipSpace.y > shrinkMax;
+    bool v0OutFrustum = v0ClipSpace.x < shrinkMin || v0ClipSpace.x > shrinkMax || v0ClipSpace.y < shrinkMin || v0ClipSpace.y > shrinkMax;// || v0ClipSpace.z < shrinkMin || v0ClipSpace.z > shrinkMax;
+    bool v1OutFrustum = v1ClipSpace.x < shrinkMin || v1ClipSpace.x > shrinkMax || v1ClipSpace.y < shrinkMin || v1ClipSpace.y > shrinkMax;// || v1ClipSpace.z < shrinkMin || v1ClipSpace.z > shrinkMax;
+    bool v2OutFrustum = v2ClipSpace.x < shrinkMin || v2ClipSpace.x > shrinkMax || v2ClipSpace.y < shrinkMin || v2ClipSpace.y > shrinkMax;// || v2ClipSpace.z < shrinkMin || v2ClipSpace.z > shrinkMax;
     if (v0OutFrustum && v1OutFrustum && v2OutFrustum) {         
         return; // Cull.      
     } 
-
-    atomicAdd(numBladesBuffer.numVisible, 1);
 
     // Wind forces.
     float height = blade.p1_and_height.w;
@@ -187,5 +186,6 @@ void main()
     blade.p2_and_direction.xyz = modifiedP2;
 
     // Update out blade.
-    visibleBladeInstanceDataBuffer.visibleBlades[atomicAdd(indirectDrawData.instanceCount, 1)] = blade;
+    visibleBladeInstanceDataBuffer.visibleBlades[atomicAdd(numBladesBuffer.numVisible, 1)] = blade;
+
 }
