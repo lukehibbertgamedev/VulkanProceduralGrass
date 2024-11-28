@@ -1698,58 +1698,23 @@ void VulkanApplication::createMeshObjects()
     MeshTransform _groundPlane = quadMesh.generateQuad(glm::vec3(0.0f, 0.0f, 0.0f));
     _groundPlane.position = glm::vec3(0.0f, 0.0f, 0.0f); // X is right. Y is forward. Z is up.
     _groundPlane.rotation = glm::vec3(0.0f, 0.0f, 45.0f);
-    _groundPlane.scale = glm::vec3(MEADOW_SCALE_X, MEADOW_SCALE_Y, MEADOW_SCALE_Z); // Z = X, Y = Z, X = Y. 
+    _groundPlane.scale = glm::vec3(MEADOW_SCALE_X, MEADOW_SCALE_Y, MEADOW_SCALE_Z); 
     groundPlane = _groundPlane;
     driverData.vertexCount += quadMesh.vertexCount;    
 }
 
 void VulkanApplication::populateBladeInstanceBuffer()
 {
-    // TODO: Use noise to generate the positions along the plane.
-    // TODO: Use noise to modify the terrain for the plane.
-
     // Based on the bounds of the plane, populate the blade instance container with values to be staged to the GPU later.
 
     // Prepare the instance buffer.
     localBladeInstanceBuffer.reserve(MAX_BLADES);
 
-    // Calculate the bounds of the flat plane (Y is not needed yet as there is no terrain height).
-    // [0, 0, 0] is the origin of the plane, the bounds extend half the scale in each direction.
-    // Warning: This does not take into account the position of the ground plane.
-    glm::vec2 planeCentre = glm::vec2(groundPlane.position.x + (MEADOW_SCALE_X * 0.5f), groundPlane.position.y + (MEADOW_SCALE_Y * 0.5f));
-    //groundPlane.position.x += planeCentre.x;
-    //groundPlane.position.y += planeCentre.y;
-
-    //glm::vec2 planeBoundsX = glm::vec2(groundPlane.position.x + 0.5f, (MEADOW_SCALE_X) + groundPlane.position.x - 0.5f);
-    //glm::vec2 planeBoundsY = glm::vec2(groundPlane.position.y + 0.5f, (MEADOW_SCALE_Y) + groundPlane.position.y - 0.5f);
-    
-    glm::vec2 planeBoundsX = glm::vec2(-(MEADOW_SCALE_X)+groundPlane.position.x + 0.5f, (MEADOW_SCALE_X)+groundPlane.position.x - 0.5f) * 0.5f;
-    glm::vec2 planeBoundsY = glm::vec2(-(MEADOW_SCALE_Y)+groundPlane.position.y + 0.5f, (MEADOW_SCALE_Y)+groundPlane.position.y - 0.5f) * 0.5f;
-
-    planeBoundsX += planeCentre.x;// *2.0f;
-    planeBoundsY -= planeCentre.y;// *2.0f;
-                                      
-    // offset from bottom left | multiplier for offset.
-
-    planeBoundsX.x = (-planeCentre.x + 22.5f * 1.25f) * 1.55f;// min
-    planeBoundsX.y = (planeCentre.x  + 22.5f * 1.25f) * 1.45f;// max
-    planeBoundsY.x = (-planeCentre.y - 22.5f * 1.25f) * 1.50f;// min
-    planeBoundsY.y = (planeCentre.y  - 22.5f * 1.25f) * 1.45f;// max
-
-    planeBoundsX.x = 0.5;    // x min (bottom right x)
-    planeBoundsY.x = -84.5;    // y min (bottom right y)
-
-    planeBoundsX.y = 84.5;   // x max (top left x)
-    planeBoundsY.y = 0.5;   // y max (top left y)
-
-    //planeBoundsX *= 0.75f; // expands entire grid
-    //planeBoundsY *= 0.75f;
-
-    // -X -Y =TOP RIGHT
-    // 0  0  =BOTTOM RIGHT
-
-    //planeBoundsX = glm::vec2(-30, 30);
-    //planeBoundsY = glm::vec2(-30, 30);
+    // Calculate the bounds of the flat plane (Z is not needed yet as there is no terrain height).
+    // Bottom right (min) = X.x && Y.x
+    // Top left     (max) = X.y && Y.y
+    glm::vec2 planeBoundsX = glm::vec2(0.5f, 84.5f);    // X = Bottom Right X Min || Y = Top Left X Max
+    glm::vec2 planeBoundsY = glm::vec2(-84.5f, -0.5f);  // X = Bottom Right Y Min || Y = Top Left Y Max
 
     // Do this outside the loop to avoid continuously creating struct instances, just change the data inside it.
     GrassBladeInstanceData bladeInstanceData = {};
@@ -1758,15 +1723,8 @@ void VulkanApplication::populateBladeInstanceBuffer()
 
     for (size_t i = 0; i < MAX_BLADES; ++i) {
 
-        // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
-        
+        // Using pre-calculated bounds and no Z variation, generate a random point on the plane's surface.        
         glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsY, glm::vec2(zFightingEpsilon), false);
-
-        //randomPositionOnPlaneBounds = glm::vec3(Utils::getRandomFloat(-30.0f, 30.0f), Utils::getRandomFloat(-30.0f, 30.0f), zFightingEpsilon); // -60 0 -30 30
-        //randomPositionOnPlaneBounds = glm::vec3(0);
-        //randomPositionOnPlaneBounds += glm::vec3(MEADOW_SCALE_X + 60.0f, -MEADOW_SCALE_Y + 60.0f, MEADOW_SCALE_Z) * 0.5f;
-
-        //randomPositionOnPlaneBounds = glm::vec3(0, -75, 1);
 
         // Create an instance of a grass blade, and define its' natural world position.
         GrassBlade bladeInstance = GrassBlade();
@@ -2397,14 +2355,14 @@ VkResult VulkanApplication::createModelDescriptorSetLayout()
     uboBinding.binding = 0;
     uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     uboBinding.descriptorCount = 1;
-    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
     uboBinding.pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutBinding samplerBinding = {};
     samplerBinding.binding = 1;
     samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     samplerBinding.descriptorCount = 1;
-    samplerBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    samplerBinding.stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
     samplerBinding.pImmutableSamplers = nullptr;
 
     std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboBinding, samplerBinding };
@@ -2427,7 +2385,7 @@ VkResult VulkanApplication::createModelDescriptorSetLayout()
 VkResult VulkanApplication::createGrassDescriptorSetLayout()
 {
     // This layout requires a UBO for the camera data to be used here too, so that the grass positions can be represented as points.
-    std::array<VkDescriptorSetLayoutBinding, 4> layoutBindings = {};
+    std::array<VkDescriptorSetLayoutBinding, 5> layoutBindings = {};
 
     // Uniform buffer objects.
     layoutBindings[0] = {};
@@ -2460,6 +2418,14 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     layoutBindings[3].descriptorCount = 1;
     layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     layoutBindings[3].pImmutableSamplers = nullptr;
+
+    // Height map for the grass to have its height aligned to the terrain.
+    layoutBindings[4] = {};
+    layoutBindings[4].binding = 4;
+    layoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    layoutBindings[4].descriptorCount = 1;
+    layoutBindings[4].stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    layoutBindings[4].pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -2556,7 +2522,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
         return ret;
     }   
 
-    std::array<VkWriteDescriptorSet, 4> grassDescriptorWrites = {};
+    std::array<VkWriteDescriptorSet, 5> grassDescriptorWrites = {};
 
     VkDescriptorBufferInfo uboBufferInfo = {};
     uboBufferInfo.buffer = uniformBuffer;
@@ -2613,6 +2579,23 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     grassDescriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     grassDescriptorWrites[3].descriptorCount = 1;
     grassDescriptorWrites[3].pBufferInfo = &sboNumBladesBufferInfo;
+
+    VkDescriptorImageInfo heightMapImageInfo = {};
+    heightMapImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    heightMapImageInfo.imageView = heightMapImageView;
+    heightMapImageInfo.sampler = heightMapSampler;
+
+    grassDescriptorWrites[4] = {};
+    grassDescriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    grassDescriptorWrites[4].pNext = nullptr;
+    grassDescriptorWrites[4].dstSet = grassPipelineDescriptorSet;
+    grassDescriptorWrites[4].dstBinding = 4;
+    grassDescriptorWrites[4].dstArrayElement = 0;
+    grassDescriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    grassDescriptorWrites[4].descriptorCount = 1;
+    grassDescriptorWrites[4].pImageInfo = &heightMapImageInfo;
+    grassDescriptorWrites[4].pBufferInfo = nullptr;
+    grassDescriptorWrites[4].pTexelBufferView = nullptr;
 
     vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(grassDescriptorWrites.size()), grassDescriptorWrites.data(), 0, nullptr);
 

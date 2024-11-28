@@ -10,6 +10,9 @@ layout(binding = 0) uniform CameraUniformBufferObject {
     mat4 proj;
 } ubo;
 
+// A sampler to sample the height map texture.
+layout(binding = 4) uniform sampler2D heightMapSampler;
+
 layout(location = 0) in vec4 inColor[];
 layout(location = 1) in vec4 inP0_Width[];      // This represents the bezier curve base, where this lies in the bottom centre of the quad.
 layout(location = 2) in vec4 inP1_Height[];     // This represents the 'height' of the bezier curve, where this lies directly above p0.
@@ -62,10 +65,13 @@ void main()
     // Lerp between ...
     vec3 position = mix(c0, c1, t * smoothnessFactor);
 
-    // Convert position to UV coordinates.
+    // Convert local space p0 to UV coordinates.
     // Sample height map at that UV, as with terrain height variable.
     // position.z = height * zScale.
-
+    float zOffset = 1.0;
+    float zScale = 1.5;
+    float height = texture(heightMapSampler, vec2(position.x / 84.5, position.y / 84.5)).r * 64.0 - zOffset;
+    position.z = height * zScale;
 
     // Convert the final position into clip space.
     gl_Position = ubo.proj * ubo.view * vec4(position, 1.0);
