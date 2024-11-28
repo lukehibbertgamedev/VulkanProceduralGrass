@@ -24,10 +24,10 @@
 #include <vector>
 #include <string>
 
-// Ground plane bounds definitions (Z is typically up).
-#define MEADOW_SCALE_X 6
-#define MEADOW_SCALE_Y 6
-#define MEADOW_SCALE_Z 1
+// Ground plane bounds definitions (Z is typically up).ssssss
+#define MEADOW_SCALE_X 60
+#define MEADOW_SCALE_Y 60
+#define MEADOW_SCALE_Z 1		// Multiply terrain height by this via push constants.
 
 static constexpr bool kEnableValidationLayers = true;
 const std::vector<const char*> kValidationLayers = { "VK_LAYER_KHRONOS_validation" };

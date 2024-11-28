@@ -804,7 +804,7 @@ VkResult VulkanApplication::createMeshPipeline()
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_NONE; // VK_CULL_MODE_BACK_BIT
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -1692,8 +1692,8 @@ void VulkanApplication::createMeshObjects()
 {
     // Construct a plane mesh, for the ground.
     MeshTransform _groundPlane = quadMesh.generateQuad(glm::vec3(0.0f, 0.0f, 0.0f));
-    _groundPlane.position = glm::vec3(0.0f, 0.5f, 0.0f); // X is right. Y is forward. Z is up.
-    _groundPlane.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+    _groundPlane.position = glm::vec3(0.0f, 0.0f, 0.0f); // X is right. Y is forward. Z is up.
+    _groundPlane.rotation = glm::vec3(0.0f, 0.0f, 45.0f);
     _groundPlane.scale = glm::vec3(MEADOW_SCALE_X, MEADOW_SCALE_Y, MEADOW_SCALE_Z); // Z = X, Y = Z, X = Y. 
     groundPlane = _groundPlane;
     driverData.vertexCount += quadMesh.vertexCount;    
@@ -1712,9 +1712,41 @@ void VulkanApplication::populateBladeInstanceBuffer()
     // Calculate the bounds of the flat plane (Y is not needed yet as there is no terrain height).
     // [0, 0, 0] is the origin of the plane, the bounds extend half the scale in each direction.
     // Warning: This does not take into account the position of the ground plane.
-    glm::vec2 planeBoundsX = glm::vec2(-(MEADOW_SCALE_X) + groundPlane.position.x + 0.5f, (MEADOW_SCALE_X) + groundPlane.position.x - 0.5f);
-    glm::vec2 planeBoundsY = glm::vec2(-(MEADOW_SCALE_Y) + groundPlane.position.y + 0.5f, (MEADOW_SCALE_Y) + groundPlane.position.y - 0.5f);
+    glm::vec2 planeCentre = glm::vec2(groundPlane.position.x + (MEADOW_SCALE_X * 0.5f), groundPlane.position.y + (MEADOW_SCALE_Y * 0.5f));
+    //groundPlane.position.x += planeCentre.x;
+    //groundPlane.position.y += planeCentre.y;
+
+    //glm::vec2 planeBoundsX = glm::vec2(groundPlane.position.x + 0.5f, (MEADOW_SCALE_X) + groundPlane.position.x - 0.5f);
+    //glm::vec2 planeBoundsY = glm::vec2(groundPlane.position.y + 0.5f, (MEADOW_SCALE_Y) + groundPlane.position.y - 0.5f);
     
+    glm::vec2 planeBoundsX = glm::vec2(-(MEADOW_SCALE_X)+groundPlane.position.x + 0.5f, (MEADOW_SCALE_X)+groundPlane.position.x - 0.5f) * 0.5f;
+    glm::vec2 planeBoundsY = glm::vec2(-(MEADOW_SCALE_Y)+groundPlane.position.y + 0.5f, (MEADOW_SCALE_Y)+groundPlane.position.y - 0.5f) * 0.5f;
+
+    planeBoundsX += planeCentre.x;// *2.0f;
+    planeBoundsY -= planeCentre.y;// *2.0f;
+                                      
+    // offset from bottom left | multiplier for offset.
+
+    planeBoundsX.x = (-planeCentre.x + 22.5f * 1.25f) * 1.55f;// min
+    planeBoundsX.y = (planeCentre.x  + 22.5f * 1.25f) * 1.45f;// max
+    planeBoundsY.x = (-planeCentre.y - 22.5f * 1.25f) * 1.50f;// min
+    planeBoundsY.y = (planeCentre.y  - 22.5f * 1.25f) * 1.45f;// max
+
+    planeBoundsX.x = 0.5;    // x min (bottom right x)
+    planeBoundsY.x = -84.5;    // y min (bottom right y)
+
+    planeBoundsX.y = 84.5;   // x max (top left x)
+    planeBoundsY.y = 0.5;   // y max (top left y)
+
+    //planeBoundsX *= 0.75f; // expands entire grid
+    //planeBoundsY *= 0.75f;
+
+    // -X -Y =TOP RIGHT
+    // 0  0  =BOTTOM RIGHT
+
+    //planeBoundsX = glm::vec2(-30, 30);
+    //planeBoundsY = glm::vec2(-30, 30);
+
     // Do this outside the loop to avoid continuously creating struct instances, just change the data inside it.
     GrassBladeInstanceData bladeInstanceData = {};
 
@@ -1725,6 +1757,12 @@ void VulkanApplication::populateBladeInstanceBuffer()
         // Using pre-calculated bounds and no Y variation, generate a random point on the plane's surface.
         
         glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsY, glm::vec2(zFightingEpsilon), false);
+
+        //randomPositionOnPlaneBounds = glm::vec3(Utils::getRandomFloat(-30.0f, 30.0f), Utils::getRandomFloat(-30.0f, 30.0f), zFightingEpsilon); // -60 0 -30 30
+        //randomPositionOnPlaneBounds = glm::vec3(0);
+        //randomPositionOnPlaneBounds += glm::vec3(MEADOW_SCALE_X + 60.0f, -MEADOW_SCALE_Y + 60.0f, MEADOW_SCALE_Z) * 0.5f;
+
+        //randomPositionOnPlaneBounds = glm::vec3(0, -75, 1);
 
         // Create an instance of a grass blade, and define its' natural world position.
         GrassBlade bladeInstance = GrassBlade();
@@ -1942,7 +1980,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     std::array<VkClearValue, 2> clearValues = {};
     clearValues[0] = {};
-    clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f} }; // { { 0.05f, 0.3f, 0.9f, 1.0f} };
+    clearValues[0].color = { { 0.05f, 0.3f, 0.9f, 1.0f} };//{ { 0.0f, 0.0f, 0.0f, 1.0f} }; // { { 0.05f, 0.3f, 0.9f, 1.0f} };
     clearValues[1] = {};
     clearValues[1].depthStencil = { 1.0f, 0 };
 
@@ -2004,7 +2042,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     auto start = std::chrono::high_resolution_clock::now();
 
     // The tessellation primitive generator expects to be generating quads, hence the value of 4.
-    //vkCmdDraw(commandBuffer, 4, numVisibleBlades, 0, 0);
+    vkCmdDraw(commandBuffer, 4, numVisibleBlades, 0, 0);
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;

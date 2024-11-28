@@ -62,6 +62,11 @@ void main()
     // Lerp between ...
     vec3 position = mix(c0, c1, t * smoothnessFactor);
 
+    // Convert position to UV coordinates.
+    // Sample height map at that UV, as with terrain height variable.
+    // position.z = height * zScale.
+
+
     // Convert the final position into clip space.
     gl_Position = ubo.proj * ubo.view * vec4(position, 1.0);
 
@@ -71,6 +76,7 @@ void main()
     //outColor = vec4(1.0, 0.0, 0.0, 1.0); // red for debug.
     //outColor = vec4(1.0, 1.0, 1.0, 1.0); // white for visual.
     outColor = inColor[0] * v;
+    //outColor = gl_Position;
 }
 
 // Example comment image of how the vertices are generated/positioned from the single input.

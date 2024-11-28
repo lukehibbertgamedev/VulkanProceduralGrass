@@ -12,7 +12,7 @@ layout(location = 0) out vec3 outPosition[];
 layout(location = 1) out vec4 outColor[];
 layout(location = 2) out vec2 outUv[];
 
-#define TESS_LEVEL 16
+#define TESS_LEVEL 128
 #define NO_TESS 2
 
 void main() {

@@ -25,18 +25,21 @@ static void frameBufferResizeCallback(GLFWwindow* window, int width, int height)
 }
 
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+
+    const float moveSpeed = 0.05f;
+
     if (action == GLFW_PRESS) {
         switch (key) {
         default: break;
 
-        case GLFW_KEY_W: globalCamera.velocity.z = -.01f; break;
-        case GLFW_KEY_S: globalCamera.velocity.z = .01f; break;
+        case GLFW_KEY_W: globalCamera.velocity.z = -moveSpeed; break;
+        case GLFW_KEY_S: globalCamera.velocity.z = moveSpeed; break;
 
-        case GLFW_KEY_A: globalCamera.velocity.x = -.01f; break;
-        case GLFW_KEY_D: globalCamera.velocity.x = .01f; break;
+        case GLFW_KEY_A: globalCamera.velocity.x = -moveSpeed; break;
+        case GLFW_KEY_D: globalCamera.velocity.x = moveSpeed; break;
 
-        case GLFW_KEY_E: globalCamera.velocity.y = -.01f; break;
-        case GLFW_KEY_Q: globalCamera.velocity.y = .01f; break;
+        case GLFW_KEY_E: globalCamera.velocity.y = -moveSpeed; break;
+        case GLFW_KEY_Q: globalCamera.velocity.y = moveSpeed; break;
 
         case GLFW_KEY_L: globalCamera.fov += 1.0f; break;
         case GLFW_KEY_J: globalCamera.fov -= 1.0f; break;
