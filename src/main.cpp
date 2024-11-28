@@ -26,7 +26,7 @@ static void frameBufferResizeCallback(GLFWwindow* window, int width, int height)
 
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 
-    const float moveSpeed = 0.05f;
+    const float moveSpeed = 0.1f;
 
     if (action == GLFW_PRESS) {
         switch (key) {
@@ -44,10 +44,10 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         case GLFW_KEY_L: globalCamera.fov += 1.0f; break;
         case GLFW_KEY_J: globalCamera.fov -= 1.0f; break;
 
-        case GLFW_KEY_UP: globalCamera.sensitivity.x = .05f; break;
-        case GLFW_KEY_DOWN: globalCamera.sensitivity.x = -.05f; break; //pitch
-        case GLFW_KEY_LEFT: globalCamera.sensitivity.y = .05f; break;
-        case GLFW_KEY_RIGHT: globalCamera.sensitivity.y = -.05f; break; // yawe
+        case GLFW_KEY_UP: globalCamera.sensitivity.x = .075f; break;
+        case GLFW_KEY_DOWN: globalCamera.sensitivity.x = -.075f; break; //pitch
+        case GLFW_KEY_LEFT: globalCamera.sensitivity.y = .075f; break;
+        case GLFW_KEY_RIGHT: globalCamera.sensitivity.y = -.075f; break; // yawe
 
         case GLFW_KEY_R: globalCamera.setFront(); break;
         case GLFW_KEY_T: globalCamera.setSide(); break;

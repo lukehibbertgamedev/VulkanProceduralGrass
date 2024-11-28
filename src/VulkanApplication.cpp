@@ -876,6 +876,8 @@ VkResult VulkanApplication::createMeshPipeline()
 
     // The pipeline retains a reference to previously created shader modules, so we no longer need local references.
     vkDestroyShaderModule(m_LogicalDevice, fragmentShaderModule, nullptr);
+    vkDestroyShaderModule(m_LogicalDevice, tessellationEvaluationShaderModule, nullptr);
+    vkDestroyShaderModule(m_LogicalDevice, tessellationControlShaderModule, nullptr);
     vkDestroyShaderModule(m_LogicalDevice, meshVertexShaderModule, nullptr);
 
     return VK_SUCCESS;
@@ -925,6 +927,8 @@ VkResult VulkanApplication::createComputePipeline()
         throw std::runtime_error("failed to create compute pipeline!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
+
+    vkDestroyShaderModule(m_LogicalDevice, grassComputeShaderModule, nullptr);
 
     return VK_SUCCESS; 
 }
@@ -2099,15 +2103,26 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
 void VulkanApplication::cleanupApplication(GLFWwindow* window)
 {
+    
+
     // Synchronisation Objects. 
     for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
         vkDestroyFence(m_LogicalDevice, inFlightFences[i], nullptr);
         vkDestroySemaphore(m_LogicalDevice, renderFinishedSemaphores[i], nullptr);
         vkDestroySemaphore(m_LogicalDevice, imageAvailableSemaphores[i], nullptr);
+
+        vkDestroyFence(m_LogicalDevice, computeInFlightFences[i], nullptr);
+        vkDestroySemaphore(m_LogicalDevice, computeFinishedSemaphores[i], nullptr);
     }
 
     // Command Buffer - uses command pool, so destroy pool later.
     vkFreeCommandBuffers(m_LogicalDevice, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+
+    // Texture resources.
+    vkDestroySampler(m_LogicalDevice, heightMapSampler, nullptr);
+    vkFreeMemory(m_LogicalDevice, heightMapImageMemory, nullptr);
+    vkDestroyImageView(m_LogicalDevice, heightMapImageView, nullptr);
+    vkDestroyImage(m_LogicalDevice, heightMapImage, nullptr);
 
     // Staging Buffer.
     for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
@@ -2130,6 +2145,9 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     // Uniform Buffer Object.
     vkDestroyBuffer(m_LogicalDevice, uniformBuffer, nullptr);
     vkFreeMemory(m_LogicalDevice, uniformBufferMemory, nullptr);
+
+    vkDestroyBuffer(m_LogicalDevice, numBladesBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, numBladesBufferMemory, nullptr);
 
     // Shader Storage Buffer Object.
     for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
@@ -2159,8 +2177,10 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     
     // Pipelines.
     vkDestroyPipelineLayout(m_LogicalDevice, grassPipelineLayout, nullptr);
+    vkDestroyPipelineLayout(m_LogicalDevice, computePipelineLayout, nullptr);
     vkDestroyPipelineLayout(m_LogicalDevice, modelPipelineLayout, nullptr);
     vkDestroyPipeline(m_LogicalDevice, grassPipeline, nullptr);
+    vkDestroyPipeline(m_LogicalDevice, computePipeline, nullptr);
     vkDestroyPipeline(m_LogicalDevice, modelPipeline, nullptr);
 
     // Render Pass.
