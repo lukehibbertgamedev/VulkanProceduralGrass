@@ -41,12 +41,6 @@ void main()
     // 0.0 results in too thin of a blade with no visuals, 0.1 results in line blades, 0.2 results in very thin blades, 0.3 onwards is suitable.
     float smoothnessFactor = 0.6; 
 
-    // Interpolate UV coordinates
-	vec2 uv1 = mix(vec2(0.0, 1.0), vec2(1.0, 1.0), u);
-	vec2 uv2 = mix(vec2(0.0, 0.0), vec2(1.0, 0.0), u);
-	vec2 outUV = mix(uv1, uv2, v);
-    float height = texture(heightMapSampler, outUV).r * 64.0 - 1.0;//- zOffset;
-
     // De Casteljau's algorithm to get a point on the Bézier curve.
     vec3 a = P0.xyz + v * (P1.xyz - P0.xyz);
     vec3 b = P1.xyz + v * (P2.xyz - P1.xyz);
@@ -73,13 +67,37 @@ void main()
 
     // Convert local space p0 to UV coordinates.
     // Sample height map at that UV, as with terrain height variable.
-    // position.z = height * zScale.   
+
+    // Interpolate UV coordinates
+    //osition = position.xyz / 1.0;
+
+	//vec2 uv1 = mix(position.xy / 1.0, position.xy / 1.0, u);
+	//vec2 uv2 = mix(position.xy / 1.0, position.xy / 1.0, u);
+	//vec2 outUV = mix(uv1, uv2, v);
+    //float height = texture(heightMapSampler, outUV).r * 64.0 - 1.0;//- zOffset;
+
+    //position.z = height * 1.5;
+
+    // Interpolate UV coordinates
+    //vec2 uv1 = mix(inUv[0], inUv[1], u);
+	//vec2 uv2 = mix(inUv[3], inUv[2], u);
+	//vec2 outUV = mix(uv1, uv2, v);
+
+    vec2 positionUV = P0.xy / 60.0;
+    positionUV.x = (1.0 - P0.x) / 60.0;
+    positionUV.y = (1.0 - P0.y) / 60.0;
+
+    float height = texture(heightMapSampler, positionUV).r * 64.0 - 1.0;//- zOffset;
+    position.z = abs(height) * 1.5;
+    // Interpolate generated vertices' positions per-triangle and displace terrain height.
+    //gl_Position = (gl_TessCoord.x * vec4(P0.xyz, 1.0)) + (gl_TessCoord.y * P1.xyz) + (gl_TessCoord.z * P2.xyz);
+    //gl_Position.z = height * 1.5;
 
     // Interpolate generated vertices' positions per-triangle and displace terrain height.
-    position.z -= height;
+    //position.z = height;
 
     // Convert the final position into clip space.
-    gl_Position = ubo.proj * ubo.view * vec4(position, 1.0);
+    gl_Position = ubo.proj * ubo.view * vec4(position.xyz, 1.0);
 
     // Use gl_TessCoord.y to gradient the blade to be black at the bottom and green at the top, faking shadows.
     //outColor = mix(inColor[0] * v, vec4(1.0, 1.0, 1.0, 1.0), v); // Snowy tipped grass! 
