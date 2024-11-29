@@ -10,6 +10,9 @@ public:
 	std::vector<Vertex> vertices;
 	std::vector<uint16_t> indices;
 	uint32_t vertexCount = 0, indexCount = 0;
+
+	// In order: Bottom left -> Bottom right -> Top right -> Top left
+	std::vector<glm::vec2> uvs;
 };
 
 // Mesh represenation for the base shape of a grass blade before tessellation.

@@ -151,6 +151,8 @@ MeshTransform Quad::generateQuad(glm::vec3 position)
 		{{-1.0f, 1.0f, 0.0f},  {1.0f, 1.0f, 1.0f, 1.0f },  { 0.0f, 0.0f }}	// Vertex 3 - top left
 	};
 
+	uvs = { {0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f} };
+
 	//vertices = {
 	//	{{-0.5f, -0.5f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f },  { 0.0f, 1.0f }},	// Vertex 0 - bottom left
 	//	{{0.5f, -0.5f, 0.0f},  {1.0f, 1.0f, 1.0f, 1.0f },  { 1.0f, 1.0f }},	// Vertex 1 - bottom right

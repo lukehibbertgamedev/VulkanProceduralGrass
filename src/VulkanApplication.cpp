@@ -399,6 +399,16 @@ VkResult VulkanApplication::createPhysicalDevice()
         std::cout << "- minUniformBufferOffsetAlignment: " << limits.minUniformBufferOffsetAlignment << std::endl;
         std::cout << "- maxPushConstantsSize: " << limits.maxPushConstantsSize << std::endl;
         std::cout << "- maxMemoryAllocationCount: " << limits.maxMemoryAllocationCount << std::endl;
+
+        std::cout << "\n\n TESSELLATION LIMITS:\n";
+        std::cout << "- maxTessellationGenerationLevel: " << limits.maxTessellationGenerationLevel << std::endl;
+        std::cout << "- maxTessellationPatchSize: " << limits.maxTessellationPatchSize << std::endl;
+        std::cout << "- maxTessellationControlPerVertexInputComponents: " << limits.maxTessellationControlPerVertexInputComponents << std::endl;
+        std::cout << "- maxTessellationControlPerVertexOutputComponents: " << limits.maxTessellationControlPerVertexOutputComponents << std::endl;
+        std::cout << "- maxTessellationControlPerPatchOutputComponents: " << limits.maxTessellationControlPerPatchOutputComponents << std::endl;
+        std::cout << "- maxTessellationControlTotalOutputComponents: " << limits.maxTessellationControlTotalOutputComponents << std::endl;
+        std::cout << "- maxTessellationEvaluationInputComponents: " << limits.maxTessellationEvaluationInputComponents << std::endl;
+        std::cout << "- maxTessellationEvaluationOutputComponents: " << limits.maxTessellationEvaluationOutputComponents << std::endl;
     }
 
     if (m_PhysicalDevice == VK_NULL_HANDLE) {
@@ -1061,10 +1071,17 @@ VkResult VulkanApplication::createGrassPipeline()
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
+    VkPushConstantRange pushConstantRange = {};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(TerrainInfoPushConstants);
+
     // Configure how Vulkan understands to bind resources to shaders, ensuring they can efficiently access required resources.
     // Note that if you have more descriptor set layouts (currently only using uniform buffer objects) you would need to reference that here.
     VkPipelineLayoutCreateInfo grassPipelineLayoutInfo = {};
     grassPipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    grassPipelineLayoutInfo.pushConstantRangeCount = 1;
+    grassPipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
     grassPipelineLayoutInfo.setLayoutCount = 1;
     grassPipelineLayoutInfo.pSetLayouts = &grassDescriptorSetLayout;
 
@@ -1700,6 +1717,7 @@ void VulkanApplication::createMeshObjects()
     _groundPlane.rotation = glm::vec3(0.0f, 0.0f, 45.0f);
     _groundPlane.scale = glm::vec3(MEADOW_SCALE_X, MEADOW_SCALE_Y, MEADOW_SCALE_Z); 
     groundPlane = _groundPlane;
+    groundPlaneUVs = quadMesh.uvs;
     driverData.vertexCount += quadMesh.vertexCount;    
 }
 
@@ -1710,21 +1728,23 @@ void VulkanApplication::populateBladeInstanceBuffer()
     // Prepare the instance buffer.
     localBladeInstanceBuffer.reserve(MAX_BLADES);
 
-    // Calculate the bounds of the flat plane (Z is not needed yet as there is no terrain height).
-    // Bottom right (min) = X.x && Y.x
-    // Top left     (max) = X.y && Y.y
-    glm::vec2 planeBoundsX = glm::vec2(0.5f, 84.5f);    // X = Bottom Right X Min || Y = Top Left X Max
-    glm::vec2 planeBoundsY = glm::vec2(-84.5f, -0.5f);  // X = Bottom Right Y Min || Y = Top Left Y Max
+    // Calculate the bounds of the flat plane (Z is not needed yet as there is no terrain height on the host, this is done in tessellation).
+    glm::vec2 offset = glm::vec2(-75.0f, 10.0f);
+    groundPlane.position.x += MEADOW_SCALE_X + offset.x; // -15.0f x [ -15, +70]
+    groundPlane.position.y += MEADOW_SCALE_Y + offset.y; //  70.0f y [ -15, +70]
+
+    const float zFightingEpsilon = 0.01f; // Small value to avoid the grass being clipped into the ground and causing z-fighting.
 
     // Do this outside the loop to avoid continuously creating struct instances, just change the data inside it.
     GrassBladeInstanceData bladeInstanceData = {};
 
-    const float zFightingEpsilon = 0.01f;
-
     for (size_t i = 0; i < MAX_BLADES; ++i) {
 
-        // Using pre-calculated bounds and no Z variation, generate a random point on the plane's surface.        
-        glm::vec3 randomPositionOnPlaneBounds = Utils::getRandomVec3(planeBoundsX, planeBoundsY, glm::vec2(zFightingEpsilon), false);
+        // Using pre-calculated bounds and no Z variation, generate a random point on the plane's surface. 
+        glm::vec3 randomPositionOnPlaneBounds = {};
+        randomPositionOnPlaneBounds.x = Utils::getRandomFloat(groundPlane.position.x, groundPlane.position.y);
+        randomPositionOnPlaneBounds.y = Utils::getRandomFloat(groundPlane.position.x, groundPlane.position.y); 
+        randomPositionOnPlaneBounds.z = zFightingEpsilon;
 
         // Create an instance of a grass blade, and define its' natural world position.
         GrassBlade bladeInstance = GrassBlade();
@@ -1999,6 +2019,17 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bladeInstanceDataBuffer[currentFrame], quadOffsetsGRASS);
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
+
+    // In order: Bottom left -> Bottom right -> Top right -> Top left
+
+    TerrainInfoPushConstants pushConstantsObject = {};
+    pushConstantsObject.uvBottomLeft = groundPlaneUVs[0];
+    pushConstantsObject.uvBottomRight = groundPlaneUVs[1];
+    pushConstantsObject.uvTopRight = groundPlaneUVs[2];
+    pushConstantsObject.uvTopLeft = groundPlaneUVs[3];
+
+    vkCmdPushConstants(commandBuffer, grassPipelineLayout, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, 0, sizeof(TerrainInfoPushConstants), &pushConstantsObject);
+
 
     uint32_t numVisibleBlades = retrieveNumVisibleBlades();
     auto start = std::chrono::high_resolution_clock::now();

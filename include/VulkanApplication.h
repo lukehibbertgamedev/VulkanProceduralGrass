@@ -79,6 +79,13 @@ struct PushConstantsObject {
 	alignas(4) float elapsed;
 };
 
+struct TerrainInfoPushConstants {
+	alignas(8) glm::vec2 uvBottomLeft;
+	alignas(8) glm::vec2 uvBottomRight;
+	alignas(8) glm::vec2 uvTopRight;
+	alignas(8) glm::vec2 uvTopLeft;
+};
+
 struct QueueFamilyIndices {
 public:
 	std::optional<uint32_t> graphicsAndComputeFamily;
@@ -277,6 +284,7 @@ public:
 	VkDescriptorSet grassPipelineDescriptorSet;							// Descriptor set (two shader resources) that is bound to shaders within the grass pipeline. 
 
 	MeshTransform groundPlane;											// A handle to the ground plane transform.
+	std::vector<glm::vec2> groundPlaneUVs;								// Collection of UVs so the grass can sample the same parts of the height map as the terrain.
 
 	Quad quadMesh;														// One-time data structure containing vertex and index data for this mesh.
 	VkBuffer quadVertexBuffer = VK_NULL_HANDLE;							// The vertex buffer for this mesh.
