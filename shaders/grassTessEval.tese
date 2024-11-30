@@ -10,17 +10,6 @@ layout(binding = 0) uniform CameraUniformBufferObject {
     mat4 proj;
 } ubo;
 
-// A sampler to sample the height map texture.
-layout(binding = 4) uniform sampler2D heightMapSampler;
-
-// Push constants for quick and easy readonly data that the shader needs.
-layout(push_constant) uniform TerrainInfoPushConstants {    
-    vec2 bottomLeft;
-    vec2 bottomRight;
-    vec2 topRight;
-    vec2 topLeft;
-} terrainInfoPushConstants;
-
 layout(location = 0) in vec4 inColor[];
 layout(location = 1) in vec4 inP0_Width[];      // This represents the bezier curve base, where this lies in the bottom centre of the quad.
 layout(location = 2) in vec4 inP1_Height[];     // This represents the 'height' of the bezier curve, where this lies directly above p0.
@@ -44,20 +33,6 @@ void main()
 
     float width = P0.w;
     float direction = P2.w;
-
-    float terrainScale = 64.0;
-    vec2 positionUV = vec2(0);
-    positionUV.x = (1.0 - P0.x) / terrainScale;
-    positionUV.y = (1.0 - P0.y) / terrainScale;
-    float terrainHeightSample = texture(heightMapSampler, positionUV).r * terrainScale;//- zOffset;
-
-    // Interpolate UV coordinates
-	//vec2 uv1 = mix(terrainInfoPushConstants.bottomLeft, terrainInfoPushConstants.bottomRight, u);
-	//vec2 uv2 = mix(terrainInfoPushConstants.topRight, terrainInfoPushConstants.topLeft, u);
-	//vec2 outUV = mix(uv1, uv2, v);
-    //float terrainHeightSample = texture(heightMapSampler, outUV).r * 64.0; //- zOffset;
-
-    //position.z = abs(height) * 1.5;
 
     // Suitably ranged [0.3, 1.0]. The closer to 1, the smoother the tip. The closer to 0.3, the pointier the tip.
     // 0.0 results in too thin of a blade with no visuals, 0.1 results in line blades, 0.2 results in very thin blades, 0.3 onwards is suitable.
@@ -86,7 +61,6 @@ void main()
 
     // Lerp between ...
     vec3 position = mix(c0, c1, t * smoothnessFactor);
-    position += terrainHeightSample;
 
     // Convert the final position into clip space.
     gl_Position = ubo.proj * ubo.view * vec4(position.xyz, 1.0);

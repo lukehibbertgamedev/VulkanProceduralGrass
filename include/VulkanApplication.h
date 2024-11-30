@@ -79,13 +79,6 @@ struct PushConstantsObject {
 	alignas(4) float elapsed;
 };
 
-struct TerrainInfoPushConstants {
-	alignas(8) glm::vec2 uvBottomLeft;
-	alignas(8) glm::vec2 uvBottomRight;
-	alignas(8) glm::vec2 uvTopRight;
-	alignas(8) glm::vec2 uvTopLeft;
-};
-
 struct QueueFamilyIndices {
 public:
 	std::optional<uint32_t> graphicsAndComputeFamily;

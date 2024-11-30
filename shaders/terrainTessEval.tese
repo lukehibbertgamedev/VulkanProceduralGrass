@@ -36,19 +36,17 @@ void main()
     float zOffset = 1.0;
     float zScale = 1.5;
 
-    // Interpolate UV coordinates
-	vec2 uv1 = mix(inUv[0], inUv[1], u);
-	vec2 uv2 = mix(inUv[3], inUv[2], u);
-	vec2 outUV = mix(uv1, uv2, v);
+    // Use barycentric coordinates as a texture sample point.
+    vec2 outUV = vec2(u, v);
     float height = texture(heightMapSampler, outUV).r * 64.0; //- zOffset;
 
     // Interpolate generated vertices' positions per-triangle and displace terrain height.
     gl_Position = (gl_TessCoord.x * p0) + (gl_TessCoord.y * p1) + (gl_TessCoord.z * p2);
-    gl_Position.z = height;
+    gl_Position.z = height * 1.5;
 
     // Convert the final position into clip space.
     // Ensure the final position is passed as a homogeneous coordinate here.
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(gl_Position.xyz, 1.0); // Matrix transformations go here if necessary.
 
-    outColor = inColor[0] * (abs(height) + 0.3); // the ground colour but it gets lighter the higher the point is. 
+    outColor = inColor[0] * (abs(height) + 0.01); // the ground colour but it gets lighter the higher the point is. 
 }

@@ -1071,17 +1071,12 @@ VkResult VulkanApplication::createGrassPipeline()
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
-    VkPushConstantRange pushConstantRange = {};
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-    pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(TerrainInfoPushConstants);
-
     // Configure how Vulkan understands to bind resources to shaders, ensuring they can efficiently access required resources.
     // Note that if you have more descriptor set layouts (currently only using uniform buffer objects) you would need to reference that here.
     VkPipelineLayoutCreateInfo grassPipelineLayoutInfo = {};
     grassPipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    grassPipelineLayoutInfo.pushConstantRangeCount = 1;
-    grassPipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+    grassPipelineLayoutInfo.pushConstantRangeCount = 0;
+    grassPipelineLayoutInfo.pPushConstantRanges = nullptr;
     grassPipelineLayoutInfo.setLayoutCount = 1;
     grassPipelineLayoutInfo.pSetLayouts = &grassDescriptorSetLayout;
 
@@ -2020,18 +2015,8 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, grassPipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
-    // In order: Bottom left -> Bottom right -> Top right -> Top left
-
-    TerrainInfoPushConstants pushConstantsObject = {};
-    pushConstantsObject.uvBottomLeft = groundPlaneUVs[0];
-    pushConstantsObject.uvBottomRight = groundPlaneUVs[1];
-    pushConstantsObject.uvTopRight = groundPlaneUVs[2];
-    pushConstantsObject.uvTopLeft = groundPlaneUVs[3];
-
-    vkCmdPushConstants(commandBuffer, grassPipelineLayout, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, 0, sizeof(TerrainInfoPushConstants), &pushConstantsObject);
-
-
     uint32_t numVisibleBlades = retrieveNumVisibleBlades();
+
     auto start = std::chrono::high_resolution_clock::now();
 
     // The tessellation primitive generator expects to be generating quads, hence the value of 4.
@@ -2393,7 +2378,7 @@ VkResult VulkanApplication::createModelDescriptorSetLayout()
     samplerBinding.binding = 1;
     samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     samplerBinding.descriptorCount = 1;
-    samplerBinding.stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    samplerBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
     samplerBinding.pImmutableSamplers = nullptr;
 
     std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboBinding, samplerBinding };
@@ -2455,7 +2440,7 @@ VkResult VulkanApplication::createGrassDescriptorSetLayout()
     layoutBindings[4].binding = 4;
     layoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     layoutBindings[4].descriptorCount = 1;
-    layoutBindings[4].stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    layoutBindings[4].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
     layoutBindings[4].pImmutableSamplers = nullptr;
 
     VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
