@@ -116,17 +116,15 @@ int main() {
     // Link the application structure to the window.
     glfwSetWindowUserPointer(window, &vkApp);
 
-    // Link functoinality to determine key presses, mostly for the dynamic camera.
+    // Link functionality to determine key presses, mostly for the dynamic camera.
     glfwSetKeyCallback(window, keyCallback);
 
     // Link functionality to when glfw detects its framebuffer has been resized (window resizing).
     glfwSetFramebufferSizeCallback(window, frameBufferResizeCallback);
 
-    // FIXME: May not be needed since timer has its own lastTime.
     // Begin the timer to retrieve delta time throughout the application loop.
     vkApp.lastTime = glfwGetTime();
 
-    // TODO: Put in its own static function in its own header (extensionsupport.h).
     // Enumerate and output supported Vulkan extensions.
     uint32_t extensionCount = 0;
     VkExtensionProperties props = {};
@@ -189,7 +187,7 @@ int main() {
 
     vkApp.createMeshObjects();
 
-    vkApp.populateBladeInstanceBuffer(); // SSBO data.
+    vkApp.populateBladeInstanceBuffer(); 
 
     ret = vkApp.createTextureResources();
     if (ret != VK_SUCCESS) throw std::runtime_error("Could not create image | sampler resources.");
@@ -230,8 +228,6 @@ int main() {
     // Main application loop:
     while (!glfwWindowShouldClose(window)) {
         
-        // TODO: Remove vkApp.time variables as timer should do this for you.
-        // We want to animate the particle system using the last frames time to get smooth, frame-rate independent animation
         double currentTime = glfwGetTime();
         vkApp.lastFrameTime = (currentTime - vkApp.lastTime) * 1000.0;
         vkApp.lastTime = currentTime;
@@ -245,7 +241,7 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Prepare ImGui draw data, anything within the ImGui:: namspace this doesn't touch the GPU or graphics API at all.
+        // Prepare ImGui draw data, this does not affect the graphics in any way, the drawing is done later.
         vkApp.prepareImGuiDrawData();
 
         // Update camera data.
