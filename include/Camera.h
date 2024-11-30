@@ -13,6 +13,14 @@ struct CameraDataDefaults {
 	const float fov = 45.0f; // Degrees.
 };
 
+struct CameraGoodPhotoDefaults {
+	const glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
+	const glm::vec3 position = { -2.0f, 8.0f, 3.0f };
+	const float pitch = 83.0f;
+	const float yaw = -69.0f;
+	const float fov = 45.0f; // Degrees.
+};
+
 struct SideCameraDataDefaults {
 	const glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
 	const glm::vec3 position = { 40.0f, -100.0f, 5.0f };
@@ -49,4 +57,5 @@ public:
 	void setFront();
 	void setSide();
 	void setTop(); 
+	void setGoodPhoto();
 };

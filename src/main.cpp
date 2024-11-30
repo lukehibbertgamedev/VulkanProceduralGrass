@@ -52,6 +52,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         case GLFW_KEY_R: globalCamera.setFront(); break;
         case GLFW_KEY_T: globalCamera.setSide(); break;
         case GLFW_KEY_Y: globalCamera.setTop(); break;
+        case GLFW_KEY_U: globalCamera.setGoodPhoto(); break;
         }
     }
 

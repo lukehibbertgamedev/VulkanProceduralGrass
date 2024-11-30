@@ -155,14 +155,15 @@ void main()
     BladeInstanceData blade = allBladeInstanceDataBuffer.allBlades[gl_GlobalInvocationID.x]; // This blade instance.
 
     // UV coordinates for the height map sample.
-    float u = ((blade.p0_and_width.x + 15.0) / 85.0);
-    float v = 1.0 -((blade.p0_and_width.y + 15.0) / 85.0);
+    float u = ((blade.p0_and_width.x + 30.0) / 170.0);
+    float v = 1.0 -((blade.p0_and_width.y + 30.0) / 170.0);
     vec2 outUV = vec2(v, u); // Effectively rotates the height map by -90 degrees, not sure why I have to do this.
     float terrainHeightSample = texture(heightMapSampler, outUV).r * 64.0; // Sample the height map.
 
-    blade.p0_and_width.z -= -terrainHeightSample * 1.5; // Offset the ground position to match the terrain.
-    blade.p1_and_height.z -= -terrainHeightSample * 1.5; // Offset the ground position to match the terrain.
-    blade.p2_and_direction.z -= -terrainHeightSample * 1.5; // Offset the ground position to match the terrain.
+    float terrainScale = 1.0;
+    blade.p0_and_width.z -= -terrainHeightSample * terrainScale; // Offset the ground position to match the terrain.
+    blade.p1_and_height.z -= -terrainHeightSample * terrainScale; // Offset the ground position to match the terrain.
+    blade.p2_and_direction.z -= -terrainHeightSample * terrainScale; // Offset the ground position to match the terrain.
 
     // Frustum culling.
     float shrinkFactor = 1.0; // Shrink the frustum for testing purposes where 0 is no frustum and 1 is screen-space.    

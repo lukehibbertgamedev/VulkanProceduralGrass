@@ -33,16 +33,15 @@ void main()
     vec4 p2 = vec4(inPosition[2], 1.0);
     vec4 p3 = vec4(inPosition[3], 1.0);
 
-    float zOffset = 1.0;
-    float zScale = 1.5;
+    float terrainScale = 1.0;
 
     // Use barycentric coordinates as a texture sample point.
     vec2 outUV = vec2(u, v);
-    float height = texture(heightMapSampler, outUV).r * 64.0; //- zOffset;
+    float height = texture(heightMapSampler, outUV).r * 64.0; 
 
     // Interpolate generated vertices' positions per-triangle and displace terrain height.
     gl_Position = (gl_TessCoord.x * p0) + (gl_TessCoord.y * p1) + (gl_TessCoord.z * p2);
-    gl_Position.z = height * 1.5;
+    gl_Position.z = height * terrainScale;
 
     // Convert the final position into clip space.
     // Ensure the final position is passed as a homogeneous coordinate here.

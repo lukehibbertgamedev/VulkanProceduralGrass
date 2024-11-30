@@ -63,3 +63,14 @@ void Camera::setTop()
     yaw = defaults.yaw;
     fov = defaults.fov;
 }
+
+void Camera::setGoodPhoto()
+{
+    CameraGoodPhotoDefaults defaults;
+
+    position = defaults.position;
+    velocity = defaults.velocity;
+    pitch = defaults.pitch;
+    yaw = defaults.yaw;
+    fov = defaults.fov;
+}

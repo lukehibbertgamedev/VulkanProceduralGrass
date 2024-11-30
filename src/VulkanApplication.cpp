@@ -1724,9 +1724,9 @@ void VulkanApplication::populateBladeInstanceBuffer()
     localBladeInstanceBuffer.reserve(MAX_BLADES);
 
     // Calculate the bounds of the flat plane (Z is not needed yet as there is no terrain height on the host, this is done in tessellation).
-    glm::vec2 offset = glm::vec2(-75.0f, 10.0f);
-    groundPlane.position.x += MEADOW_SCALE_X + offset.x; // -15.0f x [ -15, +70]
-    groundPlane.position.y += MEADOW_SCALE_Y + offset.y; //  70.0f y [ -15, +70]
+    glm::vec2 offset = glm::vec2(-150.0f, 20.0f);        // Scale 60 | -75, 10               Scale 120| -150, 20
+    groundPlane.position.x += MEADOW_SCALE_X + offset.x; // -15.0f x | ranges [-15, +70]     -30.0f x | ranges [-30, +140]
+    groundPlane.position.y += MEADOW_SCALE_Y + offset.y; //  70.0f y | ranges [-15, +70]     140.0f y | ranges [-30, +140]
 
     const float zFightingEpsilon = 0.01f; // Small value to avoid the grass being clipped into the ground and causing z-fighting.
 

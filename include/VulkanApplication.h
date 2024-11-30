@@ -25,8 +25,8 @@
 #include <string>
 
 // Ground plane bounds definitions (Z is typically up).ssssss
-#define MEADOW_SCALE_X 60
-#define MEADOW_SCALE_Y 60
+#define MEADOW_SCALE_X 120
+#define MEADOW_SCALE_Y 120
 #define MEADOW_SCALE_Z 1		// Multiply terrain height by this via push constants.
 
 static constexpr bool kEnableValidationLayers = true;
