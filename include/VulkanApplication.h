@@ -29,7 +29,7 @@
 #define MEADOW_SCALE_Y 120
 #define MEADOW_SCALE_Z 1		// Multiply terrain height by this via push constants.
 
-static constexpr bool kEnableValidationLayers = true;
+static constexpr bool kEnableValidationLayers = false;
 const std::vector<const char*> kValidationLayers = { "VK_LAYER_KHRONOS_validation" };
 static constexpr bool kEnableImGuiDemoWindow = true;
 static constexpr int kMaxFramesInFlight = 2; 
