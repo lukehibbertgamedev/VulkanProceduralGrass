@@ -67,7 +67,7 @@ void main()
 
     // Use gl_TessCoord.y to gradient the blade to be black at the bottom and green at the top, faking shadows.
     //outColor = mix(inColor[0] * v, vec4(1.0, 1.0, 1.0, 1.0), v); // Snowy tipped grass! 
-    outColor = mix(inColor[0] * v, vec4(P1.w - 0.3, P1.w, 0.0, 1.0), v); // Colour variation between tall yellow and short green.
+    outColor = mix(inColor[0] * v, vec4(P1.w - 0.4, P1.w, 0.0, 1.0), v); // Colour variation between tall yellow and short green.
 }
 
 // Example comment image of how the vertices are generated/positioned from the single input.

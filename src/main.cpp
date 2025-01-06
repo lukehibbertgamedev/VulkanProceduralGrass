@@ -10,6 +10,8 @@
 #include <Camera.h>
 
 #include <iostream>
+#include <fstream>
+#include <iterator>
 #include <cstdio>
 #include <stdio.h>
 #include <vector>
@@ -226,8 +228,20 @@ int main() {
     std::cout << "\nSuccessful initialization.\n";
 
     // Main application loop:
+    int i = 0;
+    int wait = 10000;
+    int count = 10000;
+    std::vector<double> timeInMs; 
+    std::vector<float> fps;
+    timeInMs.reserve(count);
+    fps.reserve(count);
+    bool writtenToFile = false;
+
     while (!glfwWindowShouldClose(window)) {
         
+        // Begin calculating frame time.
+        auto t0 = std::chrono::high_resolution_clock::now(); 
+
         double currentTime = glfwGetTime();
         vkApp.lastFrameTime = (currentTime - vkApp.lastTime) * 1000.0;
         vkApp.lastTime = currentTime;
@@ -252,6 +266,43 @@ int main() {
         
         // Record and execute commands through a compute and graphics pipeline.
         vkApp.render();
+
+        // End and calculate frame time.
+        auto t1 = std::chrono::high_resolution_clock::now();
+
+        if (i >= wait) {
+            auto t = t1 - t0;
+            double tc = std::chrono::duration_cast<std::chrono::duration<double>>(t).count();
+            double time = (tc * 1000);
+            if (timeInMs.size() < count) {
+                timeInMs.push_back(time);
+
+                float thisFps = 1 / (time / 1000);
+                fps.push_back(thisFps);
+            }
+
+            if (timeInMs.size() >= count && !writtenToFile) {
+
+                std::string fileName = "../assets/performance_timings/VulkanFrameTimings_";
+                fileName += std::to_string(MAX_BLADES);
+                fileName += ".txt"; 
+
+                std::ofstream file(fileName);
+                std::ostream_iterator<double> it(file, "\n");
+                std::copy(std::begin(timeInMs), std::end(timeInMs), it); 
+                
+                fileName = "../assets/performance_timings/VulkanFpsCount_";
+                fileName += std::to_string(MAX_BLADES);
+                fileName += ".txt";
+
+                std::ofstream file2(fileName);
+                std::ostream_iterator<double> it2(file2, "\n");
+                std::copy(std::begin(fps), std::end(fps), it2);
+
+                writtenToFile = true;
+            }
+        }
+        i++;
     }
 
     // All operations in vkApp.render() are asynchronous, ensure all operations/commands have completed before termination.

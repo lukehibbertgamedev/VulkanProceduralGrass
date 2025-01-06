@@ -10,7 +10,7 @@
 
 // A class representing ONE blade of grass using the Bézier representation.
 
-constexpr uint32_t MAX_BLADES = 2<<19; // 2 << 19; // Test using 15, 16, 17, 18 19, 20, 21, 22
+constexpr uint32_t MAX_BLADES = 2 << 22;// 430512; // 2 << 19; // Test using 15, 16, 17, 18 19, 20, 21, 22
 
 #define GRASS_MIN_WIDTH 0.050f	// Will modify the shader values.
 #define GRASS_MAX_WIDTH 0.100f	// Will modify the shader values.
