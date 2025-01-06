@@ -108,7 +108,7 @@ int main() {
 
     // Create the glfw window and its associated context.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan procedural grass rendering", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1920, 1080, "Vulkan procedural grass rendering", nullptr, nullptr);
     if (window == nullptr) {
         throw std::runtime_error("failed to create glfw window!");
     }
