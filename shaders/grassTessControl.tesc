@@ -43,13 +43,13 @@ void main() {
     outP1_Height[gl_InvocationID] = inP1_Height[gl_InvocationID];
     outP2_Direction[gl_InvocationID] = inP2_Direction[gl_InvocationID];
     
-    // Extract the camera's position from the view matrix.
-    vec4 pos = inverse(ubo.view)[3];
+    // Extract the camera's position from the view matrix to perform distance-based tessellation.
+    vec4 cameraPosition = inverse(ubo.view)[3];
 
     float minLevel = 2.0;
-    float maxLevel = 32.0;
+    float maxLevel = 16.0;
     float maxDistance = 40.0;
-    float tessellationLevel = calculateTessellationLevel(pos.xyz, 
+    float tessellationLevel = calculateTessellationLevel(cameraPosition.xyz, 
         inP0_Width[gl_InvocationID].xyz, inP1_Height[gl_InvocationID].xyz, inP2_Direction[gl_InvocationID].xyz, 
         maxLevel, minLevel, maxDistance);
 

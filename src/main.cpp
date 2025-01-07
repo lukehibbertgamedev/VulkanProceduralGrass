@@ -232,8 +232,8 @@ int main() {
     int wait = 10000;
     int count = 10000;
     std::vector<double> timeInMs; 
-    std::vector<float> fps;
     timeInMs.reserve(count);
+    std::vector<float> fps;
     fps.reserve(count);
     bool writtenToFile = false;
 
@@ -277,8 +277,8 @@ int main() {
             if (timeInMs.size() < count) {
                 timeInMs.push_back(time);
 
-                float thisFps = 1 / (time / 1000);
-                fps.push_back(thisFps);
+                //float thisFps = 1 / (time / 1000);
+                //fps.push_back(thisFps);
             }
 
             if (timeInMs.size() >= count && !writtenToFile) {
@@ -291,13 +291,13 @@ int main() {
                 std::ostream_iterator<double> it(file, "\n");
                 std::copy(std::begin(timeInMs), std::end(timeInMs), it); 
                 
-                fileName = "../assets/performance_timings/VulkanFpsCount_";
-                fileName += std::to_string(MAX_BLADES);
-                fileName += ".txt";
-
-                std::ofstream file2(fileName);
-                std::ostream_iterator<double> it2(file2, "\n");
-                std::copy(std::begin(fps), std::end(fps), it2);
+                //fileName = "../assets/performance_timings/VulkanFpsCount_";
+                //fileName += std::to_string(MAX_BLADES);
+                //fileName += ".txt";
+                //
+                //std::ofstream file2(fileName);
+                //std::ostream_iterator<double> it2(file2, "\n");
+                //std::copy(std::begin(fps), std::end(fps), it2);
 
                 writtenToFile = true;
             }
