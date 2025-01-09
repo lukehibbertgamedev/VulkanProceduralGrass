@@ -192,21 +192,22 @@ void VulkanApplication::render()
     vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
     recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
-    VkSemaphore waitSemaphores[] = { computeFinishedSemaphores[currentFrame], imageAvailableSemaphores[currentFrame] };
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
-    
-    VkSubmitInfo graphicsSubmitInfo{};
+    std::array<VkSemaphore, 2> waitSemaphores = { computeFinishedSemaphores[currentFrame], imageAvailableSemaphores[currentFrame] };
+    std::array<VkPipelineStageFlags, 2> waitStages = { VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+    VkSubmitInfo graphicsSubmitInfo = {};
     graphicsSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    graphicsSubmitInfo.waitSemaphoreCount = 2;
-    graphicsSubmitInfo.pWaitSemaphores = waitSemaphores;
-    graphicsSubmitInfo.pWaitDstStageMask = waitStages;
+    graphicsSubmitInfo.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size());
+    graphicsSubmitInfo.pWaitSemaphores = waitSemaphores.data();
+    graphicsSubmitInfo.pWaitDstStageMask = waitStages.data();
     graphicsSubmitInfo.commandBufferCount = 1;
     graphicsSubmitInfo.pCommandBuffers = &commandBuffers[currentFrame];
     graphicsSubmitInfo.signalSemaphoreCount = 1;
-    graphicsSubmitInfo.pSignalSemaphores = signalSemaphores;
+    graphicsSubmitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame]; // Signal this so present can wait for this.
 
     ret = vkQueueSubmit(graphicsQueue, 1, &graphicsSubmitInfo, inFlightFences[currentFrame]);
+
+    std::cout << ret << std::endl;
 
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer!");
@@ -217,7 +218,7 @@ void VulkanApplication::render()
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.pWaitSemaphores = &renderFinishedSemaphores[currentFrame];
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
@@ -878,6 +879,8 @@ VkResult VulkanApplication::createMeshPipeline()
     modelPipelineCreateInfo.renderPass = renderPass; 
     modelPipelineCreateInfo.subpass = 0; 
     modelPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE; 
+
+    VkResult a = vkCreateGraphicsPipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &modelPipelineCreateInfo, nullptr, &modelPipeline);
 
     if (vkCreateGraphicsPipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &modelPipelineCreateInfo, nullptr, &modelPipeline) != VK_SUCCESS) {
         throw std::runtime_error("failed to create graphics pipeline!"); 
@@ -2017,14 +2020,8 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     uint32_t numVisibleBlades = retrieveNumVisibleBlades();
 
-    auto start = std::chrono::high_resolution_clock::now();
-
     // The tessellation primitive generator expects to be generating quads, hence the value of 4.
     vkCmdDraw(commandBuffer, 4, numVisibleBlades, 0, 0);
-
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> duration = end - start;
-    driverData.grassDrawCallTime = duration.count() * 1000000; // Convert from seconds to microseconds.
 
     //
     // End grass pipeline.
