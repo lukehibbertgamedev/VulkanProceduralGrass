@@ -229,7 +229,7 @@ int main() {
 
     // Main application loop:
     int i = 0;
-    int wait = 10000;
+    int wait = 1000;
     int count = 10000;
     std::vector<double> timeInMs; 
     timeInMs.reserve(count);
