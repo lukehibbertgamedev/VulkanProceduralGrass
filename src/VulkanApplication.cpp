@@ -2028,7 +2028,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     //
 
     // Start ImGui rendering.
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer); 
+    //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer); 
     // End ImGui rendering.
 
     vkCmdEndRenderPass(commandBuffer); 

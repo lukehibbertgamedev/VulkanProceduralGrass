@@ -33,7 +33,7 @@ void main()
     vec4 p2 = vec4(inPosition[2], 1.0);
     vec4 p3 = vec4(inPosition[3], 1.0);
 
-    float terrainScale = 1.0;
+    float terrainScale = 1.5;
 
     // Use barycentric coordinates as a texture sample point.
     vec2 outUV = vec2(u, v);

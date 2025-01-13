@@ -251,18 +251,18 @@ int main() {
         glfwPollEvents();
 
         // Create new ImGui frames via its backend and context.
-        ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+        //ImGui_ImplVulkan_NewFrame();
+        //ImGui_ImplGlfw_NewFrame();
+        //ImGui::NewFrame();
 
         // Prepare ImGui draw data, this does not affect the graphics in any way, the drawing is done later.
-        vkApp.prepareImGuiDrawData();
+        //vkApp.prepareImGuiDrawData();
 
         // Update camera data.
         globalCamera.update();
 
         // Prepare the ImGui data for rendering so you can call GetDrawData().
-        ImGui::Render();        
+        //ImGui::Render();        
         
         // Record and execute commands through a compute and graphics pipeline.
         vkApp.render();

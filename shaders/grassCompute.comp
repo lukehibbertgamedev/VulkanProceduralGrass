@@ -160,7 +160,7 @@ void main()
     vec2 outUV = vec2(v, u); // Effectively rotates the height map by -90 degrees, not sure why I have to do this.
     float terrainHeightSample = texture(heightMapSampler, outUV).r * 64.0; // Sample the height map.
 
-    float terrainScale = 1.0;
+    float terrainScale = 1.5;
     blade.p0_and_width.z -= -terrainHeightSample * terrainScale; // Offset the ground position to match the terrain.
     blade.p1_and_height.z -= -terrainHeightSample * terrainScale; // Offset the ground position to match the terrain.
     blade.p2_and_direction.z -= -terrainHeightSample * terrainScale; // Offset the ground position to match the terrain.
