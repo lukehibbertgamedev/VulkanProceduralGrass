@@ -196,7 +196,7 @@ void VulkanApplication::render()
 
     // Swap to next swapchain image.
     uint32_t imageIndex;
-    VkResult ret = vkAcquireNextImageKHR(m_LogicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult ret = vkAcquireNextImageKHR(m_LogicalDevice, swapchainData.handle, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
     if (ret == VK_ERROR_OUT_OF_DATE_KHR) {
         recreateSwapchain();
         return;
@@ -225,7 +225,7 @@ void VulkanApplication::render()
         throw std::runtime_error("failed to submit draw command buffer!");
     }
 
-    VkSwapchainKHR swapChains[] = { swapChain };
+    VkSwapchainKHR swapChains[] = { swapchainData.handle };
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
@@ -261,7 +261,8 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
     glm::vec3 worldUpVector = glm::vec3(0.0f, 0.0f, 1.0f); // Z is the natural UP vector.
     glm::mat4 view = glm::lookAtRH(cameraPosition, lookTowardsPoint, worldUpVector); 
 
-    glm::mat4 projectionMatrix = glm::perspective(glm::radians(camera->getFOV()), swapChainExtent.width / (float)swapChainExtent.height, camera->nearPlane, camera->farPlane);
+    glm::mat4 projectionMatrix = glm::perspective(glm::radians(camera->getFOV()), 
+        swapchainData.extents.width / (float)swapchainData.extents.height, camera->nearPlane, camera->farPlane);
     projectionMatrix[1][1] *= -1; // Invert the y-axis due to differing coordinate systems.
 
     // Calculate correct rotation matrix for the plane to be flat ground.
@@ -364,7 +365,7 @@ VkResult VulkanApplication::createPhysicalDevice()
         }
     }
 
-    // Print out details of all physical devices.
+    // Initialise driver data to display in ImGui.
     for (int i = 0; i < deviceCount; ++i) {
         VkPhysicalDeviceProperties deviceProperties = {};
         memset(&deviceProperties, 0, sizeof(deviceProperties));
@@ -457,7 +458,7 @@ VkResult VulkanApplication::createGlfwSurface()
 
 VkResult VulkanApplication::createSwapchain()
 {
-    SwapChainSupportDetails swapChainSupport = checkSwapchainSupport(m_PhysicalDevice);
+    SwapChain swapChainSupport = checkSwapchainSupport(m_PhysicalDevice);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapchainSurfaceFormat(swapChainSupport.formats);
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -495,16 +496,16 @@ VkResult VulkanApplication::createSwapchain()
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(m_LogicalDevice, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(m_LogicalDevice, &createInfo, nullptr, &swapchainData.handle) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    vkGetSwapchainImagesKHR(m_LogicalDevice, swapChain, &imageCount, nullptr);
-    swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(m_LogicalDevice, swapChain, &imageCount, swapChainImages.data());
-    swapChainImageFormat = surfaceFormat.format;
-    swapChainExtent = extent;
+    vkGetSwapchainImagesKHR(m_LogicalDevice, swapchainData.handle, &imageCount, nullptr);
+    swapchainData.images.resize(imageCount);
+    vkGetSwapchainImagesKHR(m_LogicalDevice, swapchainData.handle, &imageCount, swapchainData.images.data());
+    swapchainData.imageFormat = surfaceFormat.format;
+    swapchainData.extents = extent;
 
     return VK_SUCCESS;
 }
@@ -551,14 +552,14 @@ VkResult VulkanApplication::recreateSwapchain()
 
 VkResult VulkanApplication::createSwapchainImageViews()
 {
-    swapChainImageViews.resize(swapChainImages.size());
+    swapchainData.imageViews.resize(swapchainData.images.size());
 
-    for (size_t i = 0; i < swapChainImages.size(); i++) {
+    for (size_t i = 0; i < swapchainData.images.size(); i++) {
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image = swapChainImages[i];
+        createInfo.image = swapchainData.images[i];
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = swapChainImageFormat;
+        createInfo.format = swapchainData.imageFormat;
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -569,7 +570,7 @@ VkResult VulkanApplication::createSwapchainImageViews()
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(m_LogicalDevice, &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
+        if (vkCreateImageView(m_LogicalDevice, &createInfo, nullptr, &swapchainData.imageViews[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create image views!");
         }
     }
@@ -580,7 +581,7 @@ VkResult VulkanApplication::createSwapchainImageViews()
 VkResult VulkanApplication::createRenderPass()
 {
     VkAttachmentDescription colorAttachment = {};
-    colorAttachment.format = swapChainImageFormat;
+    colorAttachment.format = swapchainData.imageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1184,21 +1185,21 @@ VkResult VulkanApplication::createHeightMapSampler()
 
 VkResult VulkanApplication::createFrameBuffers()
 {
-    swapChainFramebuffers.resize(swapChainImageViews.size());
-    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+    swapchainData.framebuffers.resize(swapchainData.imageViews.size());
+    for (size_t i = 0; i < swapchainData.imageViews.size(); i++) {
 
-        std::array<VkImageView, 2> attachments = { swapChainImageViews[i], depthImageView };
+        std::array<VkImageView, 2> attachments = { swapchainData.imageViews[i], depthImageView };
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = renderPass;
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = swapChainExtent.width;
-        framebufferInfo.height = swapChainExtent.height;
+        framebufferInfo.width = swapchainData.extents.width;
+        framebufferInfo.height = swapchainData.extents.height;
         framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(m_LogicalDevice, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
+        if (vkCreateFramebuffer(m_LogicalDevice, &framebufferInfo, nullptr, &swapchainData.framebuffers[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create framebuffer!");
             return VK_ERROR_INITIALIZATION_FAILED;
         }
@@ -1228,7 +1229,8 @@ VkResult VulkanApplication::createDepthResources()
 {
     VkFormat depthFormat = findDepthFormat();
 
-    VkResult ret = createImage(swapChainExtent.width, swapChainExtent.height, 1, VK_SAMPLE_COUNT_1_BIT, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
+    VkResult ret = createImage(swapchainData.extents.width, swapchainData.extents.height, 1,
+        VK_SAMPLE_COUNT_1_BIT, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("bad image creation.");
         return ret;
@@ -1712,7 +1714,7 @@ void VulkanApplication::populateBladeInstanceBuffer()
         // Create an instance of a grass blade, and define its' natural world position.
         GrassBlade bladeInstance = GrassBlade();
         bladeInstance.p0AndWidth = glm::vec4(randomPositionOnPlaneBounds, 0.0f);
-        bladeInstance.updatePackedVec4s();
+        bladeInstance.updatePackedData();
 
         // Populate this instance of blade data.
         bladeInstanceData.p0_width      = bladeInstance.p0AndWidth;
@@ -1923,9 +1925,9 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     VkRenderPassBeginInfo renderPassInfo = {};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = renderPass;
-    renderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];
+    renderPassInfo.framebuffer = swapchainData.framebuffers[imageIndex];
     renderPassInfo.renderArea.offset = { 0, 0 };
-    renderPassInfo.renderArea.extent = swapChainExtent; 
+    renderPassInfo.renderArea.extent = swapchainData.extents;
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
 
@@ -1940,15 +1942,15 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     VkViewport viewport = {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(swapChainExtent.width);
-    viewport.height = static_cast<float>(swapChainExtent.height);
+    viewport.width = static_cast<float>(swapchainData.extents.width);
+    viewport.height = static_cast<float>(swapchainData.extents.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor = {};
     scissor.offset = { 0, 0 };
-    scissor.extent = swapChainExtent;
+    scissor.extent = swapchainData.extents;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // Ground plane rendering.
@@ -2129,15 +2131,15 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
 
 void VulkanApplication::cleanupSwapchain()
 {
-    for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
-        vkDestroyFramebuffer(m_LogicalDevice, swapChainFramebuffers[i], nullptr);
+    for (size_t i = 0; i < swapchainData.framebuffers.size(); i++) {
+        vkDestroyFramebuffer(m_LogicalDevice, swapchainData.framebuffers[i], nullptr);
     }
 
-    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-        vkDestroyImageView(m_LogicalDevice, swapChainImageViews[i], nullptr);
+    for (size_t i = 0; i < swapchainData.imageViews.size(); i++) {
+        vkDestroyImageView(m_LogicalDevice, swapchainData.imageViews[i], nullptr);
     }
 
-    vkDestroySwapchainKHR(m_LogicalDevice, swapChain, nullptr);
+    vkDestroySwapchainKHR(m_LogicalDevice, swapchainData.handle, nullptr);
 }
 
 VkSurfaceFormatKHR VulkanApplication::chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
@@ -2224,9 +2226,9 @@ uint32_t VulkanApplication::findGPUMemoryType(uint32_t typeFilter, VkMemoryPrope
     throw std::runtime_error("failed to find suitable memory type!");
 }
 
-SwapChainSupportDetails VulkanApplication::checkSwapchainSupport(VkPhysicalDevice device)
+SwapChain VulkanApplication::checkSwapchainSupport(VkPhysicalDevice device)
 {
-    SwapChainSupportDetails details;
+    SwapChain details;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_SurfaceKHR, &details.capabilities);
     uint32_t formatCount;
     vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_SurfaceKHR, &formatCount, nullptr);
@@ -2733,7 +2735,7 @@ bool VulkanApplication::checkPhysicalDeviceSuitability(VkPhysicalDevice device)
 
     bool isSwapchainAdequate = false;
     if (checkPhysicalDeviceExtensionSupport(device)) {
-        SwapChainSupportDetails swapChainSupport = checkSwapchainSupport(device);
+        SwapChain swapChainSupport = checkSwapchainSupport(device);
         isSwapchainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 

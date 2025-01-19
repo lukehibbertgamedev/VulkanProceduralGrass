@@ -18,11 +18,13 @@ set(INCLUDE
 	${CMAKE_CURRENT_SOURCE_DIR}/include/GrassBlade.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Mesh.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Camera.h
+	${CMAKE_CURRENT_SOURCE_DIR}/include/Constants.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Buffer.h
+	${CMAKE_CURRENT_SOURCE_DIR}/include/MiscStructs.h
+	${CMAKE_CURRENT_SOURCE_DIR}/include/Swapchain.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Timer.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Utility.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/stb_image.h
-	${CMAKE_CURRENT_SOURCE_DIR}/include/tiny_obj_loader.h
 )
 
 add_executable(${PROJECT_NAME} ${SRC} ${INCLUDE})

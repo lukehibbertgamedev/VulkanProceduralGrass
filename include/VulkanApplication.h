@@ -15,72 +15,16 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
 
-#include "Vertex.h"
+#include "Buffer.h"
+#include "Swapchain.h"
 #include "Mesh.h"
 #include "GrassBlade.h"
 #include "Camera.h"
+#include "MiscStructs.h"
+#include "Constants.h"
 
 #include <optional>
 #include <vector>
-#include <string>
-
-// Ground plane bounds definitions (Z is typically up).ssssss
-#define MEADOW_SCALE_X 120
-#define MEADOW_SCALE_Y 120
-#define MEADOW_SCALE_Z 1		// Multiply terrain height by this via push constants.
-
-static constexpr bool kEnableValidationLayers = true;
-const std::vector<const char*> kValidationLayers = { "VK_LAYER_KHRONOS_validation" };
-static constexpr bool kEnableImGuiDemoWindow = true;
-static constexpr int kMaxFramesInFlight = 2; 
-
-struct DriverData {
-public:
-	std::string name;
-	uint32_t version = 0;
-	unsigned int versionMajor = 0, versionMinor = 0;
-	unsigned int apiMajor = 0, apiMinor = 0, apiPatch = 0;
-	uint32_t numVisible = 0;
-};
-
-struct CameraUniformBufferObject {
-	alignas(16) glm::mat4 model;
-	alignas(16) glm::mat4 view;
-	alignas(16) glm::mat4 proj;
-};
-
-struct NumBladesBufferObject {
-	alignas(4) uint32_t numVisible;
-};
-
-// Allow draw call parameters to be stored in GPU memory.
-// Passing the parameters in indirectly, not directly into the call.
-struct BladeDrawIndirect {
-	alignas(4) uint32_t vertexCount;
-	alignas(4) uint32_t instanceCount;
-	alignas(4) uint32_t firstVertex;
-	alignas(4) uint32_t firstInstance;
-};
-
-struct PushConstantsObject {
-	alignas(4) uint32_t totalNumBlades;
-	alignas(4) float elapsed;
-};
-
-struct QueueFamilyIndices {
-public:
-	std::optional<uint32_t> graphicsAndComputeFamily;
-	std::optional<uint32_t> presentFamily;
-
-	bool isComplete() { return graphicsAndComputeFamily.has_value() && presentFamily.has_value(); }
-};
-
-struct SwapChainSupportDetails {
-public:
-	VkSurfaceCapabilitiesKHR capabilities;
-	std::vector<VkSurfaceFormatKHR> formats;
-	std::vector<VkPresentModeKHR> presentModes;
-};
 
 class VulkanApplication {
 public:		
@@ -178,7 +122,7 @@ private:
 	VkCommandBuffer beginSingleTimeCommands();
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 	uint32_t findGPUMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-	SwapChainSupportDetails checkSwapchainSupport(VkPhysicalDevice device);
+	SwapChain checkSwapchainSupport(VkPhysicalDevice device);
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& outCreateInfo);
 	VkResult createDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 	bool checkPhysicalDeviceSuitability(VkPhysicalDevice device);
@@ -204,13 +148,7 @@ public:
 	VkQueue graphicsQueue = VK_NULL_HANDLE;								// Queues graphics rendering commands for processing graphics shaders.
 	VkQueue presentQueue = VK_NULL_HANDLE;								// Manages the commands for presenting the swapchain images to the screen.
 
-	// Swapchain structures.
-	VkSwapchainKHR swapChain = VK_NULL_HANDLE;							// Handle to manage the swapping of rendering images to a window surface.
-	std::vector<VkImage> swapChainImages = {};							// A collection of images used by the swapchain, each image corresponds to a framebuffer used for drawing.
-	std::vector<VkImageView> swapChainImageViews = {};					// A collection of image views for each image to access and interpret image data for rendering.
-	std::vector<VkFramebuffer> swapChainFramebuffers = {};				// A collection of framebuffer objects for each image to define attachments used in rendering images.
-	VkFormat swapChainImageFormat = {};									// A reference to the format of the images used by the swapchain. Determines how pixel data is stored and displayed.
-	VkExtent2D swapChainExtent = {};									// A reference to the dimensions of the images used by the swapchain. Determines the resolution of the images.
+	SwapChain swapchainData;
 
 	// Render passes and pipelines.
 	VkRenderPass renderPass = VK_NULL_HANDLE;							// Defines how rendering operations are performed and how framebuffers are used during rendering.
@@ -236,7 +174,7 @@ public:
 	float lastFrameTime = 0.0f;											// Used to calculate FPS.
 	float deltaTime = 0.0f;												// Used to smooth out update logic.
 	double lastTime = 0.0f;												// Used to calculated lastFrameTime.
-	DriverData driverData = {};											// A custom collection of GPU data to be displayed easily in ImGui.
+	GPUData driverData = {};											// A custom collection of GPU data to be displayed easily in ImGui.
 	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
 	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
 	int frameCount = 0;
