@@ -1104,7 +1104,15 @@ VkResult VulkanApplication::createHeightMapImage()
     // Create a staging buffer to upload pixel data to the GPU.
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
-    VkResult ret = createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+    BufferCreateInfo buffer = {};
+    buffer.size = imageSize;
+    buffer.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    buffer.memProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    buffer.pBuffer = &stagingBuffer;
+    buffer.pBufferMemory = &stagingBufferMemory;
+
+    VkResult ret = createBuffer(buffer);
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("bad buffer creation.");
         return ret;
@@ -1119,10 +1127,20 @@ VkResult VulkanApplication::createHeightMapImage()
     // Since the GPU now has a reference to the pixel data, we don't need to store it on the host anymore.
     stbi_image_free(pixels);
 
+    ImageCreateInfo heightMapImageInfo = {};
+    heightMapImageInfo.width = texWidth;
+    heightMapImageInfo.height = texHeight;
+    heightMapImageInfo.mipLevels = 1;
+    heightMapImageInfo.numSamples = VK_SAMPLE_COUNT_1_BIT;
+    heightMapImageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+    heightMapImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    heightMapImageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    heightMapImageInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    heightMapImageInfo.pImage = &heightMapImage;
+    heightMapImageInfo.pImageMemory = &heightMapImageMemory;
+
     // Create an image handle.
-    ret = createImage(texWidth, texHeight, 1, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        heightMapImage, heightMapImageMemory);
+    ret = createImage(heightMapImageInfo);
 
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("bad image creation.");
@@ -1229,8 +1247,19 @@ VkResult VulkanApplication::createDepthResources()
 {
     VkFormat depthFormat = findDepthFormat();
 
-    VkResult ret = createImage(swapchainData.extents.width, swapchainData.extents.height, 1,
-        VK_SAMPLE_COUNT_1_BIT, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
+    ImageCreateInfo depthImageInfo = {};
+    depthImageInfo.width = swapchainData.extents.width;
+    depthImageInfo.height = swapchainData.extents.height;
+    depthImageInfo.mipLevels = 1;
+    depthImageInfo.numSamples = VK_SAMPLE_COUNT_1_BIT;
+    depthImageInfo.format = depthFormat;
+    depthImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    depthImageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    depthImageInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    depthImageInfo.pImage = &depthImage;
+    depthImageInfo.pImageMemory = &depthImageMemory;
+
+    VkResult ret = createImage(depthImageInfo);
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("bad image creation.");
         return ret;
@@ -1286,10 +1315,14 @@ VkResult VulkanApplication::createShaderStorageBuffers()
     // Create 2 SSBOs per-framebuffer, this application uses double-buffering.
     for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
         
-        ret = createBuffer(bufferSize, 
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            bladeInstanceDataBuffer[i], bladeInstanceDataBufferMemory[i]);
+        BufferCreateInfo buffer = {};
+        buffer.size = bufferSize;
+        buffer.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        buffer.memProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        buffer.pBuffer = &bladeInstanceDataBuffer[i];
+        buffer.pBufferMemory = &bladeInstanceDataBufferMemory[i];
+
+        ret = createBuffer(buffer);
 
         if (ret != VK_SUCCESS) {
             throw std::runtime_error("bad buffer creation.");
@@ -1314,9 +1347,16 @@ VkResult VulkanApplication::createVertexBuffer()
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
 
+        BufferCreateInfo stagingBufferInfo = {};
+        stagingBufferInfo.size = bufferSize;
+        stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        stagingBufferInfo.memProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        stagingBufferInfo.pBuffer = &stagingBuffer;
+        stagingBufferInfo.pBufferMemory = &stagingBufferMemory;
+
         // Create the staging buffer used as a source to send/transfer buffer data.
         // Note: writes from the CPU are visible to the GPU without explicit flushing.
-        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        ret = createBuffer(stagingBufferInfo);
         if (ret != VK_SUCCESS) {
             throw std::runtime_error("bad buffer creation");
             return ret;
@@ -1332,16 +1372,23 @@ VkResult VulkanApplication::createVertexBuffer()
         // Releases the mapped memory so the GPU can safely access the written data.
         vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
 
+        BufferCreateInfo bladeVertexBufferInfo = {};
+        bladeVertexBufferInfo.size = bufferSize;
+        bladeVertexBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bladeVertexBufferInfo.memProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        bladeVertexBufferInfo.pBuffer = &bladeShapeIndexBuffer;
+        bladeVertexBufferInfo.pBufferMemory = &bladeShapeIndexBufferMemory;
+
         // Creates the vertex buffer on the GPU used as a destination to receive transfers from a source, and as a vertex buffer for drawing. 
         // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
-        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, bladeShapeVertexBuffer, bladeShapeVertexBufferMemory);
+        ret = createBuffer(bladeVertexBufferInfo);
         if (ret != VK_SUCCESS) {
             throw std::runtime_error("bad buffer creation");
             return ret;
         }
 
         // Transfers the vertex data from the staging buffer to the vertex buffer.
-        copyBuffer(stagingBuffer, bladeShapeVertexBuffer, bufferSize);
+        copyBuffer(*stagingBufferInfo.pBuffer, *bladeVertexBufferInfo.pBuffer, bufferSize);
 
         // Clean up the staging buffer and its associated allocated memory.
         vkDestroyBuffer(m_LogicalDevice, stagingBuffer, nullptr);
@@ -1357,9 +1404,16 @@ VkResult VulkanApplication::createVertexBuffer()
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
 
+        BufferCreateInfo stagingBufferInfo = {};
+        stagingBufferInfo.size = quadMeshRequiredBufferSize;
+        stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        stagingBufferInfo.memProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        stagingBufferInfo.pBuffer = &stagingBuffer;
+        stagingBufferInfo.pBufferMemory = &stagingBufferMemory;
+
         // Create the staging buffer used as a source to send/transfer buffer data.
         // Note: writes from the CPU are visible to the GPU without explicit flushing.
-        ret = createBuffer(quadMeshRequiredBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        ret = createBuffer(stagingBufferInfo);
         if (ret != VK_SUCCESS) {
             throw std::runtime_error("bad buffer creation");
             return ret;
@@ -1375,9 +1429,16 @@ VkResult VulkanApplication::createVertexBuffer()
         // Releases the mapped memory so the GPU can safely access the written data.
         vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
 
+        BufferCreateInfo quadVertexBufferInfo = {};
+        quadVertexBufferInfo.size = quadMeshRequiredBufferSize;
+        quadVertexBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        quadVertexBufferInfo.memProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        quadVertexBufferInfo.pBuffer = &quadVertexBuffer;
+        quadVertexBufferInfo.pBufferMemory = &quadVertexBufferMemory;
+
         // Creates the vertex buffer on the GPU used as a destination to receive transfers from a source, and as a vertex buffer for drawing. 
         // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
-        ret = createBuffer(quadMeshRequiredBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, quadVertexBuffer, quadVertexBufferMemory);
+        ret = createBuffer(quadVertexBufferInfo);
         if (ret != VK_SUCCESS) {
             throw std::runtime_error("bad buffer creation");
             return ret;
@@ -1408,9 +1469,16 @@ VkResult VulkanApplication::createIndexBuffer()
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
 
+        BufferCreateInfo stagingBufferInfo = {};
+        stagingBufferInfo.size = bufferSize;
+        stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        stagingBufferInfo.memProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        stagingBufferInfo.pBuffer = &stagingBuffer;
+        stagingBufferInfo.pBufferMemory = &stagingBufferMemory;
+
         // Create the staging buffer used as a source to send/transfer buffer data.
         // Note: writes from the CPU are visible to the GPU without explicit flushing.
-        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        ret = createBuffer(stagingBufferInfo);
         if (ret != VK_SUCCESS) {
             throw std::runtime_error("bad buffer creation");
             return ret;
@@ -1426,9 +1494,16 @@ VkResult VulkanApplication::createIndexBuffer()
         // Releases the mapped memory so the GPU can safely access the written data.
         vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
 
+        BufferCreateInfo bladeIndexBufferInfo = {};
+        bladeIndexBufferInfo.size = bufferSize;
+        bladeIndexBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        bladeIndexBufferInfo.memProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        bladeIndexBufferInfo.pBuffer = &bladeShapeIndexBuffer;
+        bladeIndexBufferInfo.pBufferMemory = &bladeShapeIndexBufferMemory;
+
         // Creates the index buffer on the GPU used as a destination to receive transfers from a source, and as a index buffer for drawing. 
         // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
-        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, bladeShapeIndexBuffer, bladeShapeIndexBufferMemory);
+        ret = createBuffer(bladeIndexBufferInfo);
         if (ret != VK_SUCCESS) {
             throw std::runtime_error("bad buffer creation");
             return ret;
@@ -1451,9 +1526,16 @@ VkResult VulkanApplication::createIndexBuffer()
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
 
+        BufferCreateInfo stagingBufferInfo = {};
+        stagingBufferInfo.size = bufferSize;
+        stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        stagingBufferInfo.memProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        stagingBufferInfo.pBuffer = &stagingBuffer;
+        stagingBufferInfo.pBufferMemory = &stagingBufferMemory;
+
         // Create the staging buffer used as a source to send/transfer buffer data.
         // Note: writes from the CPU are visible to the GPU without explicit flushing.
-        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        ret = createBuffer(stagingBufferInfo);
         if (ret != VK_SUCCESS) {
             throw std::runtime_error("bad buffer creation");
             return ret;
@@ -1469,9 +1551,16 @@ VkResult VulkanApplication::createIndexBuffer()
         // Releases the mapped memory so the GPU can safely access the written data.
         vkUnmapMemory(m_LogicalDevice, stagingBufferMemory);
 
+        BufferCreateInfo quadIndexBufferInfo = {};
+        quadIndexBufferInfo.size = bufferSize;
+        quadIndexBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        quadIndexBufferInfo.memProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        quadIndexBufferInfo.pBuffer = &quadIndexBuffer;
+        quadIndexBufferInfo.pBufferMemory = &quadIndexBufferMemory;
+
         // Creates the index buffer on the GPU used as a destination to receive transfers from a source, and as a index buffer for drawing. 
         // Note: this memory is local to the device and not accessible by the host (CPU) directly (optimised for GPU access).
-        ret = createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, quadIndexBuffer, quadIndexBufferMemory);
+        ret = createBuffer(quadIndexBufferInfo);
         if (ret != VK_SUCCESS) {
             throw std::runtime_error("bad buffer creation");
             return ret;
@@ -1492,13 +1581,14 @@ VkResult VulkanApplication::createUniformBuffers()
 {
     VkDeviceSize bufferSize = sizeof(CameraUniformBufferObject);
 
-    VkResult ret = createBuffer(
-        bufferSize, 
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-        uniformBuffer, 
-        uniformBufferMemory
-    );
+    BufferCreateInfo buffer = {};
+    buffer.size = bufferSize;
+    buffer.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buffer.memProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    buffer.pBuffer = &uniformBuffer;
+    buffer.pBufferMemory = &uniformBufferMemory;
+
+    VkResult ret = createBuffer(buffer);
 
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("bad buffer creation.");
@@ -1751,10 +1841,14 @@ void VulkanApplication::createBladeInstanceStagingBuffer()
     // Create 2 staging buffers per-SSBO, this application uses double-buffering.
     for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
 
-        VkResult ret = createBuffer(bladeInstanceBufferRequiredSize,
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-            bladeInstanceStagingBuffer[i], bladeInstanceStagingBufferMemory[i]);
+        BufferCreateInfo buffer = {};
+        buffer.size = bladeInstanceBufferRequiredSize;
+        buffer.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        buffer.memProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        buffer.pBuffer = &bladeInstanceStagingBuffer[i];
+        buffer.pBufferMemory = &bladeInstanceStagingBufferMemory[i];
+
+        VkResult ret = createBuffer(buffer);
 
         if (ret != VK_SUCCESS) {
             throw std::runtime_error("bad buffer creation.");
@@ -1777,10 +1871,15 @@ void VulkanApplication::createBladeInstanceStagingBuffer()
 void VulkanApplication::createNumBladesBuffer()
 {
     VkDeviceSize numBladesBufferRequiredSize = sizeof(NumBladesBufferObject);
-    VkResult ret = createBuffer(numBladesBufferRequiredSize,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        numBladesBuffer, numBladesBufferMemory);
+
+    BufferCreateInfo buffer = {};
+    buffer.size = numBladesBufferRequiredSize;
+    buffer.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    buffer.memProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    buffer.pBuffer = &numBladesBuffer;
+    buffer.pBufferMemory = &numBladesBufferMemory;
+
+    VkResult ret = createBuffer(buffer);
 
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("bad buffer creation");
@@ -1821,75 +1920,73 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::End();
 }
 
-VkResult VulkanApplication::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
+VkResult VulkanApplication::createBuffer(BufferCreateInfo& bufferCreateInfo)
 {
     VkBufferCreateInfo bufferInfo = {};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
+    bufferInfo.size = bufferCreateInfo.size;
+    bufferInfo.usage = bufferCreateInfo.usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     
-    if (vkCreateBuffer(m_LogicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+    if (vkCreateBuffer(m_LogicalDevice, &bufferInfo, nullptr, bufferCreateInfo.pBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to create buffer!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
     
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(m_LogicalDevice, buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(m_LogicalDevice, *bufferCreateInfo.pBuffer, &memRequirements);
     
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findGPUMemoryType(memRequirements.memoryTypeBits, properties);
+    allocInfo.memoryTypeIndex = findGPUMemoryType(memRequirements.memoryTypeBits, bufferCreateInfo.memProperties);
     
-    if (vkAllocateMemory(m_LogicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(m_LogicalDevice, &allocInfo, nullptr, bufferCreateInfo.pBufferMemory) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate buffer memory!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
     
-    vkBindBufferMemory(m_LogicalDevice, buffer, bufferMemory, 0);
+    vkBindBufferMemory(m_LogicalDevice, *bufferCreateInfo.pBuffer, *bufferCreateInfo.pBufferMemory, 0);
 
     return VK_SUCCESS;
 }
 
-VkResult VulkanApplication::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, 
-    VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, 
-    VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory)
+VkResult VulkanApplication::createImage(ImageCreateInfo& imageCreateInfo)
 {
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = width;
-    imageInfo.extent.height = height;
+    imageInfo.extent.width = imageCreateInfo.width;
+    imageInfo.extent.height = imageCreateInfo.height;
     imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = mipLevels;
+    imageInfo.mipLevels = imageCreateInfo.mipLevels;
     imageInfo.arrayLayers = 1;
-    imageInfo.format = format;
-    imageInfo.tiling = tiling;
+    imageInfo.format = imageCreateInfo.format;
+    imageInfo.tiling = imageCreateInfo.tiling;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = usage;
-    imageInfo.samples = numSamples;
+    imageInfo.usage = imageCreateInfo.usage;
+    imageInfo.samples = imageCreateInfo.numSamples;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(m_LogicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+    if (vkCreateImage(m_LogicalDevice, &imageInfo, nullptr, imageCreateInfo.pImage) != VK_SUCCESS) {
         throw std::runtime_error("failed to create image!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(m_LogicalDevice, image, &memRequirements);
+    vkGetImageMemoryRequirements(m_LogicalDevice, *imageCreateInfo.pImage, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findGPUMemoryType(memRequirements.memoryTypeBits, properties);
+    allocInfo.memoryTypeIndex = findGPUMemoryType(memRequirements.memoryTypeBits, imageCreateInfo.properties);
 
-    if (vkAllocateMemory(m_LogicalDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(m_LogicalDevice, &allocInfo, nullptr, imageCreateInfo.pImageMemory) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate image memory!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    vkBindImageMemory(m_LogicalDevice, image, imageMemory, 0);
+    vkBindImageMemory(m_LogicalDevice, *imageCreateInfo.pImage, *imageCreateInfo.pImageMemory, 0);
 
     return VK_SUCCESS;
 }

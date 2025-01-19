@@ -32,42 +32,12 @@ public:
 	// Handles the set-up, queue submission, and presentation of a frame to the screen surface.
 	void render();
 
-	// Updates the uniform buffer object that is bound to both the model and grass pipeline, so they receive the most recent data (re-maps the memory).
-	void updateUniformBuffer(uint32_t currentFrame);
-
-	// ...
-	uint32_t retrieveNumVisibleBlades();
-
 	void linkWindowToVulkan(GLFWwindow* window);					
 	void linkCameraToVulkan(Camera* camera);	
-	VkResult initialiseApplication();	 
-
-	void createMeshObjects();					// Creates the ground plane. 
-	void populateBladeInstanceBuffer();			// Populates a vector of blade instance data.
-	void createBladeInstanceStagingBuffer();	// Copy the vector of instance data to the GPU.
-	void createNumBladesBuffer();				// Create the buffer to hold the number of active blades.
-
-	void prepareImGuiDrawData();
-
-	// Creates a buffer, creates its memory requirements, and allocates and binds the buffer memory. Returns a VkResult.
-	VkResult createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-
-	// Creates an image, creates its memory requirements, and allocates and binds the image memory. Returls a VkResult.
-	VkResult createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
-
-	// Copy from srcBuffer to dstBuffer passing the size of srcBuffer so the command knows how much data to copy. Performs vkCmdCopyBuffer.
-	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-
-	// Bind pipelines and populate the command buffer with commands (i.e., vkCmdDraw) for that pipeline.
-	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex); 
-	void recordComputeCommandBuffer(VkCommandBuffer commandBuffer);
-
-	// Reads a SPIR-V code file and turns it into a handle that can be bound to a VkPipeline.
-	VkShaderModule createShaderModule(const std::vector<char>& code);
+	VkResult initialiseApplication();	
+	void prepareImGuiDrawData();	
 
 	void cleanupApplication(GLFWwindow* window);
-	void cleanupSwapchain();
-	void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 private:
 
 	VkResult createInstance();										// - - - - - .
@@ -107,6 +77,36 @@ private:
 	VkResult createSynchronizationObjects();						//			 |
 	VkResult createDefaultCamera();									//			 |
 	VkResult createImGuiImplementation();							// - - - - - '
+
+	void createMeshObjects();					// Creates the ground plane. 
+	void populateBladeInstanceBuffer();			// Populates a vector of blade instance data.
+	void createBladeInstanceStagingBuffer();	// Copy the vector of instance data to the GPU.
+	void createNumBladesBuffer();				// Create the buffer to hold the number of active blades.
+
+	// Updates the uniform buffer object that is bound to both the model and grass pipeline, so they receive the most recent data (re-maps the memory).
+	void updateUniformBuffer(uint32_t currentFrame);
+
+	// ...
+	uint32_t retrieveNumVisibleBlades();
+
+	// Creates a buffer, creates its memory requirements, and allocates and binds the buffer memory. Returns a VkResult.
+	VkResult createBuffer(BufferCreateInfo& bufferCreateInfo);
+
+	// Creates an image, creates its memory requirements, and allocates and binds the image memory. Returls a VkResult.
+	VkResult createImage(ImageCreateInfo& imageCreateInfo);
+
+	// Copy from srcBuffer to dstBuffer passing the size of srcBuffer so the command knows how much data to copy. Performs vkCmdCopyBuffer.
+	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+	// Bind pipelines and populate the command buffer with commands (i.e., vkCmdDraw) for that pipeline.
+	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+	void recordComputeCommandBuffer(VkCommandBuffer commandBuffer);
+
+	// Reads a SPIR-V code file and turns it into a handle that can be bound to a VkPipeline.
+	VkShaderModule createShaderModule(const std::vector<char>& code);
+
+	void cleanupSwapchain();
+	void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);

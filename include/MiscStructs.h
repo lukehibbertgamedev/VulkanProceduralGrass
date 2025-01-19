@@ -19,3 +19,25 @@ public:
 	unsigned int apiMajor = 0, apiMinor = 0, apiPatch = 0;
 	uint32_t numVisible = 0;
 };
+
+struct BufferCreateInfo {
+public:
+	VkDeviceSize size;
+	VkBufferUsageFlags usage;
+	VkMemoryPropertyFlags memProperties;
+	VkBuffer* pBuffer;
+	VkDeviceMemory* pBufferMemory;
+};
+
+struct ImageCreateInfo {
+	uint32_t width;
+	uint32_t height;
+	uint32_t mipLevels;
+	VkSampleCountFlagBits numSamples;
+	VkFormat format;
+	VkImageTiling tiling;
+	VkImageUsageFlags usage;
+	VkMemoryPropertyFlags properties;
+	VkImage* pImage;
+	VkDeviceMemory* pImageMemory;
+};
