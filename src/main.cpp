@@ -8,24 +8,25 @@
 
 #include <VulkanApplication.h>
 #include <Camera.h>
+#include <Timer.h>
 
-#include <iostream>
 #include <fstream>
 #include <iterator>
 #include <cstdio>
 #include <stdio.h>
 #include <vector>
 #include <set>
-#include <chrono>
 
+// Global main camera.
 static Camera globalCamera;
 
-// TODO: Move to its own header (callbacks.h).
+// Determine action to take on window/framebuffer resize.
 static void frameBufferResizeCallback(GLFWwindow* window, int width, int height) {
     auto app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
     app->framebufferResized = true;
 }
 
+// Determine action to take on keyboard inputs.
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 
     const float moveSpeed = 0.1f;
@@ -77,31 +78,13 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
     }
 }
 
-// TODO: Move to its own header (timer.h).
-class Timer {
-public:
-    Timer() {
-        lastTime = std::chrono::high_resolution_clock::now();
-    }
-
-    float getDeltaTime() {
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<float> deltaTime = currentTime - lastTime;
-        lastTime = currentTime;
-        return deltaTime.count(); // Return delta time in seconds
-    }
-
-private:
-    std::chrono::high_resolution_clock::time_point lastTime;
-};
-
 int main() {
 
     // Create an empty application structure.
     VulkanApplication vkApp = {};
 
     // Create a timer instance to obtain delta time for the application loop, auto initialises timer.lastTime.
-    Timer timer;
+    Timer timer = {};
 
     // Initialize glfw for window creation.
     if (glfwInit() != GLFW_TRUE) {
@@ -127,121 +110,27 @@ int main() {
     // Begin the timer to retrieve delta time throughout the application loop.
     vkApp.lastTime = glfwGetTime();
 
-    // Enumerate and output supported Vulkan extensions.
-    uint32_t extensionCount = 0;
-    VkExtensionProperties props = {};
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    std::cout << extensionCount << " extensions supported:\n";
-    std::vector<VkExtensionProperties> extensionProperties(extensionCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProperties.data());
-    for (auto& extension : extensionProperties) {
-        std::cout << "- " << extension.extensionName;
-        std::cout << ".\tVersion: " << extension.specVersion << "\n";
-    }
-
     // Vulkan application initialization:
-
     vkApp.linkWindowToVulkan(window);
-
     vkApp.linkCameraToVulkan(&globalCamera);
+    VkResult ret = vkApp.initialiseApplication();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not initialise application.");
 
-    VkResult ret = vkApp.createDefaultCamera(); 
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create camera.");
-
-    ret = vkApp.createInstance();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create instance.");   
-
-    ret = vkApp.createDebugMessenger();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create debug messenger.");
-
-    ret = vkApp.createGlfwSurface();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create surface.");
-
-    ret = vkApp.createPhysicalDevice();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create physical device.");
-
-    ret = vkApp.createLogicalDevice();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create logical device.");
-
-    ret = vkApp.createSwapchain();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create swapchain.");
-
-    ret = vkApp.createSwapchainImageViews();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create swapchain image views.");
-
-    ret = vkApp.createRenderPass();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create render pass.");
-
-    ret = vkApp.createDescriptorSetLayouts();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor layout.");
-
-    ret = vkApp.createPipelines();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create model | grass pipeline.");
-
-    ret = vkApp.createDepthResources();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create depth resources.");
-
-    ret = vkApp.createFrameBuffers();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create frame buffers.");
-
-    ret = vkApp.createCommandPool();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command pool.");
-
-    vkApp.createMeshObjects();
-
-    vkApp.populateBladeInstanceBuffer(); 
-
-    ret = vkApp.createTextureResources();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create image | sampler resources.");
-
-    ret = vkApp.createVertexBuffer();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create vertex buffer.");
-
-    ret = vkApp.createIndexBuffer();  
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create index buffer.");
-
-    ret = vkApp.createShaderStorageBuffers();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create shader storage buffer.");
-
-    ret = vkApp.createUniformBuffers();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create uniform buffer.");
-
-    ret = vkApp.createDescriptorPool();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor pool.");
-
-    vkApp.createNumBladesBuffer();
-
-    ret = vkApp.createDescriptorSets();  
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor sets."); 
-
-    vkApp.createBladeInstanceStagingBuffer(); 
-
-    ret = vkApp.createCommandBuffers(); 
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command buffer.");
-
-    ret = vkApp.createSynchronizationObjects();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create semaphores | fences.");
-
-    ret = vkApp.createImGuiImplementation();
-    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create imgui implementation.");
-
-    std::cout << "\nSuccessful initialization.\n";
-
-    // Main application loop:
-    int i = 0;
+    // For use in monitoring frame time.
+    int frameNum = 0;
     int wait = 1000;
     int count = 10000;
     std::vector<double> timeInMs; 
     timeInMs.reserve(count);
-    std::vector<float> fps;
-    fps.reserve(count);
     bool writtenToFile = false;
 
+    // Main application loop:
     while (!glfwWindowShouldClose(window)) {
         
         // Begin calculating frame time.
         auto t0 = std::chrono::high_resolution_clock::now(); 
 
+        // Internal application timings.
         double currentTime = glfwGetTime();
         vkApp.lastFrameTime = (currentTime - vkApp.lastTime) * 1000.0;
         vkApp.lastTime = currentTime;
@@ -251,58 +140,42 @@ int main() {
         glfwPollEvents();
 
         // Create new ImGui frames via its backend and context.
-        //ImGui_ImplVulkan_NewFrame();
-        //ImGui_ImplGlfw_NewFrame();
-        //ImGui::NewFrame();
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
 
         // Prepare ImGui draw data, this does not affect the graphics in any way, the drawing is done later.
-        //vkApp.prepareImGuiDrawData();
+        vkApp.prepareImGuiDrawData();
 
         // Update camera data.
         globalCamera.update();
 
         // Prepare the ImGui data for rendering so you can call GetDrawData().
-        //ImGui::Render();        
+        ImGui::Render();        
         
         // Record and execute commands through a compute and graphics pipeline.
         vkApp.render();
 
-        // End and calculate frame time.
+        // End and monitor frame time.
         auto t1 = std::chrono::high_resolution_clock::now();
-
-        if (i >= wait) {
+        if (frameNum >= wait) { // Wait for n frames for scene to populate.
             auto t = t1 - t0;
             double tc = std::chrono::duration_cast<std::chrono::duration<double>>(t).count();
             double time = (tc * 1000);
-            if (timeInMs.size() < count) {
+            if (timeInMs.size() < count) { // Insert new frame timing if not at max count.
                 timeInMs.push_back(time);
-
-                //float thisFps = 1 / (time / 1000);
-                //fps.push_back(thisFps);
             }
-
-            if (timeInMs.size() >= count && !writtenToFile) {
-
+            if (timeInMs.size() >= count && !writtenToFile) { // If at max count, write those timings to file.
                 std::string fileName = "../assets/performance_timings/VulkanFrameTimings_";
                 fileName += std::to_string(MAX_BLADES);
                 fileName += ".txt"; 
-
                 std::ofstream file(fileName);
                 std::ostream_iterator<double> it(file, "\n");
                 std::copy(std::begin(timeInMs), std::end(timeInMs), it); 
-                
-                //fileName = "../assets/performance_timings/VulkanFpsCount_";
-                //fileName += std::to_string(MAX_BLADES);
-                //fileName += ".txt";
-                //
-                //std::ofstream file2(fileName);
-                //std::ostream_iterator<double> it2(file2, "\n");
-                //std::copy(std::begin(fps), std::end(fps), it2);
-
                 writtenToFile = true;
             }
         }
-        i++;
+        frameNum++;
     }
 
     // All operations in vkApp.render() are asynchronous, ensure all operations/commands have completed before termination.

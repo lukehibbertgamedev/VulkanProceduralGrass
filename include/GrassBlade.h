@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
 
-constexpr uint32_t MAX_BLADES = 2<<22; // Test 18, 19, 20, 21, 22 without culling and 22 with culling. 
+constexpr uint32_t MAX_BLADES = 2<<18; // Test 18, 19, 20, 21, 22 without culling and 22 with culling. 
 // 413812	- unity value
 // 1072145	- unity value
 // 1535599	- unity value

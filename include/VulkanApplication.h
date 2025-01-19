@@ -38,21 +38,9 @@ struct DriverData {
 public:
 	std::string name;
 	uint32_t version = 0;
-	unsigned int versionMajor = 0, versionMinor = 0, versionPatch = 0;
-	uint32_t deviceID = 0;
-	VkPhysicalDeviceType deviceType;
+	unsigned int versionMajor = 0, versionMinor = 0;
 	unsigned int apiMajor = 0, apiMinor = 0, apiPatch = 0;
-	uint32_t deviceCount = 0;
-
-	uint32_t queueFamilyCount = 0;
-	VkQueueFlags queueFlags;
-
-	int vertexCount = 0;
-
 	uint32_t numVisible = 0;
-
-	float grassDrawCallTime = 0.0f;
-	float computeCallTime = 0.0f;
 };
 
 struct CameraUniformBufferObject {
@@ -106,35 +94,11 @@ public:
 	// ...
 	uint32_t retrieveNumVisibleBlades();
 
-	void linkWindowToVulkan(GLFWwindow* window);					// - - - - - .
-	void linkCameraToVulkan(Camera* camera);						//			 |
-	VkResult createInstance();										//			 |
-	VkResult createDebugMessenger();								//			 |
-	VkResult createPhysicalDevice();								//			 |
-	VkResult createLogicalDevice();									//			 |
-	VkResult createGlfwSurface();									//			 |
-	VkResult createSwapchain();										//			 |
-	VkResult recreateSwapchain();									//			 |
-	VkResult createSwapchainImageViews();							//			 |
-	VkResult createRenderPass();									//			 |
-	VkResult createDescriptorSetLayouts();							//			 |
-	VkResult createDepthResources();								//			 | - Vulkan application initialisation.
-	VkResult createTextureResources();										//			 |
-	VkResult createPipelines();										//			 |
-	VkResult createFrameBuffers();									//			 |
-	VkResult createCommandPool();									//			 |
-	VkResult createShaderStorageBuffers(); 							//			 |
-	VkResult createVertexBuffer();									//			 |
-	VkResult createIndexBuffer();									//			 |
-	VkResult createUniformBuffers();								//			 |
-	VkResult createDescriptorPool();								//			 |
-	VkResult createDescriptorSets();								//			 |
-	VkResult createCommandBuffers();								//			 |
-	VkResult createSynchronizationObjects();						//			 |
-	VkResult createDefaultCamera();									//			 |
-	VkResult createImGuiImplementation();							// - - - - - '
+	void linkWindowToVulkan(GLFWwindow* window);					
+	void linkCameraToVulkan(Camera* camera);	
+	VkResult initialiseApplication();	 
 
-	void createMeshObjects();					// Creates the ground plane.
+	void createMeshObjects();					// Creates the ground plane. 
 	void populateBladeInstanceBuffer();			// Populates a vector of blade instance data.
 	void createBladeInstanceStagingBuffer();	// Copy the vector of instance data to the GPU.
 	void createNumBladesBuffer();				// Create the buffer to hold the number of active blades.
@@ -162,22 +126,43 @@ public:
 	void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 private:
 
-	VkResult createGraphicsCommandBuffer();
-	VkResult createComputeCommandBuffer();
-
-	VkResult createModelDescriptorSetLayout(); // For camera ubo.
-	VkResult createGrassDescriptorSetLayout(); // For grass data ssbo.
-
-	VkResult createModelDescriptorSets(); // For camera buffer object.
-	VkResult createGrassDescriptorSets(); // For grass data buffer.
-
-	VkResult createMeshPipeline(); // For regular rendering of meshes.
-	VkResult createComputePipeline(); // Animates and culls grass blades.
-	VkResult createGrassPipeline(); // Exclusively for grass rendering.
-
-	VkResult createHeightMapImage();
-	VkResult createHeightMapImageView();
-	VkResult createHeightMapSampler();
+	VkResult createInstance();										// - - - - - .
+	VkResult createDebugMessenger();								//			 |
+	VkResult createPhysicalDevice();								//			 |
+	VkResult createLogicalDevice();									//			 |
+	VkResult createGlfwSurface();									//			 |
+	VkResult createSwapchain();										//			 |
+	VkResult recreateSwapchain();									//			 |
+	VkResult createSwapchainImageViews();							//			 |
+	VkResult createRenderPass();									//			 |
+	VkResult createDescriptorSetLayouts();							//			 |
+	VkResult createModelDescriptorSetLayout();						//			 |
+	VkResult createGrassDescriptorSetLayout();						//			 |
+	VkResult createDepthResources();								//			 | 
+	VkResult createTextureResources();								//			 |
+	VkResult createHeightMapImage();								//			 |
+	VkResult createHeightMapImageView();							//			 |
+	VkResult createHeightMapSampler();								//			 |
+	VkResult createPipelines();										//			 | - Vulkan application initialisation.
+	VkResult createMeshPipeline();									//			 |
+	VkResult createComputePipeline();								//			 |
+	VkResult createGrassPipeline();									//			 |
+	VkResult createFrameBuffers();									//			 |
+	VkResult createCommandPool();									//			 |
+	VkResult createShaderStorageBuffers(); 							//			 |
+	VkResult createVertexBuffer();									//			 |
+	VkResult createIndexBuffer();									//			 |
+	VkResult createUniformBuffers();								//			 |
+	VkResult createDescriptorPool();								//			 |
+	VkResult createDescriptorSets();								//			 |
+	VkResult createModelDescriptorSets();							//			 |
+	VkResult createGrassDescriptorSets();							//			 |
+	VkResult createCommandBuffers();								//			 |
+	VkResult createGraphicsCommandBuffer();							//			 |
+	VkResult createComputeCommandBuffer();							//			 |
+	VkResult createSynchronizationObjects();						//			 |
+	VkResult createDefaultCamera();									//			 |
+	VkResult createImGuiImplementation();							// - - - - - '
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
@@ -246,9 +231,6 @@ public:
 	// Descriptors.
 	VkDescriptorPool descriptorPool = VK_NULL_HANDLE;					// A handle to the manager that allocates descriptor sets to increase correct resource allocation.
 	VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;				// A handle to the manager that allocates descriptor sets specifically for ImGui resources necessary for rendering its interface.
-
-	// Multi-sampling.
-	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;			// ...
 
 	// Other.
 	float lastFrameTime = 0.0f;											// Used to calculate FPS.

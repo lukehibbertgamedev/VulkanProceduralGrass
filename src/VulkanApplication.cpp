@@ -4,74 +4,22 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include <chrono>
-
 #include <stdexcept>
-#include <iostream>
 #include <set>
-#include <cstdint> // Necessary for uint32_t
-#include <limits> // Necessary for std::numeric_limits
-#include <algorithm> // Necessary for std::clamp
-#include <fstream> // Necssary for std::ifstream
-#include <random>
-#include <glm/gtx/quaternion.hpp>
+#include <cstdint> 
 
 #include "Utility.h"
 
-// Todo: Wrap in ifdef vk debug
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+// Validation layers method of outputting notes, warnings, or errors.
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, 
+    VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
+{
     std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl << std::endl;
-    /*std::cout << "Debug Messenger\n";
-    std::cout << "Type: ";
-    if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) std::cout << "General\n ";
-    else {
-        if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
-            if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
-                std::cout << "Performance | Validation\n ";
-            }
-            else {
-                std::cout << "Performance\n ";
-            }
-        }
-        else if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
-            std::cout << "Validation\n ";
-        }
-    }
-    std::cout << "Severity: ";
-    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) std::cout << "Verbose\n ";
-    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) std::cout << "Info\n ";
-    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) std::cout << "Warning\n ";
-    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) std::cout << "Error\n ";
-    if (pCallbackData->objectCount > 0) {
-        std::cout << "Number of objects: " << pCallbackData->objectCount << "\n";
-        for (uint32_t object = 0u; object < pCallbackData->objectCount; ++object)  {
-            if (pCallbackData->pObjects[object].pObjectName != nullptr && strlen(pCallbackData->pObjects[object].pObjectName) > 0) {                
-                std::cout << "\tObject: " << object  << " - Type ID " << pCallbackData->pObjects[object].objectType 
-                    << ", Handle " << (void*)(pCallbackData->pObjects[object].objectHandle) << ", Name " << pCallbackData->pObjects[object].pObjectName << "\n";
-            }
-            else {
-                std::cout << "\tObject: " << object << " - Type ID " << pCallbackData->pObjects[object].objectType
-                    << ", Handle " << (void*)(pCallbackData->pObjects[object].objectHandle) << "\n";
-            }
-        }
-    }
-
-    if (pCallbackData->cmdBufLabelCount > 0) {
-        std::cout << "Number of command buffer labels: " << pCallbackData->cmdBufLabelCount << "\n";
-        for (uint32_t cmd_buf_label = 0u; cmd_buf_label < pCallbackData->cmdBufLabelCount; ++cmd_buf_label) {
-            std::cout << "\tLabel: " << cmd_buf_label << " - " << pCallbackData->pCmdBufLabels[cmd_buf_label].pLabelName
-                << " { " << pCallbackData->pCmdBufLabels[cmd_buf_label].color[0] << ", " << pCallbackData->pCmdBufLabels[cmd_buf_label].color[1]
-                << ", " << pCallbackData->pCmdBufLabels[cmd_buf_label].color[2] << ", " << pCallbackData->pCmdBufLabels[cmd_buf_label].color[3] << " }\n";
-        }
-    }
-    std::cout << "Message ID Number: " << pCallbackData->messageIdNumber << "\n";
-    std::cout << "Message ID Name: " << pCallbackData->pMessageIdName << "\n";
-    std::cout << "Message: " << pCallbackData->pMessage << "\n";*/
-
     return VK_FALSE;
 }
 
@@ -107,22 +55,11 @@ static std::vector<const char*> getGlfwRequiredExtensions() {
     for (uint32_t i = 0; i < glfwExtensionCount; i++) {
         extensions.emplace_back(glfwExtensions[i]);
     }
-    //extensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+
     return extensions;
 }
 
-static std::vector<char> readFile(const std::string& filename) {
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-    if (!file.is_open()) {
-        throw std::runtime_error("failed to open file!");
-    }
-    size_t fileSize = (size_t)file.tellg();
-    std::vector<char> buffer(fileSize);
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
-    file.close();
-    return buffer;
-}
+
 
 static const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -142,20 +79,101 @@ VkShaderModule VulkanApplication::createShaderModule(const std::vector<char>& co
     return shaderModule;
 }
 
+VkResult VulkanApplication::initialiseApplication()
+{
+    VkResult ret = createDefaultCamera();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create camera.");
+
+    ret = createInstance();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create instance.");
+
+    ret = createDebugMessenger();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create debug messenger.");
+
+    ret = createGlfwSurface();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create surface.");
+
+    ret = createPhysicalDevice();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create physical device.");
+
+    ret = createLogicalDevice();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create logical device.");
+
+    ret = createSwapchain();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create swapchain.");
+
+    ret = createSwapchainImageViews();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create swapchain image views.");
+
+    ret = createRenderPass();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create render pass.");
+
+    ret = createDescriptorSetLayouts();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor layout.");
+
+    ret = createPipelines();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create model | grass pipeline.");
+
+    ret = createDepthResources();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create depth resources.");
+
+    ret = createFrameBuffers();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create frame buffers.");
+
+    ret = createCommandPool();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command pool.");
+
+    createMeshObjects();
+
+    populateBladeInstanceBuffer();
+
+    ret = createTextureResources();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create image | sampler resources.");
+
+    ret = createVertexBuffer();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create vertex buffer.");
+
+    ret = createIndexBuffer();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create index buffer.");
+
+    ret = createShaderStorageBuffers();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create shader storage buffer.");
+
+    ret = createUniformBuffers();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create uniform buffer.");
+
+    ret = createDescriptorPool();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor pool.");
+
+    createNumBladesBuffer();
+
+    ret = createDescriptorSets();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create descriptor sets.");
+
+    createBladeInstanceStagingBuffer();
+
+    ret = createCommandBuffers();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create command buffer.");
+
+    ret = createSynchronizationObjects();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create semaphores | fences.");
+
+    ret = createImGuiImplementation();
+    if (ret != VK_SUCCESS) throw std::runtime_error("Could not create imgui implementation.");
+
+    return ret;
+}
+
 void VulkanApplication::render()
 {
-
-    //uint32_t numBladesCulled = retrieveNumBlades();
-    //updateIndirectBuffer(MAX_BLADES - numBladesCulled); // max - culled = visible
-
     // Compute pipeline stage:
 
+    // Re-sync and reset.
     vkWaitForFences(m_LogicalDevice, 1, &computeInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-
     vkResetFences(m_LogicalDevice, 1, &computeInFlightFences[currentFrame]);
-
     vkResetCommandBuffer(computeCommandBuffers[currentFrame], 0);
 
+    // Record command buffer.
     recordComputeCommandBuffer(computeCommandBuffers[currentFrame]);
 
     VkSubmitInfo computeSubmitInfo = {};
@@ -164,21 +182,21 @@ void VulkanApplication::render()
     computeSubmitInfo.pCommandBuffers = &computeCommandBuffers[currentFrame];
     computeSubmitInfo.signalSemaphoreCount = 1;
     computeSubmitInfo.pSignalSemaphores = &computeFinishedSemaphores[currentFrame];
-
     if (vkQueueSubmit(computeQueue, 1, &computeSubmitInfo, computeInFlightFences[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit compute command buffer!");
     }
 
     // Graphics render stage:
 
+    // Sync between stages.
     vkWaitForFences(m_LogicalDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); 
 
-
+    // Update camera data buffer.
     updateUniformBuffer(currentFrame);
 
+    // Swap to next swapchain image.
     uint32_t imageIndex;
     VkResult ret = vkAcquireNextImageKHR(m_LogicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-
     if (ret == VK_ERROR_OUT_OF_DATE_KHR) {
         recreateSwapchain();
         return;
@@ -187,14 +205,13 @@ void VulkanApplication::render()
         throw std::runtime_error("failed to acquire swap chain image!");
     }
 
+    // Re-sync and reset.
     vkResetFences(m_LogicalDevice, 1, &inFlightFences[currentFrame]);
-
-    vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
+    vkResetCommandBuffer(commandBuffers[currentFrame], 0);
     recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
     std::array<VkSemaphore, 2> waitSemaphores = { computeFinishedSemaphores[currentFrame], imageAvailableSemaphores[currentFrame] };
     std::array<VkPipelineStageFlags, 2> waitStages = { VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
     VkSubmitInfo graphicsSubmitInfo = {};
     graphicsSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     graphicsSubmitInfo.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size());
@@ -204,17 +221,11 @@ void VulkanApplication::render()
     graphicsSubmitInfo.pCommandBuffers = &commandBuffers[currentFrame];
     graphicsSubmitInfo.signalSemaphoreCount = 1;
     graphicsSubmitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame]; // Signal this so present can wait for this.
-
-    ret = vkQueueSubmit(graphicsQueue, 1, &graphicsSubmitInfo, inFlightFences[currentFrame]);
-
-    std::cout << ret << std::endl;
-
-    if (ret != VK_SUCCESS) {
+    if (vkQueueSubmit(graphicsQueue, 1, &graphicsSubmitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
 
     VkSwapchainKHR swapChains[] = { swapChain };
-
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
@@ -222,10 +233,10 @@ void VulkanApplication::render()
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
-    presentInfo.pResults = nullptr; // Optional
-
+    presentInfo.pResults = nullptr; 
     ret = vkQueuePresentKHR(presentQueue, &presentInfo); // Send all image data to the screen, this will render this frame and begin the vertex shader.
 
+    // Re-initialise swapchain if necessary.
     if (ret == VK_ERROR_OUT_OF_DATE_KHR || ret == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = false;
         recreateSwapchain();
@@ -267,7 +278,7 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentFrame)
 
     // Copy the contents of the ubo structure into a mapped memory location effectively updating the uniform buffer with the most recent data.
     void* data;
-    vkMapMemory(m_LogicalDevice, uniformBufferMemory, 0, sizeof(ubo), 0, &data); // Validation error: attempting to map memory on already mapped memory.
+    vkMapMemory(m_LogicalDevice, uniformBufferMemory, 0, sizeof(ubo), 0, &data);
     memcpy(data, &ubo, sizeof(ubo));
     vkUnmapMemory(m_LogicalDevice, uniformBufferMemory);
 }
@@ -296,7 +307,6 @@ VkResult VulkanApplication::createInstance() {
     createInfo.enabledExtensionCount = extensions.size();
     createInfo.ppEnabledExtensionNames = extensions.data();
     createInfo.enabledLayerCount = 0;
-    //createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
     createInfo.enabledLayerCount = (kEnableValidationLayers) ? static_cast<uint32_t>(kValidationLayers.size()) : 0;
@@ -350,7 +360,6 @@ VkResult VulkanApplication::createPhysicalDevice()
     for (const auto& device : devices) {
         if (checkPhysicalDeviceSuitability(device)) {
             m_PhysicalDevice = device;
-            //msaaSamples = getMaxUsableMSAASampleCount();
             break;
         }
     }
@@ -360,56 +369,13 @@ VkResult VulkanApplication::createPhysicalDevice()
         VkPhysicalDeviceProperties deviceProperties = {};
         memset(&deviceProperties, 0, sizeof(deviceProperties));
         vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
-
         driverData.name = deviceProperties.deviceName;
         driverData.version = deviceProperties.driverVersion;
         driverData.versionMajor = (deviceProperties.driverVersion >> 22) & 0X3FF;
         driverData.versionMinor = (deviceProperties.driverVersion >> 12) & 0X3FF;
-        driverData.versionPatch = deviceProperties.driverVersion & 0X3FF;
-
-        driverData.deviceID = deviceProperties.deviceID;
-        driverData.deviceType = deviceProperties.deviceType;
         driverData.apiMajor = (deviceProperties.apiVersion >> 22) & 0X3FF;
         driverData.apiMinor = (deviceProperties.apiVersion >> 12) & 0X3FF;
         driverData.apiPatch = deviceProperties.apiVersion & 0X3FF;
-        driverData.deviceCount = deviceCount;
-
-        std::cout << "\nDevice name: " << deviceProperties.deviceName << "\n";
-        std::cout << "Device version: " << deviceProperties.driverVersion << "\n";
-        std::cout << "Device version: " << driverData.versionMajor << "." << driverData.versionMinor << "." << driverData.versionPatch << "\n";
-        std::cout << "Device ID: " << deviceProperties.deviceID << "\n";
-        std::cout << "Device type: " << deviceProperties.deviceType << "\n";
-        auto apiVersionMajor = (deviceProperties.apiVersion >> 22) & 0X3FF;
-        auto apiVersionMinor = (deviceProperties.apiVersion >> 12) & 0X3FF;
-        auto apiVersionPatch = deviceProperties.apiVersion & 0X3FF;
-        std::cout << "API version: " << apiVersionMajor << "." << apiVersionMinor << "." << apiVersionPatch << "\n";
-
-        // Enumerate and print relevant device limitations.
-        VkPhysicalDeviceLimits limits = deviceProperties.limits;
-        std::cout << "\nVkPhysicalDeviceLimits:\n";
-        std::cout << "- maxComputeSharedMemorySize: " << limits.maxComputeSharedMemorySize << std::endl;
-        std::cout << "- maxComputeWorkGroupInvocations: " << limits.maxComputeWorkGroupInvocations << std::endl;
-        std::cout << "- maxComputeWorkGroupCount: " << limits.maxComputeWorkGroupCount[0] << " " << limits.maxComputeWorkGroupCount[1] << " " << limits.maxComputeWorkGroupCount[2] << std::endl;
-        std::cout << "- maxComputeWorkGroupSize: " << limits.maxComputeWorkGroupSize[0] << " " << limits.maxComputeWorkGroupSize[1] << " " << limits.maxComputeWorkGroupSize[2] << std::endl;
-        std::cout << "- maxBoundDescriptorSets: " << limits.maxBoundDescriptorSets << std::endl;
-        std::cout << "- maxDescriptorSetStorageBuffers: " << limits.maxDescriptorSetStorageBuffers << std::endl;
-        std::cout << "- maxDescriptorSetUniformBuffers: " << limits.maxDescriptorSetUniformBuffers << std::endl;
-        std::cout << "- maxStorageBufferRange: " << limits.maxStorageBufferRange << std::endl;
-        std::cout << "- maxUniformBufferRange: " << limits.maxUniformBufferRange << std::endl;
-        std::cout << "- minStorageBufferOffsetAlignment: " << limits.minStorageBufferOffsetAlignment << std::endl;
-        std::cout << "- minUniformBufferOffsetAlignment: " << limits.minUniformBufferOffsetAlignment << std::endl;
-        std::cout << "- maxPushConstantsSize: " << limits.maxPushConstantsSize << std::endl;
-        std::cout << "- maxMemoryAllocationCount: " << limits.maxMemoryAllocationCount << std::endl;
-
-        std::cout << "\n\n TESSELLATION LIMITS:\n";
-        std::cout << "- maxTessellationGenerationLevel: " << limits.maxTessellationGenerationLevel << std::endl;
-        std::cout << "- maxTessellationPatchSize: " << limits.maxTessellationPatchSize << std::endl;
-        std::cout << "- maxTessellationControlPerVertexInputComponents: " << limits.maxTessellationControlPerVertexInputComponents << std::endl;
-        std::cout << "- maxTessellationControlPerVertexOutputComponents: " << limits.maxTessellationControlPerVertexOutputComponents << std::endl;
-        std::cout << "- maxTessellationControlPerPatchOutputComponents: " << limits.maxTessellationControlPerPatchOutputComponents << std::endl;
-        std::cout << "- maxTessellationControlTotalOutputComponents: " << limits.maxTessellationControlTotalOutputComponents << std::endl;
-        std::cout << "- maxTessellationEvaluationInputComponents: " << limits.maxTessellationEvaluationInputComponents << std::endl;
-        std::cout << "- maxTessellationEvaluationOutputComponents: " << limits.maxTessellationEvaluationOutputComponents << std::endl;
     }
 
     if (m_PhysicalDevice == VK_NULL_HANDLE) {
@@ -731,10 +697,10 @@ VkResult VulkanApplication::createPipelines()
 VkResult VulkanApplication::createMeshPipeline()
 {
     // Read SPIR-V files.
-    auto meshVertexShaderCode = readFile("../shaders/mesh.vert.spv"); 
-    auto terrainTessellationControlShaderCode = readFile("../shaders/terrainTessControl.tesc.spv");
-    auto terrainTessellationEvalShaderCode = readFile("../shaders/terrainTessEval.tese.spv");
-    auto fragmentShaderCode = readFile("../shaders/basicShader.frag.spv");
+    auto meshVertexShaderCode = Utils::readFile("../shaders/mesh.vert.spv"); 
+    auto terrainTessellationControlShaderCode = Utils::readFile("../shaders/terrainTessControl.tesc.spv");
+    auto terrainTessellationEvalShaderCode = Utils::readFile("../shaders/terrainTessEval.tese.spv");
+    auto fragmentShaderCode = Utils::readFile("../shaders/basicShader.frag.spv");
 
     // Load shader modules.
     VkShaderModule meshVertexShaderModule = createShaderModule(meshVertexShaderCode); 
@@ -817,7 +783,7 @@ VkResult VulkanApplication::createMeshPipeline()
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_NONE; // VK_CULL_MODE_BACK_BIT
+    rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT; // Only required for the terrain.
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -825,7 +791,7 @@ VkResult VulkanApplication::createMeshPipeline()
     VkPipelineMultisampleStateCreateInfo multisampling = {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_FALSE;
-    multisampling.rasterizationSamples = msaaSamples;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     multisampling.minSampleShading = 0;
 
     VkPipelineDepthStencilStateCreateInfo depthStencil = {};
@@ -898,7 +864,7 @@ VkResult VulkanApplication::createMeshPipeline()
 
 VkResult VulkanApplication::createComputePipeline()
 {
-    auto grassComputeShaderCode = readFile("../shaders/grassCompute.comp.spv");
+    auto grassComputeShaderCode = Utils::readFile("../shaders/grassCompute.comp.spv");
     VkShaderModule grassComputeShaderModule = createShaderModule(grassComputeShaderCode);
 
     VkPipelineShaderStageCreateInfo computeShaderStageInfo = {};
@@ -949,10 +915,10 @@ VkResult VulkanApplication::createComputePipeline()
 VkResult VulkanApplication::createGrassPipeline()
 {
     // Read SPIR-V files.
-    auto grassVertexShaderCode = readFile("../shaders/grass.vert.spv");
-    auto fragmentShaderCode = readFile("../shaders/basicShader.frag.spv");
-    auto tessellationControlShaderCode = readFile("../shaders/grassTessControl.tesc.spv"); 
-    auto tessellationEvalShaderCode = readFile("../shaders/grassTessEval.tese.spv");
+    auto grassVertexShaderCode = Utils::readFile("../shaders/grass.vert.spv");
+    auto fragmentShaderCode = Utils::readFile("../shaders/basicShader.frag.spv");
+    auto tessellationControlShaderCode = Utils::readFile("../shaders/grassTessControl.tesc.spv");
+    auto tessellationEvalShaderCode = Utils::readFile("../shaders/grassTessEval.tese.spv");
 
     // Load shader modules.
     VkShaderModule grassVertexShaderModule = createShaderModule(grassVertexShaderCode);
@@ -1051,7 +1017,7 @@ VkResult VulkanApplication::createGrassPipeline()
     VkPipelineMultisampleStateCreateInfo multisampling = {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_FALSE;
-    multisampling.rasterizationSamples = msaaSamples;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     multisampling.minSampleShading = 0;
     
     VkPipelineDepthStencilStateCreateInfo depthStencil = {};
@@ -1153,7 +1119,7 @@ VkResult VulkanApplication::createHeightMapImage()
     stbi_image_free(pixels);
 
     // Create an image handle.
-    ret = createImage(texWidth, texHeight, 1, msaaSamples, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+    ret = createImage(texWidth, texHeight, 1, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         heightMapImage, heightMapImageMemory);
 
@@ -1262,7 +1228,7 @@ VkResult VulkanApplication::createDepthResources()
 {
     VkFormat depthFormat = findDepthFormat();
 
-    VkResult ret = createImage(swapChainExtent.width, swapChainExtent.height, 1, msaaSamples, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
+    VkResult ret = createImage(swapChainExtent.width, swapChainExtent.height, 1, VK_SAMPLE_COUNT_1_BIT, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
     if (ret != VK_SUCCESS) {
         throw std::runtime_error("bad image creation.");
         return ret;
@@ -1697,7 +1663,7 @@ VkResult VulkanApplication::createImGuiImplementation()
     init_info.DescriptorPool = imguiDescriptorPool;
     init_info.MinImageCount = 3;
     init_info.ImageCount = 3;
-    init_info.MSAASamples = msaaSamples;
+    init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     init_info.RenderPass = renderPass;
     init_info.Allocator = nullptr;
     //init_info.UseDynamicRendering = true;
@@ -1715,8 +1681,7 @@ void VulkanApplication::createMeshObjects()
     _groundPlane.rotation = glm::vec3(0.0f, 0.0f, 45.0f);
     _groundPlane.scale = glm::vec3(MEADOW_SCALE_X, MEADOW_SCALE_Y, MEADOW_SCALE_Z); 
     groundPlane = _groundPlane;
-    groundPlaneUVs = quadMesh.uvs;
-    driverData.vertexCount += quadMesh.vertexCount;    
+    groundPlaneUVs = quadMesh.uvs; 
 }
 
 void VulkanApplication::populateBladeInstanceBuffer()
@@ -1763,8 +1728,6 @@ void VulkanApplication::populateBladeInstanceBuffer()
         baseBladeGeometry.position = glm::vec3(bladeInstance.p0AndWidth.x, bladeInstance.p0AndWidth.y, bladeInstance.p0AndWidth.z); 
         baseBladeGeometry.scale = glm::vec3(1.0f); 
     }
-
-    driverData.vertexCount += bladeShapeMesh.vertexCount * localBladeInstanceBuffer.size();
 }
 
 void VulkanApplication::createBladeInstanceStagingBuffer()
@@ -1826,10 +1789,8 @@ void VulkanApplication::prepareImGuiDrawData()
 {
     ImGui::Begin("Driver Details", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar);
 
-    ImGui::Text("Device Count: %i", driverData.deviceCount);
     ImGui::Text("Name: %s", driverData.name.c_str()); 
-    ImGui::SameLine(); ImGui::Text("ID: %i", driverData.deviceID);
-    ImGui::Text("Driver Version: %i.%i.%i", driverData.versionMajor, driverData.versionMinor, driverData.versionPatch);
+    ImGui::Text("Driver Version: %i.%i", driverData.versionMajor, driverData.versionMinor);
     ImGui::Text("Vulkan API Version supported: %i.%i.%i", driverData.apiMajor, driverData.apiMinor, driverData.apiPatch);
     ImGui::Text("Frames per second: %f", 1 / (lastFrameTime / 1000));
     ImGui::Text("Delta time: %f", deltaTime);
@@ -1843,11 +1804,6 @@ void VulkanApplication::prepareImGuiDrawData()
     ImGui::Separator();
 
     ImGui::Text("Grass blades: %u/%u", driverData.numVisible, MAX_BLADES);
-    
-    ImGui::Separator();
-
-    ImGui::Text("Grass pipeline draw call time: %fus", driverData.grassDrawCallTime);
-    ImGui::Text("Compute pipeline execution time: %fus", driverData.computeCallTime);
 
     ImGui::Separator();
 
@@ -2028,7 +1984,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
     //
 
     // Start ImGui rendering.
-    //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer); 
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer); 
     // End ImGui rendering.
 
     vkCmdEndRenderPass(commandBuffer); 
@@ -2057,15 +2013,9 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
     vkCmdPushConstants(commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstantsObject), &pushConstantsObject);
 
-    auto start = std::chrono::high_resolution_clock::now();
-
     // This should run ONCE PER-BLADE. Dividing the work-group by 32 to match the ideal size of a warp on most hardware, then working with
     // 32 threads per-thread group on the local size in the shader. These values are multiplied so it makes the MAX count anyway.
     vkCmdDispatch(commandBuffer, ((MAX_BLADES - 1) / 32u) + 1, 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
-
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> duration = end - start;
-    driverData.computeCallTime = duration.count() * 1000000; // Convert from seconds to microseconds.
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to end recording compute command buffer!");
@@ -2074,8 +2024,6 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
 
 void VulkanApplication::cleanupApplication(GLFWwindow* window)
 {
-    
-
     // Synchronisation Objects. 
     for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
         vkDestroyFence(m_LogicalDevice, inFlightFences[i], nullptr);
@@ -2824,10 +2772,7 @@ QueueFamilyIndices VulkanApplication::findQueueFamilies(VkPhysicalDevice device)
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
     int i = 0;
-    for (const auto& queueFamily : queueFamilies) {
-        
-        driverData.queueFamilyCount = queueFamilyCount;
-        driverData.queueFlags = queueFamily.queueFlags;        
+    for (const auto& queueFamily : queueFamilies) {  
 
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_SurfaceKHR, &presentSupport);

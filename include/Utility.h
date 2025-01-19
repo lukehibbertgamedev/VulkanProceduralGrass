@@ -3,6 +3,8 @@
 #include <iostream>
 #include <random>
 #include <chrono>
+#include <fstream> // Necssary for std::ifstream
+#include <vector>
 
 #include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
 
@@ -31,5 +33,19 @@ namespace Utils {
 		else {
 			return glm::vec3(getRandomFloat(xBounds.x, xBounds.y), getRandomFloat(yBounds.x, yBounds.y), getRandomFloat(zBounds.x , zBounds.y));
 		}
+	}
+
+	// Read the character data from a text file.
+	static std::vector<char> readFile(const std::string& filename) {
+		std::ifstream file(filename, std::ios::ate | std::ios::binary);
+		if (!file.is_open()) {
+			throw std::runtime_error("failed to open file!");
+		}
+		size_t fileSize = (size_t)file.tellg();
+		std::vector<char> buffer(fileSize);
+		file.seekg(0);
+		file.read(buffer.data(), fileSize);
+		file.close();
+		return buffer;
 	}
 }
