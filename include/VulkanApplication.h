@@ -134,12 +134,13 @@ public:
 	VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;			// Vulkan debug output handle.
 	VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;					// GPU chosen as the default device.
 	VkDevice m_LogicalDevice = VK_NULL_HANDLE;							// Handle to allow interaction with the GPU.
+	SwapChain swapchainData = {};										// Structure of swapchain data.
 
 	// Window.
 	GLFWwindow* window = nullptr;										// Glfw window pointer to keep track of the window for use in the swapchain.
 	VkSurfaceKHR m_SurfaceKHR = VK_NULL_HANDLE;							// A handle to the area on screen that rendering can occur, connects Vulkan and the windowing system.
 
-	// GPU features, properties, limitations.
+	// GPU features & properties.
 	VkPhysicalDeviceProperties deviceProperties = {};					// A structure describing key GPU driver information (ie., driver name, driver version), including a collection of limitations.
 	VkPhysicalDeviceFeatures deviceFeatures = {};						// A structure describing features that are supported by the GPU in Vulkan allowing optional additional capabilities.
 
@@ -148,27 +149,34 @@ public:
 	VkQueue graphicsQueue = VK_NULL_HANDLE;								// Queues graphics rendering commands for processing graphics shaders.
 	VkQueue presentQueue = VK_NULL_HANDLE;								// Manages the commands for presenting the swapchain images to the screen.
 
-	SwapChain swapchainData;
-
-	// Render passes and pipelines.
-	VkRenderPass renderPass = VK_NULL_HANDLE;							// Defines how rendering operations are performed and how framebuffers are used during rendering.
-
 	// Commands.
 	VkCommandPool commandPool = VK_NULL_HANDLE;							// A handle to the manager that allocates command buffers to increase memory efficiency.
 	std::vector<VkCommandBuffer> commandBuffers = {};					// A collection of command buffers, each buffer contains a list of GPU commands to be executed.
 	std::vector<VkCommandBuffer> computeCommandBuffers = {};			// A collection of command buffers, each buffer contains a list of GPU commands to be executed specifically for compute shaders.
 
+	// Render passes and pipelines.
+	VkRenderPass renderPass = VK_NULL_HANDLE;							// Defines how rendering operations are performed and how framebuffers are used during rendering.
+	VkPipelineLayout modelPipelineLayout = VK_NULL_HANDLE;				// A pipeline configuration for the rendering of models/meshes.
+	VkPipelineLayout grassPipelineLayout = VK_NULL_HANDLE;				// A pipeline configuration for the rendering of grass blades.
+	VkPipelineLayout computePipelineLayout = VK_NULL_HANDLE;			// A pipeline configuration for the culling and animation of grass blades.
+	VkPipeline modelPipeline = VK_NULL_HANDLE;							// A pipeline structure for a model/mesh render pass.
+	VkPipeline grassPipeline = VK_NULL_HANDLE;							// A pipeline structure for the grass blade render pass.
+	VkPipeline computePipeline = VK_NULL_HANDLE;						// A pipeline structure for the grass animation and culling pass.
+		
 	// Synchronisation.
 	std::vector<VkSemaphore> imageAvailableSemaphores = {};				// Per-frame synchronisation used for signalling when swapchain images are available for rendering.
 	std::vector<VkSemaphore> renderFinishedSemaphores = {};				// Per-frame synchronisation used for signalling when rendering to an image is completed allowing safe image presentation to the screen.
 	std::vector<VkFence> inFlightFences = {};							// Per-frame synchronisation used for signalling when a frame's rendering has completed allowing the GPU tasks to complete.
-	
 	std::vector<VkFence> computeInFlightFences = {};
 	std::vector<VkSemaphore> computeFinishedSemaphores = {};
 
 	// Descriptors.
 	VkDescriptorPool descriptorPool = VK_NULL_HANDLE;					// A handle to the manager that allocates descriptor sets to increase correct resource allocation.
 	VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;				// A handle to the manager that allocates descriptor sets specifically for ImGui resources necessary for rendering its interface.
+	VkDescriptorSetLayout modelDescriptorSetLayout = VK_NULL_HANDLE;	// A layout that determines what shader resources can later be bound for this pipeline. Contains UBO for models (ie plane).
+	VkDescriptorSetLayout grassDescriptorSetLayout = VK_NULL_HANDLE;	// A layout that determines what shader resources can later be bound for this pipeline. Contains SSBO for grass instance buffer.
+	VkDescriptorSet modelPipelineDescriptorSet = VK_NULL_HANDLE;		// Descriptor set (one shader resource) that is bound to shaders within the model pipeline.
+	VkDescriptorSet grassPipelineDescriptorSet;							// Descriptor set (two shader resources) that is bound to shaders within the grass pipeline. 
 
 	// Other.
 	float lastFrameTime = 0.0f;											// Used to calculate FPS.
@@ -178,63 +186,41 @@ public:
 	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
 	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
 	int frameCount = 0;
-
-	// Uniform buffer objects (UBO).
-	VkBuffer uniformBuffer;												// The buffer object containing, most notably, the camera's view and projection matrices.
-	VkDeviceMemory uniformBufferMemory;									// Allocated memory for this buffer object.
-	void* uniformBufferMapped;											// A handle to map data to the buffer.
-	VkDescriptorSet modelPipelineDescriptorSet;							// Descriptor set (one shader resource) that is bound to shaders within the model pipeline.
-	 
-	std::vector<VkBuffer> bladeInstanceStagingBuffer;								// A temporary holding buffer containing the blade data ready for CPU > GPU copy.
-	std::vector<VkDeviceMemory> bladeInstanceStagingBufferMemory;					// Allocated memory for the holding buffer used to copy blade data to the GPU.
-	std::vector<GrassBladeInstanceData> localBladeInstanceBuffer;			// A CPU buffer of instance data per-blade, populates the staging buffer, which populates the SSBO. 
-
-	// Shader storage buffer objects (SSBO). 
-	// There needs to be 2 of these since we are double buffering, the data is read from the last frame and written to the current, and then swapped.
-	std::vector<VkBuffer> bladeInstanceDataBuffer;						// The shader resources containing all grass blade data.
-	std::vector<VkDeviceMemory> bladeInstanceDataBufferMemory;			// Allocated memory for the shader resources.
-	std::vector<void*> bladeInstanceDataBufferMapped;					// Handles to map data to the buffer.
-	VkDescriptorSet grassPipelineDescriptorSet;							// Descriptor set (two shader resources) that is bound to shaders within the grass pipeline. 
-
-	MeshTransform groundPlane;											// A handle to the ground plane transform.
-	std::vector<glm::vec2> groundPlaneUVs;								// Collection of UVs so the grass can sample the same parts of the height map as the terrain.
-
+	Camera* camera = nullptr;											// A handle to a dynamic camera that works with WASDEQ, arrow keys, LJ, and RTY. 
 	Quad quadMesh;														// One-time data structure containing vertex and index data for this mesh.
-	VkBuffer quadVertexBuffer = VK_NULL_HANDLE;							// The vertex buffer for this mesh.
-	VkDeviceMemory quadVertexBufferMemory = VK_NULL_HANDLE;				// The memory corresponding to the vertex buffer.
-	VkBuffer quadIndexBuffer = VK_NULL_HANDLE;							// The index buffer for this mesh.
-	VkDeviceMemory quadIndexBufferMemory = VK_NULL_HANDLE;				// The memory corresponding to the index buffer.
-
 	BaseBladeShape bladeShapeMesh;										// One-time data structure containing vertex and index data for this mesh.
+	MeshTransform groundPlane;											// A handle to the ground plane transform.
+	std::vector<GrassBladeInstanceData> localBladeInstanceBuffer = {};	// A CPU buffer of instance data per-blade, populates the staging buffer, which populates the SSBO. 
+
+	// Buffers.
+	std::vector<VkBuffer> bladeInstanceStagingBuffer = {};				// A temporary holding buffer containing the blade data ready for CPU > GPU copy.
+	std::vector<VkBuffer> bladeInstanceDataBuffer;						// The shader resources containing all grass blade data.
+	VkBuffer uniformBuffer = VK_NULL_HANDLE;							// The buffer object containing, most notably, the camera's view and projection matrices.
+	VkBuffer quadVertexBuffer = VK_NULL_HANDLE;							// The vertex buffer for this mesh.
+	VkBuffer quadIndexBuffer = VK_NULL_HANDLE;							// The index buffer for this mesh.
 	VkBuffer bladeShapeVertexBuffer = VK_NULL_HANDLE;					// The vertex buffer for this mesh.
-	VkDeviceMemory bladeShapeVertexBufferMemory = VK_NULL_HANDLE;		// The memory corresponding to the vertex buffer.
 	VkBuffer bladeShapeIndexBuffer = VK_NULL_HANDLE;					// The index buffer for this mesh.
+	VkBuffer numBladesBuffer = VK_NULL_HANDLE;							// ...
+	std::vector<VkDeviceMemory> bladeInstanceStagingBufferMemory = {};	// Allocated memory for the holding buffer used to copy blade data to the GPU.
+	std::vector<VkDeviceMemory> bladeInstanceDataBufferMemory;			// Allocated memory for the shader resources.
+	VkDeviceMemory uniformBufferMemory = VK_NULL_HANDLE;				// Allocated memory for this buffer object.
+	VkDeviceMemory quadVertexBufferMemory = VK_NULL_HANDLE;				// The memory corresponding to the vertex buffer.
+	VkDeviceMemory quadIndexBufferMemory = VK_NULL_HANDLE;				// The memory corresponding to the index buffer.
+	VkDeviceMemory bladeShapeVertexBufferMemory = VK_NULL_HANDLE;		// The memory corresponding to the vertex buffer.
 	VkDeviceMemory bladeShapeIndexBufferMemory = VK_NULL_HANDLE;		// The memory corresponding to the index buffer.
+	VkDeviceMemory numBladesBufferMemory = VK_NULL_HANDLE;				// ...
+	void* uniformBufferMapped = nullptr;								// A handle to map data to the buffer.
+	std::vector<void*> bladeInstanceDataBufferMapped;					// Handles to map data to the buffer.	
 
-	VkDescriptorSetLayout modelDescriptorSetLayout = VK_NULL_HANDLE;	// A layout that determines what shader resources can later be bound for this pipeline. Contains UBO for models (ie plane).
-	VkDescriptorSetLayout grassDescriptorSetLayout = VK_NULL_HANDLE;	// A layout that determines what shader resources can later be bound for this pipeline. Contains SSBO for grass instance buffer.
-
-	VkPipelineLayout modelPipelineLayout = VK_NULL_HANDLE;				// A pipeline configuration for the rendering of models/meshes.
-	VkPipelineLayout grassPipelineLayout = VK_NULL_HANDLE;				// A pipeline configuration for the rendering of grass blades.
-	VkPipelineLayout computePipelineLayout = VK_NULL_HANDLE;			// A pipeline configuration for the culling and animation of grass blades.
-
-	VkPipeline modelPipeline = VK_NULL_HANDLE;							// A pipeline structure for a model/mesh render pass.
-	VkPipeline grassPipeline = VK_NULL_HANDLE;							// A pipeline structure for the grass blade render pass.
-	VkPipeline computePipeline = VK_NULL_HANDLE;						// A pipeline structure for the grass animation and culling pass.
-
-	Camera* camera;														// A handle to a dynamic camera that works with WASDEQ, arrow keys, LJ, and RTY. 
-
+	// Images.
+	VkImage heightMapImage = VK_NULL_HANDLE;
 	VkImage depthImage = VK_NULL_HANDLE;								// A handle to the image that represents a depth stencil.
-	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;					// Allocated memory for this image resource.
+	VkImageView heightMapImageView = VK_NULL_HANDLE;
 	VkImageView depthImageView = VK_NULL_HANDLE;						// A handle to the actual image data for the depth stencil.
-
-	VkBuffer numBladesBuffer;											// ...
-	VkDeviceMemory numBladesBufferMemory;								// ...
-
-	// Height map data.
-	VkImage heightMapImage;
-	VkImageView heightMapImageView;
-	VkDeviceMemory heightMapImageMemory;
-	VkSampler heightMapSampler;
+	VkDeviceMemory heightMapImageMemory = VK_NULL_HANDLE;
+	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;					// Allocated memory for this image resource.
+	
+	// Sampler.
+	VkSampler heightMapSampler = VK_NULL_HANDLE;
 
 };

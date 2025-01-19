@@ -1773,7 +1773,6 @@ void VulkanApplication::createMeshObjects()
     _groundPlane.rotation = glm::vec3(0.0f, 0.0f, 45.0f);
     _groundPlane.scale = glm::vec3(MEADOW_SCALE_X, MEADOW_SCALE_Y, MEADOW_SCALE_Z); 
     groundPlane = _groundPlane;
-    groundPlaneUVs = quadMesh.uvs; 
 }
 
 void VulkanApplication::populateBladeInstanceBuffer()
