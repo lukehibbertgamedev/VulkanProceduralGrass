@@ -5,47 +5,23 @@
 
 // Dynamic camera
 
-struct CameraDataDefaults {
+struct Defaults {
 	const glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
-	const glm::vec3 position = { 40.0f, -20.0f, 5.0f };
-	const float pitch = 0.0f;//81.0f;
-	const float yaw = 0.0f;// 136.f;
-	const float fov = 45.0f; // Degrees.
-};
-
-struct CameraGoodPhotoDefaults {
-	const glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
-	const glm::vec3 position = { -2.0f, 8.0f, 3.0f };
-	const float pitch = 83.0f;
-	const float yaw = -69.0f;
-	const float fov = 45.0f; // Degrees.
-};
-
-struct SideCameraDataDefaults {
-	const glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
-	const glm::vec3 position = { 40.0f, -100.0f, 5.0f };
-	const float pitch = 81.0f;
-	const float yaw = 42.0f;
-	const float fov = 45.0f; // Degrees.
-};
-
-struct TopCameraDataDefaults {
-	const glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
-	const glm::vec3 position = { 17.0f, -46.0f, 100.0f };
-	const float pitch = 11.0f;
-	const float yaw = 134.0f;
+	const glm::vec3 position = { -29.0f, 60.0f, 5.0f };
+	const float pitch = 87.0f;
+	const float yaw = -130.0f;
 	const float fov = 45.0f; // Degrees.
 };
 
 class Camera {
 public:
-	glm::vec3 velocity = { 0.0f, 0.0f, 0.0f }; // camera movement speed.
+	glm::vec3 velocity = { 0.0f, 0.0f, 0.0f }; // Movement.
 	glm::vec3 position = { 0.0f, -3.0f, 1.5f };
 
-	glm::vec2 sensitivity = { 0.0f, 0.0f }; // camera rotation speed.
+	glm::vec2 sensitivity = { 0.0f, 0.0f }; // Rotation.
 	float pitch= -30.f;
 	float yaw = 0.f;
-	float fov = 45.0f; // Degrees.
+	float fov = 45.0f; // Stored in degrees.
 	float nearPlane = 0.1f;
 	float farPlane = 1000.f;
 
@@ -54,8 +30,5 @@ public:
 	float getFOV() const;
 
 	void update();
-	void setFront();
-	void setSide();
-	void setTop(); 
-	void setGoodPhoto();
+	void setDefault();
 };

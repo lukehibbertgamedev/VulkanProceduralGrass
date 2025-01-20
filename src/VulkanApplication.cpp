@@ -391,7 +391,7 @@ VkResult VulkanApplication::createLogicalDevice()
 {
     float queuePriority = 1.0f;
 
-    QueueFamilyIndices indices = findQueueFamilies(m_PhysicalDevice);
+    QueueFamilyIndices indices = findQueueFamilies(m_PhysicalDevice, m_SurfaceKHR);
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = { 
         indices.graphicsAndComputeFamily.value(), 
@@ -477,7 +477,7 @@ VkResult VulkanApplication::createSwapchain()
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    QueueFamilyIndices indices = findQueueFamilies(m_PhysicalDevice);
+    QueueFamilyIndices indices = findQueueFamilies(m_PhysicalDevice, m_SurfaceKHR);
     uint32_t queueFamilyIndices[] = { indices.graphicsAndComputeFamily.value(), indices.presentFamily.value() };
     if (indices.graphicsAndComputeFamily != indices.presentFamily) {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -521,7 +521,7 @@ VkResult VulkanApplication::recreateSwapchain()
 
     vkDeviceWaitIdle(m_LogicalDevice);
 
-    cleanupSwapchain();
+    swapchainData.cleanupSwapchain(m_LogicalDevice);
 
     VkResult ret = createSwapchain();
     if (ret != VK_SUCCESS) {
@@ -1228,7 +1228,7 @@ VkResult VulkanApplication::createFrameBuffers()
 
 VkResult VulkanApplication::createCommandPool()
 {
-    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(m_PhysicalDevice);
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(m_PhysicalDevice, m_SurfaceKHR);
 
     VkCommandPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -1703,7 +1703,7 @@ VkResult VulkanApplication::createDefaultCamera()
 {
     VkResult ret = VK_SUCCESS;
 
-    CameraDataDefaults defaults;
+    Defaults defaults;
 
     camera->position = defaults.position;
     camera->pitch = defaults.pitch;
@@ -1889,8 +1889,8 @@ void VulkanApplication::prepareImGuiDrawData()
 {
     ImGui::Begin("Driver Details", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar);
 
-    ImGui::Text("Name: %s", driverData.name.c_str()); 
-    ImGui::Text("Driver Version: %i.%i", driverData.versionMajor, driverData.versionMinor);
+    ImGui::Text("Graphics Processing Unit: %s", driverData.name.c_str()); 
+    ImGui::Text("Version: %i.%i", driverData.versionMajor, driverData.versionMinor);
     ImGui::Text("Vulkan API Version supported: %i.%i.%i", driverData.apiMajor, driverData.apiMinor, driverData.apiPatch);
     ImGui::Text("Frames per second: %f", 1 / (lastFrameTime / 1000));
     ImGui::Text("Delta time: %f", deltaTime);
@@ -1907,12 +1907,12 @@ void VulkanApplication::prepareImGuiDrawData()
 
     ImGui::Separator();
 
-    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "WASD: Move Camera");
-    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Arrows: Rotate Camera");
-    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "R/T/Y: Camera position defaults");
-    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "L/J: Change FOV");
-    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.2f, 1.0f), "Camera position: x: %i, y: %i, z: %i", (int)camera->position.x, (int)camera->position.y, (int)camera->position.z);
-    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.2f, 1.0f), "Pitch: %i / Yaw: %i / FOV: %i", (int)camera->pitch, (int)camera->yaw, (int)camera->fov);
+    ImGui::TextColored(ImVec4(0.2f, 0.5f, 0.7f, 1.0f), "WASD: Move Camera");
+    ImGui::TextColored(ImVec4(0.2f, 0.5f, 0.7f, 1.0f), "Arrows: Rotate Camera");
+    ImGui::TextColored(ImVec4(0.2f, 0.5f, 0.7f, 1.0f), "R: Reset Camera Position");
+    ImGui::TextColored(ImVec4(0.2f, 0.5f, 0.7f, 1.0f), "L/J: Change FOV");
+    ImGui::TextColored(ImVec4(0.2f, 0.5f, 0.7f, 1.0f), "Camera position: x: %i, y: %i, z: %i", (int)camera->position.x, (int)camera->position.y, (int)camera->position.z);
+    ImGui::TextColored(ImVec4(0.2f, 0.5f, 0.7f, 1.0f), "Pitch: %i / Yaw: %i / FOV: %i", (int)camera->pitch, (int)camera->yaw, (int)camera->fov);
     
     ImGui::Separator();
 
@@ -2124,24 +2124,19 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
 {
     // Synchronisation Objects. 
     for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
+        vkDestroyFence(m_LogicalDevice, computeInFlightFences[i], nullptr);
+        vkDestroySemaphore(m_LogicalDevice, computeFinishedSemaphores[i], nullptr);
+
         vkDestroyFence(m_LogicalDevice, inFlightFences[i], nullptr);
         vkDestroySemaphore(m_LogicalDevice, renderFinishedSemaphores[i], nullptr);
         vkDestroySemaphore(m_LogicalDevice, imageAvailableSemaphores[i], nullptr);
-
-        vkDestroyFence(m_LogicalDevice, computeInFlightFences[i], nullptr);
-        vkDestroySemaphore(m_LogicalDevice, computeFinishedSemaphores[i], nullptr);
     }
 
     // Command Buffer - uses command pool, so destroy pool later.
+    vkFreeCommandBuffers(m_LogicalDevice, commandPool, static_cast<uint32_t>(computeCommandBuffers.size()), computeCommandBuffers.data());
     vkFreeCommandBuffers(m_LogicalDevice, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 
-    // Texture resources.
-    vkDestroySampler(m_LogicalDevice, heightMapSampler, nullptr);
-    vkFreeMemory(m_LogicalDevice, heightMapImageMemory, nullptr);
-    vkDestroyImageView(m_LogicalDevice, heightMapImageView, nullptr);
-    vkDestroyImage(m_LogicalDevice, heightMapImage, nullptr);
-
-    // Staging Buffer.
+    // Blade instance staging buffer.
     for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
         vkDestroyBuffer(m_LogicalDevice, bladeInstanceStagingBuffer[i], nullptr);
         vkFreeMemory(m_LogicalDevice, bladeInstanceStagingBufferMemory[i], nullptr);
@@ -2151,9 +2146,8 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     std::array<VkDescriptorSet, 2> descriptorSets = { grassPipelineDescriptorSet, modelPipelineDescriptorSet }; 
     vkFreeDescriptorSets(m_LogicalDevice, descriptorPool, static_cast<uint32_t>(descriptorSets.size()), descriptorSets.data());
 
-    // Descriptor Set Layouts.
-    vkDestroyDescriptorSetLayout(m_LogicalDevice, grassDescriptorSetLayout, nullptr);
-    vkDestroyDescriptorSetLayout(m_LogicalDevice, modelDescriptorSetLayout, nullptr);
+    vkDestroyBuffer(m_LogicalDevice, numBladesBuffer, nullptr);
+    vkFreeMemory(m_LogicalDevice, numBladesBufferMemory, nullptr);
 
     // Descriptor Pool.
     vkDestroyDescriptorPool(m_LogicalDevice, imguiDescriptorPool, nullptr);
@@ -2162,9 +2156,6 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     // Uniform Buffer Object.
     vkDestroyBuffer(m_LogicalDevice, uniformBuffer, nullptr);
     vkFreeMemory(m_LogicalDevice, uniformBufferMemory, nullptr);
-
-    vkDestroyBuffer(m_LogicalDevice, numBladesBuffer, nullptr);
-    vkFreeMemory(m_LogicalDevice, numBladesBufferMemory, nullptr);
 
     // Shader Storage Buffer Object.
     for (size_t i = 0; i < kMaxFramesInFlight; ++i) {
@@ -2184,8 +2175,18 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     vkDestroyBuffer(m_LogicalDevice, quadVertexBuffer, nullptr);
     vkFreeMemory(m_LogicalDevice, quadVertexBufferMemory, nullptr);
 
+    // Texture resources.
+    vkDestroySampler(m_LogicalDevice, heightMapSampler, nullptr);
+    vkDestroyImageView(m_LogicalDevice, heightMapImageView, nullptr);
+    vkDestroyImage(m_LogicalDevice, heightMapImage, nullptr);
+    vkFreeMemory(m_LogicalDevice, heightMapImageMemory, nullptr);
+
     // Command Pool.
     vkDestroyCommandPool(m_LogicalDevice, commandPool, nullptr);
+
+    for (size_t i = 0; i < swapchainData.framebuffers.size(); i++) {
+        vkDestroyFramebuffer(m_LogicalDevice, swapchainData.framebuffers[i], nullptr);
+    }
 
     // Depth Resources.
     vkDestroyImageView(m_LogicalDevice, depthImageView, nullptr);
@@ -2200,11 +2201,20 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     vkDestroyPipeline(m_LogicalDevice, computePipeline, nullptr);
     vkDestroyPipeline(m_LogicalDevice, modelPipeline, nullptr);
 
+    // Descriptor Set Layouts.
+    vkDestroyDescriptorSetLayout(m_LogicalDevice, grassDescriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(m_LogicalDevice, modelDescriptorSetLayout, nullptr);
+
     // Render Pass.
     vkDestroyRenderPass(m_LogicalDevice, renderPass, nullptr);
 
-    // Swapchain, Swapchain Image Views, & Frame Buffers.
-    cleanupSwapchain();
+    // Swapchain Images
+    for (size_t i = 0; i < swapchainData.imageViews.size(); i++) {
+        vkDestroyImageView(m_LogicalDevice, swapchainData.imageViews[i], nullptr);
+    }
+
+    // Swapchain.
+    vkDestroySwapchainKHR(m_LogicalDevice, swapchainData.handle, nullptr);
 
     // Logical Device.
     vkDestroyDevice(m_LogicalDevice, nullptr);
@@ -2223,19 +2233,6 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     // Window.
     glfwDestroyWindow(window);
     glfwTerminate();
-}
-
-void VulkanApplication::cleanupSwapchain()
-{
-    for (size_t i = 0; i < swapchainData.framebuffers.size(); i++) {
-        vkDestroyFramebuffer(m_LogicalDevice, swapchainData.framebuffers[i], nullptr);
-    }
-
-    for (size_t i = 0; i < swapchainData.imageViews.size(); i++) {
-        vkDestroyImageView(m_LogicalDevice, swapchainData.imageViews[i], nullptr);
-    }
-
-    vkDestroySwapchainKHR(m_LogicalDevice, swapchainData.handle, nullptr);
 }
 
 VkSurfaceFormatKHR VulkanApplication::chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
@@ -2661,22 +2658,6 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     return ret;
 }
 
-VkSampleCountFlagBits VulkanApplication::getMaxUsableMSAASampleCount()
-{
-    VkPhysicalDeviceProperties physicalDeviceProperties;
-    vkGetPhysicalDeviceProperties(m_PhysicalDevice, &physicalDeviceProperties);
-
-    VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
-    if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
-    if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
-    if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
-    if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
-    if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
-    if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
-
-    return VK_SAMPLE_COUNT_1_BIT;
-}
-
 VkFormat VulkanApplication::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
     for (VkFormat format : candidates) {
@@ -2697,11 +2678,6 @@ VkFormat VulkanApplication::findSupportedFormat(const std::vector<VkFormat>& can
 VkFormat VulkanApplication::findDepthFormat() 
 {
     return findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT }, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-}
-
-bool VulkanApplication::hasStencilComponent(VkFormat format)
-{
-    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
 VkImageView VulkanApplication::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
@@ -2827,7 +2803,7 @@ bool VulkanApplication::checkPhysicalDeviceSuitability(VkPhysicalDevice device)
     VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
     vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-    QueueFamilyIndices indices = findQueueFamilies(device);
+    QueueFamilyIndices indices = findQueueFamilies(device, m_SurfaceKHR);
 
     bool isSwapchainAdequate = false;
     if (checkPhysicalDeviceExtensionSupport(device)) {
@@ -2858,39 +2834,4 @@ bool VulkanApplication::checkPhysicalDeviceExtensionSupport(VkPhysicalDevice dev
         requiredExtensions.erase(extension.extensionName); 
     }
     return requiredExtensions.empty(); 
-}
-
-QueueFamilyIndices VulkanApplication::findQueueFamilies(VkPhysicalDevice device)
-{
-    QueueFamilyIndices indices;
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-    int i = 0;
-    for (const auto& queueFamily : queueFamilies) {  
-
-        VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_SurfaceKHR, &presentSupport);
-
-        // Graphics and compute family.
-        if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
-            indices.graphicsAndComputeFamily = i;
-        }
-
-        // Present queue family.
-        if (presentSupport) {
-            indices.presentFamily = i;
-        }      
-
-        if (indices.isComplete()) {
-            break;
-        }
-
-        i++;
-    }
-
-    return indices;
 }

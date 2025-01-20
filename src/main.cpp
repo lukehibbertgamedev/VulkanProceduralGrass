@@ -11,11 +11,6 @@
 #include <Timer.h>
 
 #include <fstream>
-#include <iterator>
-#include <cstdio>
-#include <stdio.h>
-#include <vector>
-#include <set>
 
 // Global main camera.
 static Camera globalCamera;
@@ -30,50 +25,43 @@ static void frameBufferResizeCallback(GLFWwindow* window, int width, int height)
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 
     const float moveSpeed = 0.1f;
+    const float turnSpeed = 0.075f;
 
     if (action == GLFW_PRESS) {
         switch (key) {
         default: break;
 
-        case GLFW_KEY_W: globalCamera.velocity.z = -moveSpeed; break;
-        case GLFW_KEY_S: globalCamera.velocity.z = moveSpeed; break;
+        case GLFW_KEY_W: globalCamera.velocity.z = -moveSpeed; break;           // Forward.
+        case GLFW_KEY_S: globalCamera.velocity.z = moveSpeed; break;            // Backward.
+        case GLFW_KEY_A: globalCamera.velocity.x = -moveSpeed; break;           // Left.
+        case GLFW_KEY_D: globalCamera.velocity.x = moveSpeed; break;            // Right.
+        case GLFW_KEY_E: globalCamera.velocity.y = -moveSpeed; break;           // Down.
+        case GLFW_KEY_Q: globalCamera.velocity.y = moveSpeed; break;            // Up.
+        case GLFW_KEY_L: globalCamera.fov += 1.0f; break;                       // FOV.
+        case GLFW_KEY_J: globalCamera.fov -= 1.0f; break;                       // FOV.
+        case GLFW_KEY_UP: globalCamera.sensitivity.x = turnSpeed; break;        // Pitch.
+        case GLFW_KEY_DOWN: globalCamera.sensitivity.x = -turnSpeed; break;     // Pitch.
+        case GLFW_KEY_LEFT: globalCamera.sensitivity.y = turnSpeed; break;      // Yaw.
+        case GLFW_KEY_RIGHT: globalCamera.sensitivity.y = -turnSpeed; break;    // Yaw. 
 
-        case GLFW_KEY_A: globalCamera.velocity.x = -moveSpeed; break;
-        case GLFW_KEY_D: globalCamera.velocity.x = moveSpeed; break;
-
-        case GLFW_KEY_E: globalCamera.velocity.y = -moveSpeed; break;
-        case GLFW_KEY_Q: globalCamera.velocity.y = moveSpeed; break;
-
-        case GLFW_KEY_L: globalCamera.fov += 1.0f; break;
-        case GLFW_KEY_J: globalCamera.fov -= 1.0f; break;
-
-        case GLFW_KEY_UP: globalCamera.sensitivity.x = .075f; break;
-        case GLFW_KEY_DOWN: globalCamera.sensitivity.x = -.075f; break; //pitch
-        case GLFW_KEY_LEFT: globalCamera.sensitivity.y = .075f; break;
-        case GLFW_KEY_RIGHT: globalCamera.sensitivity.y = -.075f; break; // yawe
-
-        case GLFW_KEY_R: globalCamera.setFront(); break;
-        case GLFW_KEY_T: globalCamera.setSide(); break;
-        case GLFW_KEY_Y: globalCamera.setTop(); break;
-        case GLFW_KEY_U: globalCamera.setGoodPhoto(); break;
+        case GLFW_KEY_R: globalCamera.setDefault(); break;
         }
     }
 
+    // Reset all per-frame movement to 0 on key release.
     else if (action == GLFW_RELEASE) {
         switch (key) {
         default: break;
-
         case GLFW_KEY_W: globalCamera.velocity.z = 0.0f; break;
         case GLFW_KEY_S: globalCamera.velocity.z = 0.0f; break;
         case GLFW_KEY_A: globalCamera.velocity.x = 0.0f; break;
         case GLFW_KEY_D: globalCamera.velocity.x = 0.0f; break;
         case GLFW_KEY_E: globalCamera.velocity.y = 0.0f; break;
         case GLFW_KEY_Q: globalCamera.velocity.y = 0.0f; break;
-
-        case GLFW_KEY_UP: globalCamera.sensitivity.x = 0.0f; break;
-        case GLFW_KEY_DOWN: globalCamera.sensitivity.x = 0.0f; break; //pitch
-        case GLFW_KEY_LEFT: globalCamera.sensitivity.y = 0.0f; break;
-        case GLFW_KEY_RIGHT: globalCamera.sensitivity.y = 0.0f; break; // yawe
+        case GLFW_KEY_UP: globalCamera.sensitivity.x = 0.0f; break;             
+        case GLFW_KEY_DOWN: globalCamera.sensitivity.x = 0.0f; break;                     
+        case GLFW_KEY_LEFT: globalCamera.sensitivity.y = 0.0f; break;           
+        case GLFW_KEY_RIGHT: globalCamera.sensitivity.y = 0.0f; break;                  
         }
     }
 }
@@ -118,10 +106,8 @@ int main() {
 
     // For use in monitoring frame time.
     int frameNum = 0;
-    int wait = 1000;
-    int count = 10000;
     std::vector<double> timeInMs; 
-    timeInMs.reserve(count);
+    timeInMs.reserve(kMonitorFrames);
     bool writtenToFile = false;
 
     // Main application loop:
@@ -158,14 +144,14 @@ int main() {
 
         // End and monitor frame time.
         auto t1 = std::chrono::high_resolution_clock::now();
-        if (frameNum >= wait) { // Wait for n frames for scene to populate.
+        if (frameNum >= kWaitFrames) { // Wait for n frames for scene to populate.
             auto t = t1 - t0;
             double tc = std::chrono::duration_cast<std::chrono::duration<double>>(t).count();
             double time = (tc * 1000);
-            if (timeInMs.size() < count) { // Insert new frame timing if not at max count.
+            if (timeInMs.size() < kMonitorFrames) { // Insert new frame timing if not at max count.
                 timeInMs.push_back(time);
             }
-            if (timeInMs.size() >= count && !writtenToFile) { // If at max count, write those timings to file.
+            if (timeInMs.size() >= kMonitorFrames && !writtenToFile) { // If at max count, write those timings to file.
                 std::string fileName = "../assets/performance_timings/VulkanFrameTimings_";
                 fileName += std::to_string(MAX_BLADES);
                 fileName += ".txt"; 

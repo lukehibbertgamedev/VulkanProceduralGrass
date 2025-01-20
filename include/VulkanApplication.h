@@ -8,13 +8,15 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp> 
+
+// Dear ImGui & its relevant backends.
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
-
+// Custom headers.
 #include "Buffer.h"
 #include "Swapchain.h"
 #include "Mesh.h"
@@ -23,6 +25,7 @@
 #include "MiscStructs.h"
 #include "Constants.h"
 
+// STL.
 #include <optional>
 #include <vector>
 
@@ -32,11 +35,13 @@ public:
 	// Handles the set-up, queue submission, and presentation of a frame to the screen surface.
 	void render();
 
-	void linkWindowToVulkan(GLFWwindow* window);					
-	void linkCameraToVulkan(Camera* camera);	
-	VkResult initialiseApplication();	
-	void prepareImGuiDrawData();	
+	// Set-up/preparation.
+	void linkWindowToVulkan(GLFWwindow* window);	// Link the global window to the Vulkan application.
+	void linkCameraToVulkan(Camera* camera);		// Link the global camera to the Vulkan application.
+	VkResult initialiseApplication();				// Set up all Vulkan and application specific structures.
+	void prepareImGuiDrawData();					// Dear ImGui draw data commands for later rendering.
 
+	// Release memory allocations.
 	void cleanupApplication(GLFWwindow* window);
 private:
 
@@ -57,18 +62,22 @@ private:
 	VkResult createHeightMapImage();								//			 |
 	VkResult createHeightMapImageView();							//			 |
 	VkResult createHeightMapSampler();								//			 |
-	VkResult createPipelines();										//			 | - Vulkan application initialisation.
+	VkResult createPipelines();										//			 | 
 	VkResult createMeshPipeline();									//			 |
 	VkResult createComputePipeline();								//			 |
-	VkResult createGrassPipeline();									//			 |
+	VkResult createGrassPipeline();									//			 | ---> Vulkan application initialisation.
 	VkResult createFrameBuffers();									//			 |
 	VkResult createCommandPool();									//			 |
+	void createMeshObjects();										//			 |
+	void populateBladeInstanceBuffer();								//			 |
 	VkResult createShaderStorageBuffers(); 							//			 |
 	VkResult createVertexBuffer();									//			 |
 	VkResult createIndexBuffer();									//			 |
 	VkResult createUniformBuffers();								//			 |
 	VkResult createDescriptorPool();								//			 |
+	void createNumBladesBuffer();									//			 |
 	VkResult createDescriptorSets();								//			 |
+	void createBladeInstanceStagingBuffer();						//			 |
 	VkResult createModelDescriptorSets();							//			 |
 	VkResult createGrassDescriptorSets();							//			 |
 	VkResult createCommandBuffers();								//			 |
@@ -78,15 +87,10 @@ private:
 	VkResult createDefaultCamera();									//			 |
 	VkResult createImGuiImplementation();							// - - - - - '
 
-	void createMeshObjects();					// Creates the ground plane. 
-	void populateBladeInstanceBuffer();			// Populates a vector of blade instance data.
-	void createBladeInstanceStagingBuffer();	// Copy the vector of instance data to the GPU.
-	void createNumBladesBuffer();				// Create the buffer to hold the number of active blades.
-
 	// Updates the uniform buffer object that is bound to both the model and grass pipeline, so they receive the most recent data (re-maps the memory).
 	void updateUniformBuffer(uint32_t currentFrame);
 
-	// ...
+	// Map the memory from the num blades buffer to determine number of grass blades to draw.
 	uint32_t retrieveNumVisibleBlades();
 
 	// Creates a buffer, creates its memory requirements, and allocates and binds the buffer memory. Returns a VkResult.
@@ -98,34 +102,64 @@ private:
 	// Copy from srcBuffer to dstBuffer passing the size of srcBuffer so the command knows how much data to copy. Performs vkCmdCopyBuffer.
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-	// Bind pipelines and populate the command buffer with commands (i.e., vkCmdDraw) for that pipeline.
+	// Bind pipelines and populate the command buffer with commands (i.e., vkCmdDraw) for the graphics pipeline.
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+	// Bind pipelines and populate the command buffer with commands (i.e., vkCmdDispatch) for the compute pipeline.
 	void recordComputeCommandBuffer(VkCommandBuffer commandBuffer);
 
 	// Reads a SPIR-V code file and turns it into a handle that can be bound to a VkPipeline.
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
-	void cleanupSwapchain();
+	// Determine best tiling format for images.
+	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+
+	// Determine the best supported format for the depth images.
+	VkFormat findDepthFormat();
+
+	// Determine the best supported format for the swapchain images.
+	VkSurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+
+	// Determine the best supported present mode for the swapchain.
+	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+
+	// Determine the best extents for the swapchain.
+	VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
+
+	// Abstraction to create an image view for an image.
+	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+
+	// Performs single time commands to copy the data from a buffer to an image.
+	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+	// Performs single time commands to insert an image memory dependency.
+	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+	// Begin recording commands for use outside of the main command buffer recording.
+	VkCommandBuffer beginSingleTimeCommands();
+
+	// End and submit recorded commands for use outside of the main command buffer recording.
+	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+
+	// Determine the best supported memory type for a GPU buffer.
+	uint32_t findGPUMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+	// Determine if the swapchain is supported by its capabilities, format, and present modes.
+	SwapChain checkSwapchainSupport(VkPhysicalDevice device);
+
+	// Fill the create struct for the validation layers debug output.
+	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& outCreateInfo);
+
+	// Load the proc addresst to create the validation layers debug output.
+	VkResult createDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
+
+	// Load the proc address to destroy the validation layers debug output.
 	void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-	VkFormat findDepthFormat();
-	bool hasStencilComponent(VkFormat format);
-	VkSurfaceFormatKHR chooseSwapchainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-	VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
-	VkSampleCountFlagBits getMaxUsableMSAASampleCount();
-	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
-	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
-	VkCommandBuffer beginSingleTimeCommands();
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
-	uint32_t findGPUMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-	SwapChain checkSwapchainSupport(VkPhysicalDevice device);
-	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& outCreateInfo);
-	VkResult createDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
+	// Determine if the physical device features meet certain application expectations.
 	bool checkPhysicalDeviceSuitability(VkPhysicalDevice device);
+
+	// Determine what device extensions the application can support.
 	bool checkPhysicalDeviceExtensionSupport(VkPhysicalDevice device);
 public:
 
@@ -178,20 +212,6 @@ public:
 	VkDescriptorSet modelPipelineDescriptorSet = VK_NULL_HANDLE;		// Descriptor set (one shader resource) that is bound to shaders within the model pipeline.
 	VkDescriptorSet grassPipelineDescriptorSet;							// Descriptor set (two shader resources) that is bound to shaders within the grass pipeline. 
 
-	// Other.
-	float lastFrameTime = 0.0f;											// Used to calculate FPS.
-	float deltaTime = 0.0f;												// Used to smooth out update logic.
-	double lastTime = 0.0f;												// Used to calculated lastFrameTime.
-	GPUData driverData = {};											// A custom collection of GPU data to be displayed easily in ImGui.
-	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
-	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
-	int frameCount = 0;
-	Camera* camera = nullptr;											// A handle to a dynamic camera that works with WASDEQ, arrow keys, LJ, and RTY. 
-	Quad quadMesh;														// One-time data structure containing vertex and index data for this mesh.
-	BaseBladeShape bladeShapeMesh;										// One-time data structure containing vertex and index data for this mesh.
-	MeshTransform groundPlane;											// A handle to the ground plane transform.
-	std::vector<GrassBladeInstanceData> localBladeInstanceBuffer = {};	// A CPU buffer of instance data per-blade, populates the staging buffer, which populates the SSBO. 
-
 	// Buffers.
 	std::vector<VkBuffer> bladeInstanceStagingBuffer = {};				// A temporary holding buffer containing the blade data ready for CPU > GPU copy.
 	std::vector<VkBuffer> bladeInstanceDataBuffer;						// The shader resources containing all grass blade data.
@@ -200,7 +220,7 @@ public:
 	VkBuffer quadIndexBuffer = VK_NULL_HANDLE;							// The index buffer for this mesh.
 	VkBuffer bladeShapeVertexBuffer = VK_NULL_HANDLE;					// The vertex buffer for this mesh.
 	VkBuffer bladeShapeIndexBuffer = VK_NULL_HANDLE;					// The index buffer for this mesh.
-	VkBuffer numBladesBuffer = VK_NULL_HANDLE;							// ...
+	VkBuffer numBladesBuffer = VK_NULL_HANDLE;							// A buffer for determining how many blades to draw.
 	std::vector<VkDeviceMemory> bladeInstanceStagingBufferMemory = {};	// Allocated memory for the holding buffer used to copy blade data to the GPU.
 	std::vector<VkDeviceMemory> bladeInstanceDataBufferMemory;			// Allocated memory for the shader resources.
 	VkDeviceMemory uniformBufferMemory = VK_NULL_HANDLE;				// Allocated memory for this buffer object.
@@ -208,19 +228,30 @@ public:
 	VkDeviceMemory quadIndexBufferMemory = VK_NULL_HANDLE;				// The memory corresponding to the index buffer.
 	VkDeviceMemory bladeShapeVertexBufferMemory = VK_NULL_HANDLE;		// The memory corresponding to the vertex buffer.
 	VkDeviceMemory bladeShapeIndexBufferMemory = VK_NULL_HANDLE;		// The memory corresponding to the index buffer.
-	VkDeviceMemory numBladesBufferMemory = VK_NULL_HANDLE;				// ...
+	VkDeviceMemory numBladesBufferMemory = VK_NULL_HANDLE;				// The memory corresponding to the num blades buffer.
 	void* uniformBufferMapped = nullptr;								// A handle to map data to the buffer.
 	std::vector<void*> bladeInstanceDataBufferMapped;					// Handles to map data to the buffer.	
 
 	// Images.
-	VkImage heightMapImage = VK_NULL_HANDLE;
+	VkImage heightMapImage = VK_NULL_HANDLE;							// A handle to the image that represents the height map.
 	VkImage depthImage = VK_NULL_HANDLE;								// A handle to the image that represents a depth stencil.
-	VkImageView heightMapImageView = VK_NULL_HANDLE;
+	VkImageView heightMapImageView = VK_NULL_HANDLE;					// A handle to the actual image data for the height map.
 	VkImageView depthImageView = VK_NULL_HANDLE;						// A handle to the actual image data for the depth stencil.
-	VkDeviceMemory heightMapImageMemory = VK_NULL_HANDLE;
+	VkDeviceMemory heightMapImageMemory = VK_NULL_HANDLE;				// Allocated memory for this image resource.
 	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;					// Allocated memory for this image resource.
 	
-	// Sampler.
-	VkSampler heightMapSampler = VK_NULL_HANDLE;
-
+	// Miscellaneous.
+	float lastFrameTime = 0.0f;											// Used to calculate FPS.
+	float deltaTime = 0.0f;												// Used to smooth out update logic.
+	double lastTime = 0.0f;												// Used to calculated lastFrameTime.
+	GPUData driverData = {};											// A custom collection of GPU data to be displayed easily in ImGui.
+	uint32_t currentFrame = 0;											// A reference to the current frame in a double-buffered setup, helps manage which framebuffer is currently being used for rendering.
+	bool framebufferResized = false;									// A flag to determine if the swapchain should be recreated to accomodate new window dimensions.
+	int frameCount = 0;													// Determines the number of frames passed since start-up.
+	Camera* camera = nullptr;											// A handle to a dynamic camera that works with WASDEQ, arrow keys, LJ, and RTY. 
+	Quad quadMesh;														// One-time data structure containing vertex and index data for this mesh.
+	BaseBladeShape bladeShapeMesh;										// One-time data structure containing vertex and index data for this mesh.
+	MeshTransform groundPlane;											// A handle to the ground plane transform.
+	std::vector<GrassBladeInstanceData> localBladeInstanceBuffer = {};	// A CPU buffer of instance data per-blade, populates the staging buffer, which populates the SSBO. 
+	VkSampler heightMapSampler = VK_NULL_HANDLE;						// Sampler for use in sampling the height map to displace the terrain.
 };

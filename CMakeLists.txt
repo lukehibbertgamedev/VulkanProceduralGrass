@@ -31,7 +31,7 @@ add_executable(${PROJECT_NAME} ${SRC} ${INCLUDE})
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE YES LINKER_LANGUAGE CXX LINK_FLAGS "/ENTRY:mainCRTStartup") # Turn off console and distribute on Windows forcing main() startup.
 add_definitions(-DVULKAN_SDK=${VulkanSDK})
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/third_party/glfw")	# Add glfw's target to my project.
@@ -41,7 +41,6 @@ target_link_libraries(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/third_party/A
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm")	# Add glm's target to my project.
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm")	
-#target_link_libraries(${PROJECT_NAME} glm)
 
 # Compile ImGui as a static library
 file(GLOB IMGUI_SOURCES 
@@ -97,4 +96,3 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/AdditionalDLLs/glfw3.dll
     $<TARGET_FILE_DIR:${PROJECT_NAME}>
 )
-

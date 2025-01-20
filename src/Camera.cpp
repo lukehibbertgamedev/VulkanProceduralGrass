@@ -1,5 +1,4 @@
 #include "Camera.h"
-#include <GLFW/glfw3.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
@@ -31,42 +30,9 @@ void Camera::update()
     yaw += sensitivity.y;
 }
 
-void Camera::setFront()
+void Camera::setDefault()
 {
-    CameraDataDefaults defaults;
-
-    position = defaults.position;
-    velocity = defaults.velocity;
-    pitch = defaults.pitch;
-    yaw = defaults.yaw;
-    fov = defaults.fov;
-}
-
-void Camera::setSide()
-{
-    SideCameraDataDefaults defaults;
-
-    position = defaults.position;
-    velocity = defaults.velocity;
-    pitch = defaults.pitch;
-    yaw = defaults.yaw;
-    fov = defaults.fov;
-}
-
-void Camera::setTop()
-{
-    TopCameraDataDefaults defaults;
-
-    position = defaults.position;
-    velocity = defaults.velocity;
-    pitch = defaults.pitch;
-    yaw = defaults.yaw;
-    fov = defaults.fov;
-}
-
-void Camera::setGoodPhoto()
-{
-    CameraGoodPhotoDefaults defaults;
+    Defaults defaults;
 
     position = defaults.position;
     velocity = defaults.velocity;

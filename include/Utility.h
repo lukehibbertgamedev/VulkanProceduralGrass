@@ -3,10 +3,10 @@
 #include <iostream>
 #include <random>
 #include <chrono>
-#include <fstream> // Necssary for std::ifstream
+#include <fstream> 
 #include <vector>
 
-#include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
+#include <glm/glm.hpp>  
 
 namespace Utils {
 

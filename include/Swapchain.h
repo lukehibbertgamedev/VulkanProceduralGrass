@@ -14,4 +14,17 @@ public:
 	VkSurfaceCapabilitiesKHR capabilities;
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> presentModes;
+
+	void cleanupSwapchain(VkDevice device)
+	{
+		for (size_t i = 0; i < framebuffers.size(); i++) {
+			vkDestroyFramebuffer(device, framebuffers[i], nullptr);
+		}
+
+		for (size_t i = 0; i < imageViews.size(); i++) {
+			vkDestroyImageView(device, imageViews[i], nullptr);
+		}
+
+		vkDestroySwapchainKHR(device, handle, nullptr);
+	}
 };

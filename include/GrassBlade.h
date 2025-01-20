@@ -2,11 +2,7 @@
 
 #include <glm/glm.hpp> 
 
-// 413812	- unity value
-// 1072145	- unity value
-// 1535599	- unity value
-
-constexpr uint32_t MAX_BLADES = 2 << 18; 
+constexpr uint32_t MAX_BLADES = 2 << 21; 
 constexpr float GRASS_MIN_WIDTH = 0.050f;
 constexpr float GRASS_MAX_WIDTH = 0.100f;
 constexpr float GRASS_MIN_HEIGHT = 0.45f;
