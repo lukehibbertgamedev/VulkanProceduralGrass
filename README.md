@@ -1,4 +1,4 @@
-# Procedural Grass in Vulkan
+# Procedural Grass Renderer in Vulkan
 
 ## Information
 
@@ -6,6 +6,8 @@ Procedural geometry aims to utilise graphical processing unit advancements in an
 
 This project is inspried by Klemens Jahrmann and Michael Wimmer with their Interactive Grass Rendering Using Real-Time Tessellation (Jahrmann & Wimmer, 2017). 
 Read the paper [here](https://publik.tuwien.ac.at/files/PubDat_220935.pdf).
+
+You can read more on the development of this project on my portfolio, where my paper will be hosted too. Find the site [here](https://lukehibbertportfolio.wixsite.com/gamedev/procedural-grass-renderer).
 
 ## Installation
 
@@ -15,7 +17,7 @@ Pre-requisites:
 - [Visual Studio 2022](https://visualstudio.microsoft.com/vs/)
 - [Vulkan SDK](https://vulkan.lunarg.com/sdk/home)
 
-Clone the repository using ```git clone --recurse-submodules github.com/lukehibbertgamedev/VulkanProceduralGrass.git```.
+Clone the repository using ```git clone github.com/lukehibbertgamedev/VulkanProceduralGrass.git --recurse-submodules```.
 
 Run ```generate_vs.bat```, this will unpack and build CMake, then generate a Visual Studio 2022 solution within build_x64/.
 
