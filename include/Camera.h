@@ -1,16 +1,22 @@
 #pragma once 
 
+// ===============================================================================================================================================================================
+
+// Dynamic camera class to move around with WASD and the arrow keys. Additionally reset the camera with R.
+
+// ===============================================================================================================================================================================
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-// Dynamic camera
+// ===============================================================================================================================================================================
 
 struct Defaults {
 	const glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
 	const glm::vec3 position = { -29.0f, 60.0f, 5.0f };
 	const float pitch = 87.0f;
 	const float yaw = -130.0f;
-	const float fov = 45.0f; // Degrees.
+	const float fov = 45.0f; // Stored in degrees.
 };
 
 class Camera {

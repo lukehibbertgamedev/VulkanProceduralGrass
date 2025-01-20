@@ -20,6 +20,7 @@ set(INCLUDE
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Camera.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Constants.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Buffer.h
+	${CMAKE_CURRENT_SOURCE_DIR}/include/Vertex.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/MiscStructs.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Swapchain.h
 	${CMAKE_CURRENT_SOURCE_DIR}/include/Timer.h

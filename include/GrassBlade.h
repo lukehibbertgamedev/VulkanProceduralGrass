@@ -1,12 +1,14 @@
 #pragma once
 
+// ===============================================================================================================================================================================
+
+// Class data for the grass blade representation using packed data for a quadratic Bézier curve.
+
+// ===============================================================================================================================================================================
+
 #include <glm/glm.hpp> 
 
-constexpr uint32_t MAX_BLADES = 2 << 21; 
-constexpr float GRASS_MIN_WIDTH = 0.050f;
-constexpr float GRASS_MAX_WIDTH = 0.100f;
-constexpr float GRASS_MIN_HEIGHT = 0.45f;
-constexpr float GRASS_MAX_HEIGHT = 1.0f;
+// ===============================================================================================================================================================================
 
 // Packed data for use per-grass blade.
 struct GrassBladeInstanceData {

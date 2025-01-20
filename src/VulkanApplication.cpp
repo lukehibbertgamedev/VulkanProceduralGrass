@@ -61,6 +61,9 @@ static std::vector<const char*> getGlfwRequiredExtensions() {
     return extensions;
 }
 
+// Device extensions.
+static const std::vector<const char*> kDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
 // ===============================================================================================================================================================================
 
 VkShaderModule VulkanApplication::createShaderModule(const std::vector<char>& code)
@@ -417,8 +420,8 @@ VkResult VulkanApplication::createLogicalDevice()
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
     createInfo.pEnabledFeatures = &deviceFeatures;
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-    createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(kDeviceExtensions.size());
+    createInfo.ppEnabledExtensionNames = kDeviceExtensions.data();
 
     if (kEnableValidationLayers) {
         createInfo.enabledLayerCount = static_cast<uint32_t>(kValidationLayers.size());
@@ -1288,7 +1291,7 @@ VkResult VulkanApplication::createTextureResources()
 
 VkResult VulkanApplication::createShaderStorageBuffers()
 {
-    VkDeviceSize bufferSize = sizeof(GrassBladeInstanceData) * MAX_BLADES;
+    VkDeviceSize bufferSize = sizeof(GrassBladeInstanceData) * kMaxBlades;
 
     VkResult ret = VK_SUCCESS;
 
@@ -1760,7 +1763,7 @@ void VulkanApplication::populateBladeInstanceBuffer()
     // Based on the bounds of the plane, populate the blade instance container with values to be staged to the GPU later.
 
     // Prepare the instance buffer.
-    localBladeInstanceBuffer.reserve(MAX_BLADES);
+    localBladeInstanceBuffer.reserve(kMaxBlades);
 
     // Calculate the bounds of the flat plane (Z is not needed yet as there is no terrain height on the host, this is done in tessellation).
     glm::vec2 offset = glm::vec2(-150.0f, 20.0f);        // Scale 120| -150, 20
@@ -1772,7 +1775,7 @@ void VulkanApplication::populateBladeInstanceBuffer()
     // Do this outside the loop to avoid continuously creating struct instances, just change the data inside it.
     GrassBladeInstanceData bladeInstanceData = {};
 
-    for (size_t i = 0; i < MAX_BLADES; ++i) {
+    for (size_t i = 0; i < kMaxBlades; ++i) {
 
         // Using pre-calculated bounds and no Z variation, generate a random point on the plane's surface. 
         glm::vec3 randomPositionOnPlaneBounds = {};
@@ -1804,7 +1807,7 @@ void VulkanApplication::populateBladeInstanceBuffer()
 void VulkanApplication::createBladeInstanceStagingBuffer()
 {
     // Calculate the required size for the staging buffer.
-    VkDeviceSize bladeInstanceBufferRequiredSize = sizeof(GrassBladeInstanceData) * MAX_BLADES;
+    VkDeviceSize bladeInstanceBufferRequiredSize = sizeof(GrassBladeInstanceData) * kMaxBlades;
 
     bladeInstanceStagingBuffer.resize(kMaxFramesInFlight);
     bladeInstanceStagingBufferMemory.resize(kMaxFramesInFlight);
@@ -1875,12 +1878,12 @@ void VulkanApplication::prepareImGuiDrawData()
 
     ImGui::Separator();
 
-    ImGui::Text("Max grass blade count: %u", MAX_BLADES);
-    ImGui::Text("Num grass blades culled: %u", MAX_BLADES - driverData.numVisible); 
+    ImGui::Text("Max grass blade count: %u", kMaxBlades);
+    ImGui::Text("Num grass blades culled: %u", kMaxBlades - driverData.numVisible); 
 
     ImGui::Separator();
 
-    ImGui::Text("Grass blades: %u/%u", driverData.numVisible, MAX_BLADES);
+    ImGui::Text("Grass blades: %u/%u", driverData.numVisible, kMaxBlades);
 
     ImGui::Separator();
 
@@ -2083,14 +2086,14 @@ void VulkanApplication::recordComputeCommandBuffer(VkCommandBuffer commandBuffer
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout, 0, 1, &grassPipelineDescriptorSet, 0, nullptr);
 
     PushConstantsObject pushConstantsObject = {};
-    pushConstantsObject.totalNumBlades = MAX_BLADES;
+    pushConstantsObject.totalNumBlades = kMaxBlades;
     pushConstantsObject.elapsed = glfwGetTime();
 
     vkCmdPushConstants(commandBuffer, computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstantsObject), &pushConstantsObject);
 
     // This should run ONCE PER-BLADE. Dividing the work-group by 32 to match the ideal size of a warp on most hardware, then working with
     // 32 threads per-thread group on the local size in the shader. These values are multiplied so it makes the MAX count anyway.
-    vkCmdDispatch(commandBuffer, ((MAX_BLADES - 1) / 32u) + 1, 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
+    vkCmdDispatch(commandBuffer, ((kMaxBlades - 1) / 32u) + 1, 1, 1); // Currently only a 1 dimensional array of thread groups and work groups.
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to end recording compute command buffer!");
@@ -2575,7 +2578,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     VkDescriptorBufferInfo ssboBufferInfoLastFrame = {};
     ssboBufferInfoLastFrame.buffer = bladeInstanceDataBuffer[(currentFrame - 1) % kMaxFramesInFlight]; // Return the index for the previous frame, % to ensure correct wrapping.  
     ssboBufferInfoLastFrame.offset = 0;  
-    ssboBufferInfoLastFrame.range = sizeof(GrassBladeInstanceData) * MAX_BLADES; 
+    ssboBufferInfoLastFrame.range = sizeof(GrassBladeInstanceData) * kMaxBlades; 
 
     grassDescriptorWrites[1] = {};
     grassDescriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2589,7 +2592,7 @@ VkResult VulkanApplication::createGrassDescriptorSets()
     VkDescriptorBufferInfo ssboBufferInfoCurrentFrame = {};
     ssboBufferInfoCurrentFrame.buffer = bladeInstanceDataBuffer[(currentFrame) % kMaxFramesInFlight]; // Return the index for the current frame, % to ensure correct wrapping. 
     ssboBufferInfoCurrentFrame.offset = 0; 
-    ssboBufferInfoCurrentFrame.range = sizeof(GrassBladeInstanceData) * MAX_BLADES; 
+    ssboBufferInfoCurrentFrame.range = sizeof(GrassBladeInstanceData) * kMaxBlades; 
 
     grassDescriptorWrites[2] = {};
     grassDescriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2807,7 +2810,7 @@ bool VulkanApplication::checkPhysicalDeviceExtensionSupport(VkPhysicalDevice dev
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
     std::vector<VkExtensionProperties> availableExtensions(extensionCount); 
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-    std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+    std::set<std::string> requiredExtensions(kDeviceExtensions.begin(), kDeviceExtensions.end());
     for (const auto& extension : availableExtensions) { 
         requiredExtensions.erase(extension.extensionName); 
     }

@@ -1,3 +1,5 @@
+// ===============================================================================================================================================================================
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -11,6 +13,8 @@
 #include <Timer.h>
 
 #include <fstream>
+
+// ===============================================================================================================================================================================
 
 // Global main camera.
 static Camera globalCamera;
@@ -66,6 +70,11 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
     }
 }
 
+// ===============================================================================================================================================================================
+// ===============================================================================================================================================================================
+// ===============================================================================================================================================================================
+
+
 int main() {
 
     // Create an empty application structure.
@@ -81,7 +90,7 @@ int main() {
 
     // Create the glfw window and its associated context.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(1920, 1080, "Vulkan procedural grass rendering", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1920, 1080, "Vulkan procedural grass renderer", nullptr, nullptr);
     if (window == nullptr) {
         throw std::runtime_error("failed to create glfw window!");
     }
@@ -153,7 +162,7 @@ int main() {
             }
             if (timeInMs.size() >= kMonitorFrames && !writtenToFile) { // If at max count, write those timings to file.
                 std::string fileName = "../assets/performance_timings/VulkanFrameTimings_";
-                fileName += std::to_string(MAX_BLADES);
+                fileName += std::to_string(kMaxBlades);
                 fileName += ".txt"; 
                 std::ofstream file(fileName);
                 std::ostream_iterator<double> it(file, "\n");

@@ -1,12 +1,20 @@
 #pragma once
 
+// ===============================================================================================================================================================================
+
+// Basic vertex and transform data for the terrain rendering.
+
+// ===============================================================================================================================================================================
+
+#include <vulkan/vulkan.h>
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
+#include <glm/glm.hpp>  
 
-#include <glm/glm.hpp>  // For glm::vec2 and glm::vec3
-#include <array>        // For std::array
+#include <array>        
 
-#include <../PortableVulkanSDK1.3/include/vulkan/vulkan.h>
+// ===============================================================================================================================================================================
 
 struct MeshTransform {
 	glm::vec3 position = glm::vec3(0.0f);
@@ -16,9 +24,9 @@ struct MeshTransform {
 
 // Note: Whatever variables are here, must match the IN parameters for the vertex shader.
 struct Vertex {
-	glm::vec3 pos;		// layout(location = 0) in vec3
-	glm::vec4 color;	// layout(location = 1) in vec4
-	glm::vec2 uv;		// layout(location = 2) in vec2
+	glm::vec3 pos;		
+	glm::vec4 color;	
+	glm::vec2 uv;		
 
 	// Describes how vertex data is grouped in memory.
 	static VkVertexInputBindingDescription getBindingDescription() {
