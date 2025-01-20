@@ -15,6 +15,8 @@
 
 #include "Utility.h"
 
+// ===============================================================================================================================================================================
+
 // Validation layers method of outputting notes, warnings, or errors.
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, 
     VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
@@ -59,11 +61,7 @@ static std::vector<const char*> getGlfwRequiredExtensions() {
     return extensions;
 }
 
-
-
-static const std::vector<const char*> deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
-};
+// ===============================================================================================================================================================================
 
 VkShaderModule VulkanApplication::createShaderModule(const std::vector<char>& code)
 {
@@ -297,15 +295,15 @@ VkResult VulkanApplication::createInstance() {
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "Procedural Grass Demo";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "No Engine";
+    appInfo.applicationVersion = VK_MAKE_VERSION(APP_VERSION_MAJOR, APP_VERSION_MINOR, 0);
+    appInfo.pEngineName = "Custom Engine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.apiVersion = VK_API_VERSION_1_3;
 
     VkInstanceCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
-    createInfo.enabledExtensionCount = extensions.size();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
     createInfo.enabledLayerCount = 0;
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
@@ -407,11 +405,7 @@ VkResult VulkanApplication::createLogicalDevice()
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    // TODO: Come back here and see what device features we want.
-    //VkPhysicalDeviceLimits - has MANY stats that may be useful to know.
-
     VkPhysicalDeviceFeatures deviceFeatures = {};
-    //deviceFeatures.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
     deviceFeatures.fillModeNonSolid = VK_TRUE; // Enable Vulkan to use VK_POLYGON_MODE_POINT or LINE.
     deviceFeatures.samplerAnisotropy = VK_TRUE; // Enable Vulkan to support anisotropic filtering.
     deviceFeatures.tessellationShader = VK_TRUE; // Enable Vulkan to be able to link and execute tessellation shaders.
@@ -486,8 +480,8 @@ VkResult VulkanApplication::createSwapchain()
     }
     else {
         createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        createInfo.queueFamilyIndexCount = 0; // Optional
-        createInfo.pQueueFamilyIndices = nullptr; // Optional
+        createInfo.queueFamilyIndexCount = 0;
+        createInfo.pQueueFamilyIndices = nullptr; 
     }
 
     createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
@@ -961,10 +955,8 @@ VkResult VulkanApplication::createGrassPipeline()
     // Configure how vertex data is structured and passed from a vertex buffer into a pipeline stage.
      
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // Note that there are no vertex binding descriptions or attribute descriptions here, this is because
-    // the blade instance data is sent via a shader storage buffer object and does not require this data to be 
-    // bound. This may change down the line and you may run into an error here, so this is an informative message
-    // for you to read, if you don't read this then you're stupid.
+    // Note that there are no vertex binding descriptions or attribute descriptions here, this is because the
+    // blade instance data is sent via a shader storage buffer object and does not require this data to be bound. 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
@@ -1042,7 +1034,6 @@ VkResult VulkanApplication::createGrassPipeline()
     colorBlending.pAttachments = &colorBlendAttachment;
 
     // Configure how Vulkan understands to bind resources to shaders, ensuring they can efficiently access required resources.
-    // Note that if you have more descriptor set layouts (currently only using uniform buffer objects) you would need to reference that here.
     VkPipelineLayoutCreateInfo grassPipelineLayoutInfo = {};
     grassPipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     grassPipelineLayoutInfo.pushConstantRangeCount = 0;
@@ -1298,14 +1289,6 @@ VkResult VulkanApplication::createTextureResources()
 VkResult VulkanApplication::createShaderStorageBuffers()
 {
     VkDeviceSize bufferSize = sizeof(GrassBladeInstanceData) * MAX_BLADES;
-
-    // Usage bits: 
-    // - vertex buffer to be used within the vertex shader
-    // - storage buffer to be defined and processed as an ssbo
-    // - transfer dst to be allowed to receive data from a staging buffer
-
-    // Memory property bits:
-    // - device local is the most efficient for device access
 
     VkResult ret = VK_SUCCESS;
 
@@ -1743,8 +1726,6 @@ VkResult VulkanApplication::createImGuiImplementation()
     
     ImGui::CreateContext();
 
-    //ImGui::StyleColorsDark();
-
     ImGui_ImplGlfw_InitForVulkan(window, true); // Set up the backend to hook ImGui, GLFW, and Vulkan altogether.
 
     ImGui_ImplVulkan_InitInfo init_info = {};
@@ -1758,7 +1739,6 @@ VkResult VulkanApplication::createImGuiImplementation()
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     init_info.RenderPass = renderPass;
     init_info.Allocator = nullptr;
-    //init_info.UseDynamicRendering = true;
 
     ImGui_ImplVulkan_Init(&init_info);
 
@@ -1783,9 +1763,9 @@ void VulkanApplication::populateBladeInstanceBuffer()
     localBladeInstanceBuffer.reserve(MAX_BLADES);
 
     // Calculate the bounds of the flat plane (Z is not needed yet as there is no terrain height on the host, this is done in tessellation).
-    glm::vec2 offset = glm::vec2(-150.0f, 20.0f);        // Scale 60 | -75, 10               Scale 120| -150, 20
-    groundPlane.position.x += MEADOW_SCALE_X + offset.x; // -15.0f x | ranges [-15, +70]     -30.0f x | ranges [-30, +140]
-    groundPlane.position.y += MEADOW_SCALE_Y + offset.y; //  70.0f y | ranges [-15, +70]     140.0f y | ranges [-30, +140]
+    glm::vec2 offset = glm::vec2(-150.0f, 20.0f);        // Scale 120| -150, 20
+    groundPlane.position.x += MEADOW_SCALE_X + offset.x; // -30.0f x | ranges [-30, +140]
+    groundPlane.position.y += MEADOW_SCALE_Y + offset.y; // 140.0f y | ranges [-30, +140]
 
     const float zFightingEpsilon = 0.01f; // Small value to avoid the grass being clipped into the ground and causing z-fighting.
 
@@ -1823,16 +1803,8 @@ void VulkanApplication::populateBladeInstanceBuffer()
 
 void VulkanApplication::createBladeInstanceStagingBuffer()
 {
-    // copyCPUBladeInstanceBufferToHostVisibleMemory
-
     // Calculate the required size for the staging buffer.
     VkDeviceSize bladeInstanceBufferRequiredSize = sizeof(GrassBladeInstanceData) * MAX_BLADES;
-
-    // Create the staging buffer used as a source to send/transfer buffer data. 
-    // Usage bit: Used as a source buffer to send data from this buffer to the GPU.
-    // Memory properties: 
-    // - Host visible: Allows mapping and writing data to the buffer directly from the CPU.
-    // - Host coherent: Removes the need for manually flushing mapped memory so that the GPU sees the changes. Less error-prone.
 
     bladeInstanceStagingBuffer.resize(kMaxFramesInFlight);
     bladeInstanceStagingBufferMemory.resize(kMaxFramesInFlight);
@@ -1888,6 +1860,11 @@ void VulkanApplication::createNumBladesBuffer()
 void VulkanApplication::prepareImGuiDrawData()
 {
     ImGui::Begin("Driver Details", (bool*)0, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar);
+
+    ImGui::Text("Vulkan procedural grass renderer.");
+    ImGui::Text("Developed by Luke Jason Hibbert.");
+    
+    ImGui::Separator();
 
     ImGui::Text("Graphics Processing Unit: %s", driverData.name.c_str()); 
     ImGui::Text("Version: %i.%i", driverData.versionMajor, driverData.versionMinor);
@@ -2014,7 +1991,7 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     std::array<VkClearValue, 2> clearValues = {};
     clearValues[0] = {};
-    clearValues[0].color = { { 0.05f, 0.3f, 0.9f, 1.0f} };//{ { 0.0f, 0.0f, 0.0f, 1.0f} }; // { { 0.05f, 0.3f, 0.9f, 1.0f} };
+    clearValues[0].color = { { 0.05f, 0.3f, 0.9f, 1.0f} };
     clearValues[1] = {};
     clearValues[1].depthStencil = { 1.0f, 0 };
 
@@ -2146,6 +2123,7 @@ void VulkanApplication::cleanupApplication(GLFWwindow* window)
     std::array<VkDescriptorSet, 2> descriptorSets = { grassPipelineDescriptorSet, modelPipelineDescriptorSet }; 
     vkFreeDescriptorSets(m_LogicalDevice, descriptorPool, static_cast<uint32_t>(descriptorSets.size()), descriptorSets.data());
 
+    // Num blades buffer.
     vkDestroyBuffer(m_LogicalDevice, numBladesBuffer, nullptr);
     vkFreeMemory(m_LogicalDevice, numBladesBufferMemory, nullptr);
 

@@ -24,7 +24,7 @@
 #include "Camera.h"
 #include "MiscStructs.h"
 #include "Constants.h"
-
+ 
 // STL.
 #include <optional>
 #include <vector>
