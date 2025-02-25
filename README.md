@@ -9,6 +9,8 @@ Read the paper [here](https://publik.tuwien.ac.at/files/PubDat_220935.pdf).
 
 You can read more on the development of this project on my portfolio, where my paper will be hosted too. Find the site [here](https://lukehibbertportfolio.wixsite.com/gamedev/procedural-grass-renderer).
 
+![Alt text](relative%20assets/FinalScene.png?raw=true "Here is the final product.")
+
 ## Installation
 
 **Note**: This project is only supported on Windows.
